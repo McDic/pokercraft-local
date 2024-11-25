@@ -6,7 +6,7 @@ from pokercraft_local.parser import PokercraftParser
 from pokercraft_local.visualize import plot_total
 
 
-def export(main_path: Path, output_path: Path):
+def export(main_path: Path, output_path: Path, nickname: str):
     """
     Export data from given `main_path`.
     """
@@ -37,7 +37,7 @@ def export(main_path: Path, output_path: Path):
 
     # Export plot HTML
     with open(output_path / f"result_{current_time_strf}.html", "w") as html_file:
-        html_file.write(plot_total(summaries))
+        html_file.write(plot_total(nickname, summaries))
         print(f"Exported plot at {html_file.name}")
 
 
@@ -47,5 +47,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--output", type=Path, required=True, help="Output directory"
     )
+    parser.add_argument(
+        "-n", "--nickname", type=str, required=True, help="Nickname on GGNetwork"
+    )
     namespace = parser.parse_args()
-    export(namespace.data, namespace.output)
+    export(namespace.data, namespace.output, namespace.nickname)
