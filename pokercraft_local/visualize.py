@@ -21,13 +21,13 @@ def plot_total(
         {
             "Buy In": [t.buy_in for t in tournaments],
             "My Entries": [t.my_entries for t in tournaments],
+            "Profit": [t.profit for t in tournaments],
             "Rake": [t.rake for t in tournaments],
             "Prize": [t.my_prize for t in tournaments],
             "Rank Ratio": [t.my_rank / t.total_players for t in tournaments],
             "Prize Ratio": [t.my_prize / t.total_prize_pool for t in tournaments],
         }
     )
-    df["Profit"] = df["Prize"] - df["Buy In"] * df["My Entries"]
     df["Net Profit"] = df["Profit"].cumsum()
     fig = px.line(
         df,
