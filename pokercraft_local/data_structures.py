@@ -31,6 +31,7 @@ class TournamentSummary:
     my_rank: int
     total_players: int
     my_prize: float
+    my_entries: int = 1
 
 
 class Currency(Enum):
@@ -40,3 +41,6 @@ class Currency(Enum):
 
     USD = ("$", 1.0)
     CNY = ("¥", 7.25)
+    THB = ("฿", 34.61)
+    VND = ("₫", 25420.00)
+    PHP = ("₱", 58.98)

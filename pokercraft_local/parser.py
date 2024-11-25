@@ -1,13 +1,14 @@
 import re as regex
 import typing
 from datetime import datetime
-from io import StringIO
+from io import TextIOWrapper
+from pathlib import Path
 
 from .data_structures import Currency, TournamentSummary
 
 STR_PATTERN = regex.Pattern[str]
 ANY_INT: STR_PATTERN = regex.compile(r"\d+")
-ANY_MONEY: STR_PATTERN = regex.compile(r"[\$¥]\d(\d|(,\d))*(\.[\d,]+)?")
+ANY_MONEY: STR_PATTERN = regex.compile(r"[\$¥฿₫₱]\d(\d|(,\d))*(\.[\d,]+)?")
 
 
 def convert_money_to_float(s: str) -> float:
@@ -59,10 +60,14 @@ class PokercraftParser:
         r"\d+(st|nd|rd|th) \: Hero, .+"
     )
     LINE7_MY_RANK: STR_PATTERN = regex.compile(r"You finished the tournament in \d+.+")
-    LINE8_MY_PRIZE: STR_PATTERN = regex.compile(r"You received a total of .+")
+    LINE8_MY_PRIZE: STR_PATTERN = regex.compile(
+        r"You (made \d+ re-entries and )?received a total of .+"
+    )
+    LINE8_REENTRIES: STR_PATTERN = regex.compile(r"You made \d+ re-entries .+")
+    LINE8_ADVANCED_DAY1: STR_PATTERN = regex.compile(r"You have advanced to .+")
 
     @classmethod
-    def parse(cls, instream: StringIO) -> TournamentSummary:
+    def parse(cls, instream: TextIOWrapper) -> TournamentSummary:
         """
         Parse given file into `TournamentSummary` object.
         """
@@ -74,18 +79,20 @@ class PokercraftParser:
         t_start_time: datetime
         t_my_rank: int
         t_my_prize: float
+        t_my_entries: int = 1
 
         # Main loop
         for line in instream:
-            if not line.strip():
+            line = line.strip()
+            if not line:
                 continue
 
             elif cls.LINE1_ID_NAME.fullmatch(line):
-                id_str, name, gametype = [s.strip() for s in line.split(",")]
-                id_str_searched = ANY_INT.search(id_str)
+                stripped = [s.strip() for s in line.split(",")]
+                id_str_searched = ANY_INT.search(stripped[0])
                 assert id_str_searched is not None
                 t_id = int(id_str_searched.group())
-                t_name = name
+                t_name = ",".join(stripped[1:-1])
 
             elif cls.LINE2_BUYIN.fullmatch(line):
                 buy_ins: list[float] = sorted(take_all_money(line))
@@ -105,13 +112,12 @@ class PokercraftParser:
                 )
 
             elif cls.LINE6_MY_RANK_AND_PRIZE.fullmatch(line):
-                pass  # Will cover in LINE7 / LINE8
-
-            elif cls.LINE7_MY_RANK.fullmatch(line):
                 t_my_rank = take_first_int(line)
+                t_my_prize = sum(take_all_money(line))
 
             elif cls.LINE8_MY_PRIZE.fullmatch(line):
-                t_my_prize = next(take_all_money(line))
+                if cls.LINE8_REENTRIES.fullmatch(line):
+                    t_my_entries += take_first_int(line)
 
         return TournamentSummary(
             id=t_id,
@@ -123,4 +129,30 @@ class PokercraftParser:
             my_rank=t_my_rank,
             total_players=t_total_players,
             my_prize=t_my_prize,
+            my_entries=t_my_entries,
         )
+
+    @classmethod
+    def crawl_files(
+        cls, paths: typing.Iterable[Path], follow_symlink: bool = False
+    ) -> typing.Generator[TournamentSummary, None, None]:
+        """
+        Crawl files and parse them, recursively.
+        Be careful of infinite recursion when `follow_symlink` is True.
+        """
+        for path in paths:
+            if path.is_dir() and (not path.is_symlink() or follow_symlink):
+                yield from cls.crawl_files(path.iterdir())
+            elif (
+                path.is_file() and path.suffix == ".txt" and path.stem.startswith("GG")
+            ):
+                with path.open("r") as file:
+                    try:
+                        summary = cls.parse(file)
+                        yield summary
+                    except (ValueError, UnboundLocalError, StopIteration):
+                        print(f"Failed to parse file {path}, skipping.")
+                        pass
+                    except Exception:
+                        print(f"Failed to parse file {path} with fatal error.")
+                        raise
