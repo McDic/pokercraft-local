@@ -6,5 +6,6 @@
 **/__pycache__/
 .mypy_cache/
 
-# Playground
+# Playground and Data
 playground/
+output/

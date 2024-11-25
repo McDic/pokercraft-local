@@ -33,6 +33,20 @@ class TournamentSummary:
     my_prize: float
     my_entries: int = 1
 
+    @property
+    def buy_in(self) -> float:
+        """
+        Returns the total buy in.
+        """
+        return self.buy_in_pure + self.rake
+
+    @property
+    def profit(self) -> float:
+        """
+        Returns the profit.
+        """
+        return self.my_prize - self.buy_in * self.my_entries
+
 
 class Currency(Enum):
     """
