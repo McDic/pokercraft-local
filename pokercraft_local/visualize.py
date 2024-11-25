@@ -38,7 +38,7 @@ def get_profit_line_chart(
             "Tournament Name": [t.name for t in tournaments],
             "Time": [t.start_time for t in tournaments],
             "Profit": [t.profit for t in tournaments],
-            "Rake": [t.rake for t in tournaments],
+            "Rake": [t.rake * t.my_entries for t in tournaments],
         }
     )
     df_base["Net Profit"] = df_base["Profit"].cumsum()
