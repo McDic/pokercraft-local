@@ -1,3 +1,4 @@
+import typing
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
@@ -33,6 +34,12 @@ class TournamentSummary:
     my_prize: float
     my_entries: int = 1
 
+    def sorting_key(self):
+        """
+        Returns the sorting key.
+        """
+        return (self.start_time, self.id)
+
     @property
     def buy_in(self) -> float:
         """
@@ -46,6 +53,17 @@ class TournamentSummary:
         Returns the profit.
         """
         return self.my_prize - self.buy_in * self.my_entries
+
+    def __str__(self) -> str:
+        return "%d,%s,%s,%.2f,%.2f,%d,#%d" % (
+            self.id,
+            self.start_time.strftime("%Y%m%d %H%M%S"),
+            self.name.replace(",", " "),
+            self.buy_in,
+            self.my_prize,
+            self.my_entries,
+            self.my_rank,
+        )
 
 
 class Currency(Enum):
