@@ -1,5 +1,6 @@
 import re as regex
 import typing
+import warnings
 from datetime import datetime
 from io import TextIOWrapper
 from pathlib import Path
@@ -11,7 +12,7 @@ ANY_INT: STR_PATTERN = regex.compile(r"\d+")
 ANY_MONEY: STR_PATTERN = regex.compile(r"[\$¥฿₫₱]\d(\d|(,\d))*(\.[\d,]+)?")
 
 
-def convert_money_to_float(s: str) -> float:
+def convert_money_to_float(s: str, supposed_currency: Currency | None = None) -> float:
     """
     Convert a string to a float.
     """
@@ -20,17 +21,24 @@ def convert_money_to_float(s: str) -> float:
         raise ValueError(f"Failed to parse given string {s} as money.")
     for cur in Currency:
         if cur.value[0] == s[0]:
+            if supposed_currency is not None and s[0] != supposed_currency.value[0]:
+                raise ValueError(
+                    f"Supposed currency {supposed_currency.value[0]} is "
+                    f"different from detected currency {s[0]}."
+                )
             return float(s[1:].replace(",", "")) / cur.value[1]
     else:
         raise ValueError(f"Unknown currency {s[0]} detected")
 
 
-def take_all_money(s: str) -> typing.Generator[float, None, None]:
+def take_all_money(
+    s: str, supposed_currency: Currency | None = None
+) -> typing.Generator[float, None, None]:
     """
     Take all money from a string.
     """
     for match in ANY_MONEY.finditer(s):
-        yield convert_money_to_float(match.group())
+        yield convert_money_to_float(match.group(), supposed_currency=supposed_currency)
 
 
 def take_first_int(s: str) -> int:
@@ -81,13 +89,24 @@ class PokercraftParser:
         t_my_prize: float
         t_my_entries: int = 1
 
+        first_detected_currency: Currency | None = None
+
         # Main loop
         for line in instream:
             line = line.strip()
             if not line:
                 continue
 
-            elif cls.LINE1_ID_NAME.fullmatch(line):
+            if (
+                not cls.LINE1_ID_NAME.fullmatch(line)
+                and first_detected_currency is None
+            ):
+                for cur in Currency:
+                    if cur.value[0] in line:
+                        first_detected_currency = cur
+                        break
+
+            if cls.LINE1_ID_NAME.fullmatch(line):
                 stripped = [s.strip() for s in line.split(",")]
                 id_str_searched = ANY_INT.search(stripped[0])
                 assert id_str_searched is not None
@@ -95,7 +114,9 @@ class PokercraftParser:
                 t_name = ",".join(stripped[1:-1])
 
             elif cls.LINE2_BUYIN.fullmatch(line):
-                buy_ins: list[float] = sorted(take_all_money(line))
+                buy_ins: list[float] = sorted(
+                    take_all_money(line, supposed_currency=first_detected_currency)
+                )
                 t_rake = buy_ins[0]
                 t_buy_in_pure = sum(buy_ins) - t_rake
 
@@ -103,7 +124,9 @@ class PokercraftParser:
                 t_total_players = take_first_int(line)
 
             elif cls.LINE4_PRIZEPOOL.fullmatch(line):
-                t_total_prize_pool = next(take_all_money(line))
+                t_total_prize_pool = next(
+                    take_all_money(line, supposed_currency=first_detected_currency)
+                )
 
             elif cls.LINE5_START_TIME.fullmatch(line):
                 splitted = line.split(" ")
@@ -113,7 +136,9 @@ class PokercraftParser:
 
             elif cls.LINE6_MY_RANK_AND_PRIZE.fullmatch(line):
                 t_my_rank = take_first_int(line)
-                t_my_prize = sum(take_all_money(line))
+                t_my_prize = sum(
+                    take_all_money(line, supposed_currency=first_detected_currency)
+                )
 
             elif cls.LINE8_MY_PRIZE.fullmatch(line):
                 if cls.LINE8_REENTRIES.fullmatch(line):
@@ -150,8 +175,11 @@ class PokercraftParser:
                     try:
                         summary = cls.parse(file)
                         yield summary
-                    except (ValueError, UnboundLocalError, StopIteration):
-                        print(f"Failed to parse file {path}, skipping.")
+                    except (ValueError, UnboundLocalError, StopIteration) as err:
+                        print(
+                            f"Failed to parse file {path}, skipping. "
+                            f"(Reason: {err} ({type(err).__name__}))"
+                        )
                         pass
                     except Exception:
                         print(f"Failed to parse file {path} with fatal error.")
