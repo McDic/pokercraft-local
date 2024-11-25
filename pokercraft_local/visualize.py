@@ -6,7 +6,7 @@ import plotly.express as px  # type: ignore [import-untyped]
 import plotly.graph_objects as plgo  # type: ignore [import-untyped]
 from plotly.subplots import make_subplots  # type: ignore [import-untyped]
 
-from .data_structures import TournamentSummary
+from .data_structures import TournamentBrand, TournamentSummary
 
 BASE_HTML_FRAME: typing.Final[
     str
@@ -45,7 +45,7 @@ def get_profit_line_chart(
     )
 
 
-def get_profit_scatter_chart(tournaments: list[TournamentSummary]):
+def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
     """
     Get profit scatter chart.
     """
@@ -56,9 +56,17 @@ def get_profit_scatter_chart(tournaments: list[TournamentSummary]):
             "Relative Prize": [t.my_prize / t.buy_in for t in non_freerolls],
             "Prize Ratio": [t.my_prize / t.total_prize_pool for t in non_freerolls],
             "Total Entries": [t.total_players for t in non_freerolls],
+            "Tournament Brand": [
+                TournamentBrand.find(t.name).name for t in non_freerolls
+            ],
+            "Profitable": [t.profit > 0 for t in non_freerolls],
         }
     )
-    figure = make_subplots(
+    df_base["Dot Size Multiplier"] = df_base["Relative Prize"].apply(
+        lambda x: max(1 / 3.0, x ** (1 / 3.0))
+    )
+
+    figure1 = make_subplots(
         1,
         2,
         shared_yaxes=True,
@@ -72,7 +80,7 @@ def get_profit_scatter_chart(tournaments: list[TournamentSummary]):
         "marker_symbol": "circle",
     }
 
-    figure.add_trace(
+    figure1.add_trace(
         plgo.Scatter(
             x=df_base["Buy In"],
             name="RR by Buy In",
@@ -81,7 +89,7 @@ def get_profit_scatter_chart(tournaments: list[TournamentSummary]):
         row=1,
         col=1,
     )
-    figure.add_trace(
+    figure1.add_trace(
         plgo.Scatter(
             x=df_base["Total Entries"],
             name="RR by Entries",
@@ -90,9 +98,23 @@ def get_profit_scatter_chart(tournaments: list[TournamentSummary]):
         row=1,
         col=2,
     )
-    figure.update_xaxes(type="log")
-    figure.update_yaxes(type="log")
-    return figure
+    figure1.update_xaxes(type="log")
+    figure1.update_yaxes(type="log")
+
+    figure2 = px.scatter(
+        df_base,
+        x="Total Entries",
+        y="Buy In",
+        size="Dot Size Multiplier",
+        hover_data=["Relative Prize", "Prize Ratio"],
+        color="Profitable",
+        log_x=True,
+        log_y=True,
+        title="ITM Scatters",
+        size_max=60,
+    )
+
+    return [figure1, figure2]
 
 
 def plot_total(
@@ -108,7 +130,7 @@ def plot_total(
     tournaments = sorted(tournaments, key=sort_key)
     figures = [
         get_profit_line_chart(tournaments, max_data_points=max_data_points),
-        get_profit_scatter_chart(tournaments),
+        *get_profit_scatter_charts(tournaments),
     ]
     return BASE_HTML_FRAME % (
         "\n".join(
