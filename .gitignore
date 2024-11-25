@@ -1,3 +1,7 @@
 # Env
 .direnv/
 .envrc
+
+# Caches
+**/__pycache__/
+.mypy_cache/
