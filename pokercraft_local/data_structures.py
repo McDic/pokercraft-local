@@ -65,6 +65,12 @@ class TournamentSummary:
     my_prize: float
     my_entries: int = 1
 
+    def __hash__(self) -> int:
+        return hash(self.id)
+
+    def __eq__(self, other: typing.Any) -> bool:
+        return isinstance(other, TournamentSummary) and self.id == other.id
+
     def sorting_key(self):
         """
         Returns the sorting key.

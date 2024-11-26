@@ -16,7 +16,7 @@ def export(main_path: Path, output_path: Path, nickname: str):
         raise NotADirectoryError(f"{output_path} is not a directory")
 
     summaries = sorted(
-        PokercraftParser.crawl_files([main_path], follow_symlink=True),
+        set(PokercraftParser.crawl_files([main_path], follow_symlink=True)),
         key=lambda t: t.sorting_key(),
     )
     print(f"{len(summaries)} summaries gathered")
