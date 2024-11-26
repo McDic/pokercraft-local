@@ -1,6 +1,5 @@
 import tkinter as tk
 import typing
-from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog
 from tkinter.messagebox import showinfo, showwarning
@@ -125,7 +124,8 @@ class PokerCraftLocalGUI:
         showinfo(
             "Info from Pokercraft Local",
             "Exported CSV and plot successfully; "
-            f"Please check {csv_path} and {plot_path}.",
+            f"Please check {csv_path.name} and {plot_path.name} "
+            f"in {self._output_directory}.",
         )
 
     def run_gui(self) -> None:
