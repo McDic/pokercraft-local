@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pokercraft-local"
+authors = [{ name = "Minsung Kim", email = "spongbob9876@naver.com" }]
+description = "Local analysis tool for Pokercraft"
+readme = "README.md"
+requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+]
+license = { file = "LICENSE" }
+keywords = ["poker", "pokercraft", "ggpoker"]
+dynamic = ["dependencies", "version"]
+
+[project.urls]
+"Homepage" = "https://github.com/McDic/pokercraft-local"
+
+[project.scripts]
+gui = "pokercraft_local:gui.gui_main"
+
+[tool.setuptools]
+packages = ["pokercraft_local"]
+
+[tool.setuptools.package-data]
+"pokercraft_local" = ["py.typed"]
+
+[tool.setuptools.dynamic]
+version = { attr = "pokercraft_local.VERSION" }
+dependencies = { file = ["requirements.txt"] }
+optional-dependencies = { dev = { file = ["requirements-dev.txt"] } }
+
+[tool.mypy]
+exclude = ["examples"]
+ignore_missing_imports = true

@@ -10,3 +10,7 @@
 playground/
 output/
 data/
+
+# Dist
+dist/
+*.egg-info/
