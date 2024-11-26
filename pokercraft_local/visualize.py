@@ -64,9 +64,13 @@ def get_historical_charts(
     # Avg buy-in
     buyin_expanding = df_base["Buy In"].expanding()
     df_base["Avg Buy In"] = buyin_expanding.sum() / buyin_expanding.count()
+    max_rolling_buyin: float = 0
+    min_rolling_buyin: float = 1e9
     for window_size in window_sizes:
         this_title = f"Avg Buy In W{window_size}"
         df_base[this_title] = df_base["Buy In"].rolling(window_size).mean()
+        max_rolling_buyin = max(max_rolling_buyin, df_base[this_title].max())
+        min_rolling_buyin = min(min_rolling_buyin, df_base[this_title].min())
 
     # Resampling
     df_base = df_base.iloc[:: max(1, math.ceil(len(df_base) / max_data_points)), :]
@@ -134,19 +138,41 @@ def get_historical_charts(
             col=1,
         )
 
+    opacity_red = "rgba(255,0,0,0.25)"
+    opacity_black = "rgba(0,0,0,0.25)"
     figure.add_hline(
         y=0.0,
-        line_color="red",
+        line_color=opacity_red,
         line_dash="dash",
         row=1,
         col=1,
         label={
             "text": "Break-even",
             "textposition": "end",
-            "font": {"color": "red"},
+            "font": {"color": opacity_red, "weight": 5, "size": 24},
             "yanchor": "top",
         },
     )
+
+    for threshold, text in [
+        (5.0, "Micro / Low"),
+        (20.0, "Low / Mid"),
+        (100.0, "Mid / High"),
+    ]:
+        figure.add_hline(
+            y=threshold,
+            line_color=opacity_black,
+            line_dash="dash",
+            row=3,
+            col=1,
+            label={
+                "text": text,
+                "textposition": "start",
+                "font": {"color": opacity_black, "weight": 5, "size": 18},
+                "yanchor": "top",
+            },
+        )
+
     figure.update_layout(
         title="Historical Performance",
         hovermode="x unified",
@@ -154,8 +180,21 @@ def get_historical_charts(
         yaxis2={"tickformat": "%"},
         yaxis3={"tickformat": "$"},
     )
-    figure.update_yaxes(row=3, col=1, patch={"type": "log"})
-    figure.update_traces(xaxis="x1")
+    figure.update_traces(xaxis="x")
+    figure.update_shapes(
+        xref="x", xsizemode="scaled", x0=1.0, x1=len(df_base.index) + 1
+    )
+    figure.update_yaxes(
+        row=3,
+        col=1,
+        patch={
+            "type": "log",
+            "range": [
+                math.log10(min_rolling_buyin) - 0.1,
+                math.log10(max_rolling_buyin) + 0.1,
+            ],
+        },
+    )
     return figure
 
 
