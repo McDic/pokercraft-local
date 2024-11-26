@@ -41,7 +41,7 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         env:
           tagversion: ${{ github.ref_name}}
-        run: tar.exe -cvzf run_gui-windows-$tagversion.tar.gz dist\run_gui
+        run: tar.exe -cvzf run_gui-windows-"$tagversion".tar.gz dist\run_gui
       - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
