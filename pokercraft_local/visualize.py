@@ -135,7 +135,7 @@ def get_historical_charts(
         )
 
     figure.add_hline(
-        y=0,
+        y=0.0,
         line_color="red",
         line_dash="dash",
         row=1,
@@ -144,7 +144,7 @@ def get_historical_charts(
             "text": "Break-even",
             "textposition": "end",
             "font": {"color": "red"},
-            "yanchor": "bottom",
+            "yanchor": "top",
         },
     )
     figure.update_layout(
@@ -192,11 +192,12 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
         y_title="Relative Prize Return",
         horizontal_spacing=0.01,
     )
-    common_options = {
+    fig1_common_options = {
         "y": df_base["Relative Prize"],
         "mode": "markers",
         "marker_symbol": "circle",
         "customdata": np.stack((df_base["Tournament Name"],), axis=-1),
+        "opacity": 0.5,
     }
 
     figure1.add_trace(
@@ -204,7 +205,8 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
             x=df_base["Buy In"],
             name="RR by Buy In",
             hovertemplate="RR=%{y:.2f}<br>BuyIn=%{x:.2f}<br>Name=%{customdata[0]}",
-            **common_options,
+            marker={"color": "blue"},
+            **fig1_common_options,
         ),
         row=1,
         col=1,
@@ -215,7 +217,8 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
             name="RR by Entries",
             hovertemplate="RR=%{y:.2f}<br>TotalEntries=%{x:.2f}"
             "<br>Name=%{customdata[0]}",
-            **common_options,
+            marker={"color": "green"},
+            **fig1_common_options,
         ),
         row=1,
         col=2,
@@ -223,6 +226,19 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
     figure1.update_layout(title="Relative Prize Returns")
     figure1.update_xaxes(type="log")
     figure1.update_yaxes(type="log")
+    figure1.add_hline(
+        y=1.0,
+        line_color="red",
+        line_dash="dash",
+        row=1,
+        col="all",
+        label={
+            "text": "Break-even",
+            "textposition": "end",
+            "font": {"color": "red"},
+            "yanchor": "top",
+        },
+    )
 
     figure2 = px.scatter(
         df_base,
