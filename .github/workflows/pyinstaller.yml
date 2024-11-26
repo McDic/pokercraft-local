@@ -29,13 +29,18 @@ jobs:
       - name: Run Pyinstaller
         run: |
           pyinstaller run_gui.py
-      - name: Compress binary files
+      - name: Compress binary files (MacOS, Linux)
+        if: ${{ ! ( matrix.os == 'windows-latest' ) }}
         env:
           THIS_OS: ${{ matrix.os }}
         run: zip -r run_gui-"$THIS_OS".zip dist/run_gui/
+      - name: Compress binary files (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: tar.exe -cvzf run_gui-windows.tar.gz dist\run_gui
       - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
           files: |
               run_gui-*.zip
+              run_gui-*.tar.gz
               LICENSE
