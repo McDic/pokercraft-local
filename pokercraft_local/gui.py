@@ -5,10 +5,7 @@ from pathlib import Path
 from tkinter import filedialog
 from tkinter.messagebox import showinfo, showwarning
 
-from .csvdata import export_csv
-from .data_structures import TournamentSummary
-from .parser import PokercraftParser
-from .visualize import plot_total
+from .export import export as export_main
 
 
 class PokerCraftLocalGUI:
@@ -122,27 +119,9 @@ class PokerCraftLocalGUI:
             )
             return
 
-        # Crawl files
-        summaries: list[TournamentSummary] = sorted(
-            set(
-                PokercraftParser.crawl_files(
-                    [self._data_directory], follow_symlink=True
-                )
-            ),
-            key=lambda t: t.sorting_key(),
+        csv_path, plot_path = export_main(
+            self._data_directory, self._output_directory, nickname
         )
-        current_time_strf = datetime.now().strftime("%Y%m%d_%H%M%S.%f")
-
-        # Export CSV
-        csv_path = self._output_directory / f"summaries_{current_time_strf}.csv"
-        export_csv(csv_path, summaries)
-
-        # Export plot HTML
-        plot_path = self._output_directory / f"result_{current_time_strf}.html"
-        with open(plot_path, "w") as html_file:
-            html_file.write(plot_total(nickname, summaries))
-
-        # Finished
         showinfo(
             "Info from Pokercraft Local",
             "Exported CSV and plot successfully; "
@@ -154,10 +133,3 @@ class PokerCraftLocalGUI:
         Start GUI.
         """
         self._window.mainloop()
-
-
-def gui_main() -> None:
-    """
-    Main function for GUI.
-    """
-    PokerCraftLocalGUI().run_gui()

@@ -1,3 +1,3 @@
-from . import csvdata, data_structures, gui, parser, visualize
+from . import data_structures, export, gui, parser, visualize
 
 VERSION = "1.0.9"
