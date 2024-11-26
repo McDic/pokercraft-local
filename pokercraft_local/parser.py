@@ -171,7 +171,7 @@ class PokercraftParser:
             elif (
                 path.is_file() and path.suffix == ".txt" and path.stem.startswith("GG")
             ):
-                with path.open("r") as file:
+                with path.open("r", encoding="utf-8") as file:
                     try:
                         summary = cls.parse(file)
                         yield summary
