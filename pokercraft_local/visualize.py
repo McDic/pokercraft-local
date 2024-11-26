@@ -148,6 +148,7 @@ def get_historical_charts(
         },
     )
     figure.update_layout(
+        title="Historical Performance",
         hovermode="x unified",
         yaxis1={"tickformat": "$"},
         yaxis2={"tickformat": "%"},
@@ -219,6 +220,7 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
         row=1,
         col=2,
     )
+    figure1.update_layout(title="Relative Prize Returns")
     figure1.update_xaxes(type="log")
     figure1.update_yaxes(type="log")
 
@@ -232,7 +234,7 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
         log_x=True,
         log_y=True,
         title="ITM Scatters",
-        size_max=60,
+        size_max=45,
     )
 
     return [figure1, figure2]
