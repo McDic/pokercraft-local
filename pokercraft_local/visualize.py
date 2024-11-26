@@ -155,7 +155,7 @@ def get_historical_charts(
         yaxis3={"tickformat": "$"},
     )
     figure.update_yaxes(row=3, col=1, patch={"type": "log"})
-    figure.update_traces(xaxis="x3")
+    figure.update_traces(xaxis="x1")
     return figure
 
 
