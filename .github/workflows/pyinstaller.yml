@@ -36,7 +36,7 @@ jobs:
         env:
           THIS_OS: ${{ matrix.os }}
           TAG_VERSION: ${{ github.ref_name }}
-        run: zip -r run_gui-"$THIS_OS"-"$TAG_VERSION".zip dist/run_gui/
+        run: zip -r run_gui-"$THIS_OS"-"$Env:TAG_VERSION".zip dist/run_gui/
       - name: Compress binary files (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         env:
