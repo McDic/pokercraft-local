@@ -48,4 +48,3 @@ jobs:
           files: |
               run_gui-*.zip
               run_gui-*.tar.gz
-              LICENSE
