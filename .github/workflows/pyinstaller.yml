@@ -1,4 +1,4 @@
-name: Release Binaries
+name: Compiling with Pyinstaller
 
 permissions:
   contents: write
