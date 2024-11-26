@@ -29,13 +29,13 @@ jobs:
       - name: Run Pyinstaller
         run: |
           pyinstaller run_gui.py
-      - name: Rename files by OS
+      - name: Compress binary files
         env:
           THIS_OS: ${{ matrix.os }}
-        run: mv dist/run_gui/ dist/run_gui-$THIS_OS
+        run: zip -r run_gui-"$THIS_OS".zip dist/run_gui/
       - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
           files: |
-              dist/run_gui-*/**/*
+              run_gui-*.zip
               LICENSE
