@@ -177,9 +177,6 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
             "Profitable": [t.profit > 0 for t in non_freerolls],
         }
     )
-    df_base["Dot Size Multiplier"] = df_base["Relative Prize"].apply(
-        lambda x: max(1 / 3.0, x ** (1 / 3.0))
-    )
 
     figure1 = make_subplots(
         1,
@@ -193,53 +190,70 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
         horizontal_spacing=0.01,
     )
     fig1_common_options = {
-        "y": df_base["Relative Prize"],
-        "mode": "markers",
-        "marker_symbol": "circle",
+        "y": df_base["Relative Prize"].apply(
+            lambda x: math.log2(x) if x > 0 else np.nan
+        ),
+        "z": df_base["Relative Prize"],
         "customdata": np.stack((df_base["Tournament Name"],), axis=-1),
-        "opacity": 0.5,
+        "coloraxis": "coloraxis",
+        "histfunc": "sum",
     }
-
     figure1.add_trace(
-        plgo.Scatter(
-            x=df_base["Buy In"],
+        plgo.Histogram2d(
+            x=df_base["Buy In"].apply(math.log2),
             name="RR by Buy In",
-            hovertemplate="RR=%{y:.2f}<br>BuyIn=%{x:.2f}<br>Name=%{customdata[0]}",
-            marker={"color": "blue"},
+            hovertemplate="Log2(RR)=%{y}<br>Log2(BuyIn)=%{x}<br>"
+            "Got %{z}x profit in this region",
             **fig1_common_options,
         ),
         row=1,
         col=1,
     )
     figure1.add_trace(
-        plgo.Scatter(
-            x=df_base["Total Entries"],
+        plgo.Histogram2d(
+            x=df_base["Total Entries"].apply(math.log2),
             name="RR by Entries",
-            hovertemplate="RR=%{y:.2f}<br>TotalEntries=%{x:.2f}"
-            "<br>Name=%{customdata[0]}",
-            marker={"color": "green"},
+            hovertemplate="Log2(RR)=%{y}<br>"
+            "Log2(TotalEntries)=%{x}<br>"
+            "Got %{z:.2f}x profit in this region",
             **fig1_common_options,
         ),
         row=1,
         col=2,
     )
     figure1.update_layout(title="Relative Prize Returns")
-    figure1.update_xaxes(type="log")
-    figure1.update_yaxes(type="log")
-    figure1.add_hline(
-        y=1.0,
-        line_color="red",
-        line_dash="dash",
-        row=1,
-        col="all",
-        label={
-            "text": "Break-even",
-            "textposition": "end",
-            "font": {"color": "red"},
-            "yanchor": "top",
-        },
+    figure1.update_coloraxes(
+        colorscale=[
+            [0, "rgba(62, 51, 212, 0.25)"],  # blue
+            [0.03, "rgba(135, 232, 26, 0.5)"],  # green
+            [0.1, "rgba(232, 137, 26, 0.75)"],  # orange
+            [0.3, "rgba(217, 17, 41, 0.75)"],  # red
+            [1, "rgba(230, 36, 228, 0.75)"],  # purple
+        ],
     )
 
+    for y, color, hline_label in [
+        (0.0, "white", "Break-even: 1x+ Profit"),
+        (2.0, "rgb(102, 102, 102)", "Good run: 4x+ Profit"),
+        (5.0, "rgb(46, 46, 46)", "Deep run: 32x+ Profit"),
+    ]:
+        figure1.add_hline(
+            y=y,
+            line_color=color,
+            line_dash="dash",
+            row=1,
+            col="all",
+            label={
+                "text": hline_label,
+                "textposition": "start",
+                "font": {"color": color, "weight": 5, "size": 20},
+                "yanchor": "top",
+            },
+        )
+
+    df_base["Dot Size Multiplier"] = df_base["Relative Prize"].apply(
+        lambda x: max(1 / 3.0, x ** (1 / 3.0))
+    )
     figure2 = px.scatter(
         df_base,
         x="Total Entries",
