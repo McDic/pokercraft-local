@@ -154,3 +154,10 @@ class PokerCraftLocalGUI:
         Start GUI.
         """
         self._window.mainloop()
+
+
+def gui_main() -> None:
+    """
+    Main function for GUI.
+    """
+    PokerCraftLocalGUI().run_gui()
