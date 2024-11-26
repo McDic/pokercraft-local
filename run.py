@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 from datetime import datetime
 from pathlib import Path
 
+from pokercraft_local.csvdata import export_csv
 from pokercraft_local.parser import PokercraftParser
 from pokercraft_local.visualize import plot_total
 
@@ -25,15 +26,9 @@ def export(main_path: Path, output_path: Path, nickname: str):
     current_time_strf = datetime.now().strftime("%Y%m%d_%H%M%S.%f")
 
     # Export CSV
-    net_profit: float = 0
-    with open(output_path / f"summaries_{current_time_strf}.csv", "w") as csv_file:
-        csv_file.write(
-            "num,id,start_time,name,buy_in,my_prize,my_entries,my_rank,net_profit\n"
-        )
-        for i, summary in enumerate(summaries):
-            net_profit += summary.profit
-            csv_file.write("%d,%s,%.2f\n" % (i + 1, summary, net_profit))
-        print(f"Exported CSV at {csv_file.name}")
+    csv_path = output_path / f"summaries_{current_time_strf}.csv"
+    export_csv(csv_path, summaries)
+    print(f"Exported CSV at {csv_path}")
 
     # Export plot HTML
     with open(output_path / f"result_{current_time_strf}.html", "w") as html_file:
