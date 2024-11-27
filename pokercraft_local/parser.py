@@ -5,11 +5,8 @@ from datetime import datetime
 from io import TextIOWrapper
 from pathlib import Path
 
+from .constants import ANY_INT, ANY_MONEY, STR_PATTERN
 from .data_structures import Currency, TournamentSummary
-
-STR_PATTERN = regex.Pattern[str]
-ANY_INT: STR_PATTERN = regex.compile(r"\d+")
-ANY_MONEY: STR_PATTERN = regex.compile(r"[\$¥฿₫₱₩]\d(\d|(,\d))*(\.[\d,]+)?")
 
 
 def convert_money_to_float(s: str, supposed_currency: Currency | None = None) -> float:
