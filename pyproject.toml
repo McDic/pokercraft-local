@@ -33,7 +33,7 @@ packages = ["pokercraft_local"]
 "pokercraft_local" = ["py.typed"]
 
 [tool.setuptools.dynamic]
-version = { attr = "pokercraft_local.VERSION" }
+version = { attr = "pokercraft_local.constants.VERSION" }
 dependencies = { file = ["requirements.txt"] }
 optional-dependencies = { dev = { file = ["requirements-dev.txt"] } }
 

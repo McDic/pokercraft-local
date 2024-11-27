@@ -1,7 +1,7 @@
 import re
 import typing
 
-VERSION = "1.1.2"
+VERSION = "1.1.3"
 
 BASE_HTML_FRAME: typing.Final[
     str
