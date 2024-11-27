@@ -36,13 +36,13 @@ jobs:
         env:
           THIS_OS: ${{ matrix.os }}
           TAG_VERSION: ${{ github.ref_name }}
-        run: zip -r run_gui-"$THIS_OS"-"$Env:TAG_VERSION".zip dist/run_gui/
+        run: zip -r run_gui-"$THIS_OS"-"$TAG_VERSION".zip dist/run_gui/
       - name: Compress binary files (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         env:
           TAG_VERSION: ${{ github.ref_name }}
         shell: pwsh
-        run: Compress-Archive -Path dist\run_gui -DestinationPath run_gui-windows-latest-"$TAG_VERSION".zip
+        run: Compress-Archive -Path dist\run_gui -DestinationPath run_gui-windows-latest-"$Env:TAG_VERSION".zip
       - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
