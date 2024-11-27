@@ -1,6 +1,5 @@
 import re as regex
 import typing
-import warnings
 from datetime import datetime
 from io import TextIOWrapper
 from pathlib import Path
