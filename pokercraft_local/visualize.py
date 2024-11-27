@@ -27,6 +27,10 @@ BASE_HTML_FRAME: typing.Final[
 DEFAULT_WINDOW_SIZES: tuple[int, ...] = (50, 100, 200, 400, 800)
 
 
+def log2_or_nan(x: float | typing.Any) -> float:
+    return math.log2(x) if x > 0 else math.nan
+
+
 def get_historical_charts(
     tournaments: list[TournamentSummary],
     max_data_points: int = 2000,
@@ -190,8 +194,8 @@ def get_historical_charts(
         patch={
             "type": "log",
             "range": [
-                math.log10(min_rolling_buyin) - 0.1,
-                math.log10(max_rolling_buyin) + 0.1,
+                math.log10(max(min_rolling_buyin, 0.1)) - 0.1,
+                math.log10(max(max_rolling_buyin, 0.1)) + 0.1,
             ],
         },
     )
@@ -229,9 +233,7 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
         horizontal_spacing=0.01,
     )
     fig1_common_options = {
-        "y": df_base["Relative Prize"].apply(
-            lambda x: math.log2(x) if x > 0 else np.nan
-        ),
+        "y": df_base["Relative Prize"].apply(log2_or_nan),
         "z": df_base["Relative Prize"],
         "customdata": np.stack((df_base["Tournament Name"],), axis=-1),
         "coloraxis": "coloraxis",
@@ -239,7 +241,7 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
     }
     figure1.add_trace(
         plgo.Histogram2d(
-            x=df_base["Buy In"].apply(math.log2),
+            x=df_base["Buy In"].apply(log2_or_nan),
             name="RR by Buy In",
             hovertemplate="Log2(RR)=%{y}<br>Log2(BuyIn)=%{x}<br>"
             "Got %{z}x profit in this region",
@@ -250,7 +252,7 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
     )
     figure1.add_trace(
         plgo.Histogram2d(
-            x=df_base["Total Entries"].apply(math.log2),
+            x=df_base["Total Entries"].apply(log2_or_nan),
             name="RR by Entries",
             hovertemplate="Log2(RR)=%{y}<br>"
             "Log2(TotalEntries)=%{x}<br>"
