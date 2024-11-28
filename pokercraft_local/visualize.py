@@ -227,8 +227,8 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
         plgo.Histogram2d(
             x=df_base["Buy In"].apply(log2_or_nan),
             name="RR by Buy In",
-            hovertemplate="Log2(RR)=%{y}<br>Log2(BuyIn)=%{x}<br>"
-            "Got %{z}x profit in this region",
+            hovertemplate="Log2(RR) = [%{y}]<br>Log2(BuyIn) = [%{x}]<br>"
+            "Got %{z:.2f}x profit in this region",
             **fig1_common_options,
         ),
         row=1,
@@ -238,8 +238,8 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
         plgo.Histogram2d(
             x=df_base["Total Entries"].apply(log2_or_nan),
             name="RR by Entries",
-            hovertemplate="Log2(RR)=%{y}<br>"
-            "Log2(TotalEntries)=%{x}<br>"
+            hovertemplate="Log2(RR) = [%{y}]<br>"
+            "Log2(TotalEntries) = [%{x}]<br>"
             "Got %{z:.2f}x profit in this region",
             **fig1_common_options,
         ),
