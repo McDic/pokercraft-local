@@ -18,7 +18,13 @@ def export_csv(target_path: Path, summaries: Iterable[TournamentSummary]) -> Non
             csv_file.write("%d,%s,%.2f\n" % (i + 1, summary, net_profit))
 
 
-def export(main_path: Path, output_path: Path, nickname: str) -> tuple[Path, Path]:
+def export(
+    *,
+    main_path: Path,
+    output_path: Path,
+    nickname: str,
+    allow_freerolls: bool,
+) -> tuple[Path, Path]:
     """
     Export data from given info,
     then return `csv_file_path` and `plot_file_path`.
@@ -29,7 +35,13 @@ def export(main_path: Path, output_path: Path, nickname: str) -> tuple[Path, Pat
         raise NotADirectoryError(f"{output_path} is not a directory")
 
     summaries = sorted(
-        set(PokercraftParser.crawl_files([main_path], follow_symlink=True)),
+        set(
+            PokercraftParser.crawl_files(
+                [main_path],
+                follow_symlink=True,
+                allow_freerolls=allow_freerolls,
+            )
+        ),
         key=lambda t: t.sorting_key(),
     )
     current_time_strf = datetime.now().strftime("%Y%m%d_%H%M%S.%f")

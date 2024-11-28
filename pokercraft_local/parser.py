@@ -155,7 +155,10 @@ class PokercraftParser:
 
     @classmethod
     def crawl_files(
-        cls, paths: typing.Iterable[Path], follow_symlink: bool = False
+        cls,
+        paths: typing.Iterable[Path],
+        follow_symlink: bool = True,
+        allow_freerolls: bool = False,
     ) -> typing.Generator[TournamentSummary, None, None]:
         """
         Crawl files and parse them, recursively.
@@ -163,14 +166,21 @@ class PokercraftParser:
         """
         for path in paths:
             if path.is_dir() and (not path.is_symlink() or follow_symlink):
-                yield from cls.crawl_files(path.iterdir())
+                yield from cls.crawl_files(
+                    path.iterdir(),
+                    follow_symlink=follow_symlink,
+                    allow_freerolls=allow_freerolls,
+                )
             elif (
                 path.is_file() and path.suffix == ".txt" and path.stem.startswith("GG")
             ):
                 with path.open("r", encoding="utf-8") as file:
                     try:
                         summary = cls.parse(file)
-                        yield summary
+                        if summary.buy_in == 0 and not allow_freerolls:
+                            print(f"Detected freeroll {summary.name}, skipping.")
+                        else:
+                            yield summary
                     except (ValueError, UnboundLocalError, StopIteration) as err:
                         print(
                             f"Failed to parse file {path}, skipping. "

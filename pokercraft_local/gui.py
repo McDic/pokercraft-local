@@ -18,7 +18,7 @@ class PokerCraftLocalGUI:
     def __init__(self) -> None:
         self._window: tk.Tk = tk.Tk()
         self._window.title("PokerCraft Local - By McDic")
-        self._window.geometry("350x175")
+        self._window.geometry("350x200")
         self._window.resizable(False, False)
 
         # Target directory
@@ -52,6 +52,17 @@ class PokerCraftLocalGUI:
         self._label_nickname.pack()
         self._input_nickname: tk.Entry = tk.Entry(self._window)
         self._input_nickname.pack()
+
+        # Allow freerolls
+        self._boolvar_allow_freerolls: tk.BooleanVar = tk.BooleanVar(self._window)
+        self._checkbox_allow_freerolls: tk.Checkbutton = tk.Checkbutton(
+            self._window,
+            text="Allow Freerolls",
+            variable=self._boolvar_allow_freerolls,
+            onvalue=True,
+            offvalue=False,
+        )
+        self._checkbox_allow_freerolls.pack()
 
         # Run button
         self._button_export: tk.Button = tk.Button(
@@ -118,8 +129,17 @@ class PokerCraftLocalGUI:
             )
             return
 
+        print("\n" + "=" * 60)
+        if self._boolvar_allow_freerolls.get():
+            print("Allowing freerolls on the graph.")
+        else:
+            print("Disallowing freerolls on the graph.")
+
         csv_path, plot_path = export_main(
-            self._data_directory, self._output_directory, nickname
+            main_path=self._data_directory,
+            output_path=self._output_directory,
+            nickname=nickname,
+            allow_freerolls=self._boolvar_allow_freerolls.get(),
         )
         showinfo(
             "Info from Pokercraft Local",
