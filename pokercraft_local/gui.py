@@ -4,6 +4,7 @@ from pathlib import Path
 from tkinter import filedialog
 from tkinter.messagebox import showinfo, showwarning
 
+from .constants import VERSION
 from .export import export as export_main
 
 
@@ -17,8 +18,8 @@ class PokerCraftLocalGUI:
 
     def __init__(self) -> None:
         self._window: tk.Tk = tk.Tk()
-        self._window.title("PokerCraft Local - By McDic")
-        self._window.geometry("350x200")
+        self._window.title(f"PokerCraft Local v{VERSION} - By McDic")
+        self._window.geometry("400x200")
         self._window.resizable(False, False)
 
         # Target directory
