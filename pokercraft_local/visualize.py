@@ -126,6 +126,26 @@ def get_historical_charts(
             col=1,
         )
 
+    figure.update_layout(
+        title="Historical Performance",
+        hovermode="x unified",
+        yaxis1={"tickformat": "$"},
+        yaxis2={"tickformat": ".2%"},
+        yaxis3={"tickformat": "$"},
+    )
+    figure.update_traces(xaxis="x")
+    figure.update_yaxes(
+        row=3,
+        col=1,
+        patch={
+            "type": "log",
+            "range": [
+                math.log10(max(min_rolling_buyin, 0.1)) - 0.1,
+                math.log10(max(max_rolling_buyin, 0.1)) + 0.1,
+            ],
+        },
+    )
+
     opacity_red = "rgba(255,0,0,0.25)"
     opacity_black = "rgba(0,0,0,0.25)"
     figure.add_hline(
@@ -140,8 +160,8 @@ def get_historical_charts(
             "font": {"color": opacity_red, "weight": 5, "size": 24},
             "yanchor": "top",
         },
+        exclude_empty_subplots=False,
     )
-
     for threshold, text in [
         (5.0, "Micro / Low"),
         (20.0, "Low / Mid"),
@@ -159,30 +179,9 @@ def get_historical_charts(
                 "font": {"color": opacity_black, "weight": 5, "size": 18},
                 "yanchor": "top",
             },
+            exclude_empty_subplots=False,
         )
-
-    figure.update_layout(
-        title="Historical Performance",
-        hovermode="x unified",
-        yaxis1={"tickformat": "$"},
-        yaxis2={"tickformat": "%"},
-        yaxis3={"tickformat": "$"},
-    )
-    figure.update_traces(xaxis="x")
-    figure.update_shapes(
-        xref="x", xsizemode="scaled", x0=1.0, x1=len(df_base.index) + 1
-    )
-    figure.update_yaxes(
-        row=3,
-        col=1,
-        patch={
-            "type": "log",
-            "range": [
-                math.log10(max(min_rolling_buyin, 0.1)) - 0.1,
-                math.log10(max(max_rolling_buyin, 0.1)) + 0.1,
-            ],
-        },
-    )
+    figure.update_shapes(xref="x domain", xsizemode="scaled", x0=0, x1=1)
     return figure
 
 
