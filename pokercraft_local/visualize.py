@@ -257,9 +257,9 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
     )
 
     for y, color, hline_label in [
-        (0.0, "white", "Break-even: 1x+ Profit"),
-        (2.0, "rgb(102, 102, 102)", "Good run: 4x+ Profit"),
-        (5.0, "rgb(46, 46, 46)", "Deep run: 32x+ Profit"),
+        (0.0, "white", "Break-even: 1x Profit"),
+        (2.0, "rgb(102, 102, 102)", "Good run: 4x Profit"),
+        (5.0, "rgb(46, 46, 46)", "Deep run: 32x Profit"),
     ]:
         figure1.add_hline(
             y=y,
