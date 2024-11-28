@@ -53,7 +53,7 @@ python run_cli.py -d (YOUR_DATA_FOLDER) -o (OUTPUT_FOLDER) -n (YOUR_GG_NICKNAME)
 ```
 
 For GUI, simply run `run_gui.py` or you can directly download binaries from [Releases](https://github.com/McDic/pokercraft-local/releases) to execute compiled program directly.
-When you start the GUI program, then you will be able to view something like following image.
+When you start the GUI program, then you will be able to view something like above image.
 Choose data directory and output directory, input your nickname, then run the process by clicking the bottom button.
 
 ```bash

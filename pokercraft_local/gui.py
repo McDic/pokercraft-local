@@ -57,7 +57,7 @@ class PokerCraftLocalGUI:
         self._boolvar_allow_freerolls: tk.BooleanVar = tk.BooleanVar(self._window)
         self._checkbox_allow_freerolls: tk.Checkbutton = tk.Checkbutton(
             self._window,
-            text="Allow Freerolls",
+            text="Include Freerolls",
             variable=self._boolvar_allow_freerolls,
             onvalue=True,
             offvalue=False,

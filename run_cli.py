@@ -27,16 +27,16 @@ if __name__ == "__main__":
         help="Nickname on GGNetwork",
     )
     parser.add_argument(
-        "--allow-freerolls",
+        "--include-freerolls",
         action="store_true",
         required=False,
-        help="Allow freerolls if this flag is provided",
+        help="Include freerolls if this flag is provided",
     )
     namespace = parser.parse_args()
     csv_path, plot_path = export(
         main_path=namespace.data,
         output_path=namespace.output,
         nickname=namespace.nickname,
-        allow_freerolls=namespace.allow_freerolls,
+        allow_freerolls=namespace.include_freerolls,
     )
     print(f"Exported CSV at {csv_path} and Plot at {plot_path}")
