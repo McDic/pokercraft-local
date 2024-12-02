@@ -1,8 +1,9 @@
 import re
 import typing
 
-VERSION: typing.Final[str] = "1.3.0"
+VERSION: typing.Final[str] = "1.3.1"
 
+# fmt: off
 BASE_HTML_FRAME: typing.Final[
     str
 ] = """
@@ -20,6 +21,7 @@ Pokercraft Local v{version}</a> provided by McDic</h1>
 """.format(
     version=VERSION
 )
+# fmt: on
 
 DEFAULT_WINDOW_SIZES: tuple[int, ...] = (50, 100, 200, 400, 800)
 
