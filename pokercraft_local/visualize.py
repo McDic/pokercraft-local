@@ -1,5 +1,6 @@
 import math
 import typing
+import warnings
 
 import numpy as np
 import pandas as pd  # type: ignore [import-untyped]
@@ -7,6 +8,7 @@ import plotly.express as px  # type: ignore [import-untyped]
 import plotly.graph_objects as plgo  # type: ignore [import-untyped]
 from plotly.subplots import make_subplots  # type: ignore [import-untyped]
 
+from .bankroll import analyze_bankroll
 from .constants import BASE_HTML_FRAME, DEFAULT_WINDOW_SIZES
 from .data_structures import TournamentBrand, TournamentSummary
 
@@ -187,20 +189,19 @@ def get_historical_charts(
 
 def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
     """
-    Get profit scatter chart.
+    Get profit scatter charts.
     """
-    non_freerolls = [t for t in tournaments if t.buy_in > 0]
     df_base = pd.DataFrame(
         {
-            "Tournament Name": [t.name for t in non_freerolls],
-            "Buy In": [t.buy_in for t in non_freerolls],
-            "Relative Prize": [t.my_prize / t.buy_in for t in non_freerolls],
-            "Prize Ratio": [t.my_prize / t.total_prize_pool for t in non_freerolls],
-            "Total Entries": [t.total_players for t in non_freerolls],
+            "Tournament Name": [t.name for t in tournaments],
+            "Buy In": [t.buy_in for t in tournaments],
+            "Relative Prize": [t.relative_return + 1 for t in tournaments],
+            "Prize Ratio": [t.my_prize / t.total_prize_pool for t in tournaments],
+            "Total Entries": [t.total_players for t in tournaments],
             "Tournament Brand": [
-                TournamentBrand.find(t.name).name for t in non_freerolls
+                TournamentBrand.find(t.name).name for t in tournaments
             ],
-            "Profitable": [t.profit > 0 for t in non_freerolls],
+            "Profitable": [t.profit > 0 for t in tournaments],
         }
     )
 
@@ -294,6 +295,56 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
     return [figure1, figure2]
 
 
+def get_bankroll_charts(
+    tournaments: list[TournamentSummary],
+    initial_capitals: typing.Iterable[int] = (10, 20, 50, 100, 200, 500),
+):
+    """
+    Get bankroll charts.
+    """
+    initial_capitals = tuple(initial_capitals)
+    try:
+        analyzed = analyze_bankroll(
+            tournaments,
+            initial_capitals=tuple(initial_capitals),
+            max_iteration=max(10000, len(tournaments) * 10),
+        )
+    except ValueError as err:
+        warnings.warn(
+            (
+                "Bankroll analysis failed with reason(%s)."
+                " Perhaps your relative returns are losing."
+            )
+            % (err,)
+        )
+        df_base = pd.DataFrame(
+            {
+                "Initial Capital": ["%.1f Buy-ins" % (ic,) for ic in initial_capitals],
+                "Bankruptcy Rate": [1.0 for _ in initial_capitals],
+                "Profitable Rate": [0.0 for _ in initial_capitals],
+            }
+        )
+    else:
+        df_base = pd.DataFrame(
+            {
+                "Initial Capital": ["%.1f Buy-ins" % (k,) for k in analyzed.keys()],
+                "Bankruptcy Rate": [v.get_bankruptcy_rate() for v in analyzed.values()],
+                "Profitable Rate": [v.get_profitable_rate() for v in analyzed.values()],
+            }
+        )
+
+    figure = px.bar(
+        df_base,
+        x="Initial Capital",
+        y=["Bankruptcy Rate", "Profitable Rate"],
+        title="Bankroll Analysis with Monte-Carlo Simulation",
+        color_discrete_sequence=["rgb(242, 111, 111)", "rgb(113, 222, 139)"],
+        text_auto=True,
+    )
+    figure.update_yaxes(tickformat="%", minallowed=0.0, maxallowed=1.0)
+    return figure
+
+
 def plot_total(
     nickname: str,
     tournaments: typing.Iterable[TournamentSummary],
@@ -314,6 +365,7 @@ def plot_total(
             window_sizes=window_sizes,
         ),
         *get_profit_scatter_charts(tournaments),
+        get_bankroll_charts(tournaments),
     ]
     return BASE_HTML_FRAME % (
         nickname,
