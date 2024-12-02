@@ -341,7 +341,7 @@ def get_bankroll_charts(
         color_discrete_sequence=["rgb(242, 111, 111)", "rgb(113, 222, 139)"],
         text_auto=True,
     )
-    figure.update_yaxes(tickformat="%", minallowed=0.0, maxallowed=1.0)
+    figure.update_yaxes(tickformat=".2%", minallowed=0.0, maxallowed=1.0)
     return figure
 
 
