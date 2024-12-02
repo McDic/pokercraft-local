@@ -8,9 +8,8 @@ from .data_structures import TournamentSummary
 def analyze_bankroll(
     summaries: list[TournamentSummary],
     *,
-    initial_capitals: tuple[int | float, ...],
+    initial_capital_and_exits: tuple[tuple[int | float, float], ...],
     max_iteration: int,
-    profit_exit_multiplier: float = 10.0,
     simulation_count: int = 25_000,
 ) -> dict[int | float, BankruptcyMetric]:
     """
@@ -23,7 +22,7 @@ def analyze_bankroll(
     ]
 
     results: dict[int | float, BankruptcyMetric] = {}
-    for initial_capital in initial_capitals:
+    for initial_capital, profit_exit_multiplier in initial_capital_and_exits:
         results[initial_capital] = calculate(
             initial_capital,
             relative_returns,

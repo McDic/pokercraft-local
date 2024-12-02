@@ -302,11 +302,10 @@ def get_bankroll_charts(
     """
     Get bankroll charts.
     """
-    initial_capitals = tuple(initial_capitals)
     try:
         analyzed = analyze_bankroll(
             tournaments,
-            initial_capitals=tuple(initial_capitals),
+            initial_capital_and_exits=tuple((ic, 0.0) for ic in initial_capitals),
             max_iteration=max(10000, len(tournaments) * 10),
         )
     except ValueError as err:
