@@ -65,9 +65,9 @@ class PokercraftParser:
     )
     LINE7_MY_RANK: STR_PATTERN = regex.compile(r"You finished the tournament in \d+.+")
     LINE8_MY_PRIZE: STR_PATTERN = regex.compile(
-        r"You (made \d+ re-entries and )?received a total of .+"
+        r"You (made \d+( re)?-entries and )?received a total of .+"
     )
-    LINE8_REENTRIES: STR_PATTERN = regex.compile(r"You made \d+ re-entries .+")
+    LINE8_REENTRIES: STR_PATTERN = regex.compile(r"You made \d+( re)?-entries .+")
     LINE8_ADVANCED_DAY1: STR_PATTERN = regex.compile(r"You have advanced to .+")
 
     @classmethod
@@ -135,6 +135,9 @@ class PokercraftParser:
                 t_my_prize = sum(
                     take_all_money(line, supposed_currency=first_detected_currency)
                 )
+                # Flip & Go displays "$0 Entry" as prize
+                if t_my_prize <= 0.0 and "$0 Entry" in line:
+                    t_my_prize = t_buy_in_pure + t_rake
 
             elif cls.LINE8_MY_PRIZE.fullmatch(line):
                 if cls.LINE8_REENTRIES.fullmatch(line):
