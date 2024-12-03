@@ -42,6 +42,8 @@ def get_historical_charts(
 
     # Profitable ratio
     profitable_expanding = df_base["Profitable"].expanding()
+    max_rolling_profitable: float = 0
+    min_rolling_profitable: float = 1
     df_base["Profitable Ratio"] = (
         profitable_expanding.sum() / profitable_expanding.count()
     )
@@ -50,6 +52,8 @@ def get_historical_charts(
         df_base[this_title] = (
             df_base["Profitable"].rolling(window_size).sum() / window_size
         )
+        max_rolling_profitable = max(max_rolling_profitable, df_base[this_title].max())
+        min_rolling_profitable = min(min_rolling_profitable, df_base[this_title].min())
 
     # Avg buy-in
     buyin_expanding = df_base["Buy In"].expanding()
@@ -137,7 +141,13 @@ def get_historical_charts(
         yaxis3={"tickformat": "$"},
     )
     figure.update_traces(xaxis="x")
-    figure.update_yaxes(row=2, col=1, minallowed=0, maxallowed=1)
+    figure.update_yaxes(
+        row=2,
+        col=1,
+        minallowed=0,
+        maxallowed=1,
+        range=[min_rolling_profitable - 0.015, max_rolling_profitable + 0.015],
+    )
     figure.update_yaxes(
         row=3,
         col=1,
