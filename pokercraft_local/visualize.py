@@ -128,6 +128,7 @@ def get_historical_charts(
             col=1,
         )
 
+    # Update layouts and axes
     figure.update_layout(
         title="Historical Performance",
         hovermode="x unified",
@@ -136,6 +137,7 @@ def get_historical_charts(
         yaxis3={"tickformat": "$"},
     )
     figure.update_traces(xaxis="x")
+    figure.update_yaxes(row=2, col=1, minallowed=0, maxallowed=1)
     figure.update_yaxes(
         row=3,
         col=1,
@@ -148,6 +150,7 @@ def get_historical_charts(
         },
     )
 
+    # Hlines
     opacity_red = "rgba(255,0,0,0.25)"
     opacity_black = "rgba(0,0,0,0.25)"
     figure.add_hline(
@@ -184,6 +187,7 @@ def get_historical_charts(
             exclude_empty_subplots=False,
         )
     figure.update_shapes(xref="x domain", xsizemode="scaled", x0=0, x1=1)
+
     return figure
 
 
