@@ -348,7 +348,7 @@ def get_bankroll_charts(
         x="Initial Capital",
         y=["Bankruptcy Rate", "Profitable Rate"],
         title=(
-            "Bankroll Analysis with Monte-Carlo Simulation"
+            "Bankroll Analysis with Monte-Carlo Simulation "
             "based on RR (Only for winning players)"
         ),
         color_discrete_sequence=["rgb(242, 111, 111)", "rgb(113, 222, 139)"],
