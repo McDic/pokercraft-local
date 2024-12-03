@@ -77,11 +77,7 @@ def get_historical_charts(
         x_title="Tournament Count",
         vertical_spacing=0.01,
     )
-    common_options = {
-        "x": df_base.index,
-        "mode": "lines",
-        "customdata": np.stack((df_base["Tournament Name"],), axis=-1),
-    }
+    common_options = {"x": df_base.index, "mode": "lines"}
 
     for col in ("Net Profit", "Net Rake", "Ideal Profit w.o. Rake"):
         figure.add_trace(
@@ -261,7 +257,7 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
         row=1,
         col=2,
     )
-    figure1.update_layout(title="Relative Prize Returns")
+    figure1.update_layout(title="Relative Prize Returns (RR = Prize / BuyIn)")
     figure1.update_coloraxes(
         colorscale=[
             [0, "rgba(62, 51, 212, 0.25)"],  # blue
@@ -351,11 +347,56 @@ def get_bankroll_charts(
         df_base,
         x="Initial Capital",
         y=["Bankruptcy Rate", "Profitable Rate"],
-        title="Bankroll Analysis with Monte-Carlo Simulation",
+        title=(
+            "Bankroll Analysis with Monte-Carlo Simulation"
+            "based on RR (Only for winning players)"
+        ),
         color_discrete_sequence=["rgb(242, 111, 111)", "rgb(113, 222, 139)"],
         text_auto=True,
     )
     figure.update_yaxes(tickformat=".2%", minallowed=0.0, maxallowed=1.0)
+    return figure
+
+
+def get_profit_pie(tournaments: list[TournamentSummary]):
+    """
+    Get the pie chart of absolute profits from past tournament summaries.
+    """
+    df_base = pd.DataFrame(
+        {
+            "ID": [t.id for t in tournaments],
+            "Tournament Name": [t.name for t in tournaments],
+            "Prize": [t.my_prize for t in tournaments],
+            "Date": [t.start_time for t in tournaments],
+        }
+    )
+
+    total_prizes: float = df_base["Prize"].sum()
+    other_condition = df_base["Prize"] < total_prizes * 0.005
+    df_base.loc[other_condition, "ID"] = 0
+    df_base.loc[other_condition, "Tournament Name"] = "Others"
+    df_base.loc[other_condition, "Date"] = math.nan
+    df_base = df_base.groupby("ID").aggregate(
+        {"Prize": "sum", "Tournament Name": "first", "Date": "first"}
+    )
+    df_base["ID"] = df_base.index
+
+    figure = px.pie(
+        df_base,
+        values="Prize",
+        names="ID",
+        title="Your Prizes (Small prizes are grouped as 'Others')",
+        hole=0.3,
+    )
+    df_base["Custom Data"] = (
+        df_base["Tournament Name"] + " (" + df_base["Date"].dt.strftime("%Y%m%d") + ")"
+    )
+    df_base.fillna({"Custom Data": "Others"}, inplace=True)
+    figure.update_traces(
+        customdata=df_base["Custom Data"],
+        showlegend=False,
+        hovertemplate="%{customdata[0]}: %{value:$,.2f}",
+    )
     return figure
 
 
@@ -380,6 +421,7 @@ def plot_total(
         ),
         *get_profit_scatter_charts(tournaments),
         get_bankroll_charts(tournaments),
+        get_profit_pie(tournaments),
     ]
     return BASE_HTML_FRAME % (
         nickname,
