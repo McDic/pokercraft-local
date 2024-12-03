@@ -368,7 +368,7 @@ def plot_total(
     ]
     return BASE_HTML_FRAME % (
         nickname,
-        "\n".join(
+        "<hr>".join(
             fig.to_html(include_plotlyjs=("cdn" if i == 0 else False), full_html=False)
             for i, fig in enumerate(figures)
         ),
