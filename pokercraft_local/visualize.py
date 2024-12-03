@@ -257,7 +257,9 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
         row=1,
         col=2,
     )
-    figure1.update_layout(title="Relative Prize Returns (RR = Prize / BuyIn)")
+    figure1.update_layout(
+        title="Relative Prize Returns (RR = Prize / BuyIn / 1 + Re-entries)"
+    )
     figure1.update_coloraxes(
         colorscale=[
             [0, "rgba(62, 51, 212, 0.25)"],  # blue

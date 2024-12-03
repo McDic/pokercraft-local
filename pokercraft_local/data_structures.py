@@ -98,11 +98,15 @@ class TournamentSummary:
         Returns the relative return. For examples,
         - $3 prize from a $1 buy-in returns 2.0
         - No prize from a $2 buy-in returns -1.0
-        - $0.25 prize from a $1 buy-in returns -0.75
+        - $5 prize from a $1 buy-in with 3 re-entries returns 0.25
 
         For freerolls, this returns `NaN`.
         """
-        return (self.my_prize / self.buy_in) - 1 if self.buy_in > 0 else math.nan
+        return (
+            (self.my_prize / self.buy_in / self.my_entries) - 1
+            if self.buy_in > 0
+            else math.nan
+        )
 
     def __str__(self) -> str:
         return "%d,%s,%s,%.2f,%.2f,%d,#%d" % (
