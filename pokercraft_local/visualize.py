@@ -154,9 +154,10 @@ def get_historical_charts(
         patch={
             "type": "log",
             "range": [
-                math.log10(max(min_rolling_buyin, 0.1)) - 0.1,
-                math.log10(max(max_rolling_buyin, 0.1)) + 0.1,
+                math.log10(max(min_rolling_buyin, 0.1)) - 0.05,
+                math.log10(max(max_rolling_buyin, 0.1)) + 0.05,
             ],
+            "nticks": 8,
         },
     )
 
