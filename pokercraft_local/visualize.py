@@ -386,7 +386,7 @@ def get_profit_pie(tournaments: list[TournamentSummary]):
         values="Prize",
         names="ID",
         title="Your Prizes (Small prizes are grouped as 'Others')",
-        hole=0.3,
+        hole=0,
     )
     df_base["Custom Data"] = (
         df_base["Tournament Name"] + " (" + df_base["Date"].dt.strftime("%Y%m%d") + ")"
@@ -396,6 +396,7 @@ def get_profit_pie(tournaments: list[TournamentSummary]):
         customdata=df_base["Custom Data"],
         showlegend=False,
         hovertemplate="%{customdata[0]}: %{value:$,.2f}",
+        pull=[0.075 if id_ == 0 else 0 for id_ in df_base.index],
     )
     return figure
 
