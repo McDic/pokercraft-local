@@ -90,3 +90,5 @@ Note that plotly javascripts are included by CDN, so you need working internet c
 - Average Buy In Amount chart
 - Relative Prize Return chart
 - ITM Scatters chart
+- Bankroll Simulation Analysis chart
+- Prize Pie chart
