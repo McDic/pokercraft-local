@@ -198,7 +198,7 @@ def get_historical_charts(
     return figure
 
 
-def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
+def get_profit_scatter_chart(tournaments: list[TournamentSummary]):
     """
     Get profit scatter charts.
     """
@@ -216,7 +216,7 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
         }
     )
 
-    figure1 = make_subplots(
+    figure = make_subplots(
         1,
         2,
         shared_yaxes=True,
@@ -234,7 +234,7 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
         "coloraxis": "coloraxis",
         "histfunc": "sum",
     }
-    figure1.add_trace(
+    figure.add_trace(
         plgo.Histogram2d(
             x=df_base["Buy In"].apply(log2_or_nan),
             name="RR by Buy In",
@@ -245,7 +245,7 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
         row=1,
         col=1,
     )
-    figure1.add_trace(
+    figure.add_trace(
         plgo.Histogram2d(
             x=df_base["Total Entries"].apply(log2_or_nan),
             name="RR by Entries",
@@ -257,10 +257,10 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
         row=1,
         col=2,
     )
-    figure1.update_layout(
+    figure.update_layout(
         title="Relative Prize Returns (RR = Prize / BuyIn / (1 + Re-entries))"
     )
-    figure1.update_coloraxes(
+    figure.update_coloraxes(
         colorscale=[
             [0, "rgba(62, 51, 212, 0.25)"],  # blue
             [0.03, "rgba(135, 232, 26, 0.5)"],  # green
@@ -275,7 +275,7 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
         (2.0, "rgb(102, 102, 102)", "Good run: 4x Profit"),
         (5.0, "rgb(46, 46, 46)", "Deep run: 32x Profit"),
     ]:
-        figure1.add_hline(
+        figure.add_hline(
             y=y,
             line_color=color,
             line_dash="dash",
@@ -289,23 +289,7 @@ def get_profit_scatter_charts(tournaments: list[TournamentSummary]):
             },
         )
 
-    df_base["Dot Size Multiplier"] = df_base["Relative Prize"].apply(
-        lambda x: max(1 / 3.0, x ** (1 / 3.0))
-    )
-    figure2 = px.scatter(
-        df_base,
-        x="Total Entries",
-        y="Buy In",
-        size="Dot Size Multiplier",
-        hover_data=["Relative Prize", "Prize Ratio"],
-        color="Profitable",
-        log_x=True,
-        log_y=True,
-        title="ITM Scatters",
-        size_max=45,
-    )
-
-    return [figure1, figure2]
+    return figure
 
 
 def get_bankroll_charts(
@@ -422,7 +406,7 @@ def plot_total(
             max_data_points=max_data_points,
             window_sizes=window_sizes,
         ),
-        *get_profit_scatter_charts(tournaments),
+        get_profit_scatter_chart(tournaments),
         get_bankroll_charts(tournaments),
         get_profit_pie(tournaments),
     ]
