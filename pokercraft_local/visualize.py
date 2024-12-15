@@ -261,19 +261,13 @@ def get_profit_scatter_chart(tournaments: list[TournamentSummary]):
         title="Relative Prize Returns (RR = Prize / BuyIn / (1 + Re-entries))"
     )
     figure.update_coloraxes(
-        colorscale=[
-            [0, "rgba(62, 51, 212, 0.25)"],  # blue
-            [0.03, "rgba(135, 232, 26, 0.5)"],  # green
-            [0.1, "rgba(232, 137, 26, 0.75)"],  # orange
-            [0.3, "rgba(217, 17, 41, 0.75)"],  # red
-            [1, "rgba(230, 36, 228, 0.75)"],  # purple
-        ],
+        colorscale=[[0, "rgba(255, 255, 255, 0.6)"], [1, "rgba(0, 0, 0, 0.6)"]],
     )
 
     for y, color, hline_label in [
-        (0.0, "white", "Break-even: 1x Profit"),
-        (2.0, "rgb(102, 102, 102)", "Good run: 4x Profit"),
-        (5.0, "rgb(46, 46, 46)", "Deep run: 32x Profit"),
+        (0.0, "rgb(140, 140, 140)", "Break-even: 1x Profit"),
+        (2.0, "rgb(90, 90, 90)", "Good run: 4x Profit"),
+        (5.0, "rgb(40, 40, 40)", "Deep run: 32x Profit"),
     ]:
         figure.add_hline(
             y=y,
