@@ -308,7 +308,7 @@ def get_profit_heatmap_charts(tournaments: list[TournamentSummary]):
                 "text": hline_label,
                 "textposition": "start",
                 "font": {"color": color, "weight": 5, "size": 20},
-                "yanchor": "top",
+                "yanchor": "bottom",
             },
         )
 
