@@ -216,21 +216,27 @@ def get_profit_heatmap_charts(tournaments: list[TournamentSummary]):
         }
     )
 
+    BLACK_WHITE_COLORSCALE = [
+        [0, "rgba(255, 255, 255, 0.6)"],
+        [1, "rgba(0, 0, 0, 0.6)"],
+    ]
+
     figure = make_subplots(
         1,
-        2,
+        3,
         shared_yaxes=True,
         column_titles=[
-            "By Buy In amount (Nonzero profit only)",
-            "By Total Entries (Nonzero profit only)",
+            "By Buy In amount<br>(Nonzero profit only)",
+            "By Total Entries<br>(Nonzero profit only)",
+            "Marginal Distribution",
         ],
         y_title="Relative Prize Return",
         horizontal_spacing=0.01,
     )
     fig1_common_options = {
         "y": df_base["Relative Prize"].apply(log2_or_nan),
+        "ybins": {"size": 1.0},
         "z": df_base["Relative Prize"],
-        "customdata": np.stack((df_base["Tournament Name"],), axis=-1),
         "coloraxis": "coloraxis",
         "histfunc": "sum",
     }
@@ -257,12 +263,28 @@ def get_profit_heatmap_charts(tournaments: list[TournamentSummary]):
         row=1,
         col=2,
     )
+
+    # Marginal distribution
+    figure.add_trace(
+        plgo.Histogram(
+            x=df_base["Relative Prize"],
+            y=fig1_common_options["y"],
+            name="Marginal RR",
+            histfunc=fig1_common_options["histfunc"],
+            orientation="h",
+            ybins=fig1_common_options["ybins"],
+            hovertemplate="Log2(RR) = [%{y}]<br>"
+            "Got %{x:.2f}x total profit in this region",
+            marker={"color": "rgba(70,70,70,0.35)"},
+        ),
+        row=1,
+        col=3,
+    )
+
     figure.update_layout(
         title="Relative Prize Returns (RR = Prize / BuyIn / (1 + Re-entries))"
     )
-    figure.update_coloraxes(
-        colorscale=[[0, "rgba(255, 255, 255, 0.6)"], [1, "rgba(0, 0, 0, 0.6)"]],
-    )
+    figure.update_coloraxes(colorscale=BLACK_WHITE_COLORSCALE)
 
     for y, color, hline_label in [
         (0.0, "rgb(140, 140, 140)", "Break-even: 1x Profit"),
