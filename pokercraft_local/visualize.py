@@ -365,6 +365,8 @@ def get_bankroll_charts(
         color_discrete_sequence=["rgb(242, 111, 111)", "rgb(113, 222, 139)"],
         text_auto=True,
     )
+    figure.update_layout(legend_title_text="Metric")
+    figure.update_traces(hovertemplate="%{x}: %{y:.2%}")
     figure.update_xaxes(fixedrange=True)
     figure.update_yaxes(
         tickformat=".2%",
