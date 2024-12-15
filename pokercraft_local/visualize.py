@@ -198,7 +198,7 @@ def get_historical_charts(
     return figure
 
 
-def get_profit_scatter_chart(tournaments: list[TournamentSummary]):
+def get_profit_heatmap_charts(tournaments: list[TournamentSummary]):
     """
     Get profit scatter charts.
     """
@@ -283,6 +283,8 @@ def get_profit_scatter_chart(tournaments: list[TournamentSummary]):
             },
         )
 
+    figure.update_xaxes(fixedrange=True)
+    figure.update_yaxes(fixedrange=True)
     return figure
 
 
@@ -334,7 +336,14 @@ def get_bankroll_charts(
         color_discrete_sequence=["rgb(242, 111, 111)", "rgb(113, 222, 139)"],
         text_auto=True,
     )
-    figure.update_yaxes(tickformat=".2%", minallowed=0.0, maxallowed=1.0)
+    figure.update_xaxes(fixedrange=True)
+    figure.update_yaxes(
+        tickformat=".2%",
+        minallowed=0.0,
+        maxallowed=1.0,
+        fixedrange=True,
+    )
+    figure.update_layout(modebar_remove=["select2d", "lasso2d"])
     return figure
 
 
@@ -400,7 +409,7 @@ def plot_total(
             max_data_points=max_data_points,
             window_sizes=window_sizes,
         ),
-        get_profit_scatter_chart(tournaments),
+        get_profit_heatmap_charts(tournaments),
         get_bankroll_charts(tournaments),
         get_profit_pie(tournaments),
     ]
