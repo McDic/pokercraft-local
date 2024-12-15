@@ -1,7 +1,7 @@
 import re
 import typing
 
-VERSION: typing.Final[str] = "1.4.1"
+VERSION: typing.Final[str] = "1.5.0"
 
 # fmt: off
 BASE_HTML_FRAME: typing.Final[
