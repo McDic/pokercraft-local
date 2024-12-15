@@ -135,6 +135,13 @@ def get_historical_charts(
         yaxis1={"tickformat": "$"},
         yaxis2={"tickformat": ".2%"},
         yaxis3={"tickformat": "$"},
+        legend_groupclick="toggleitem",
+    )
+    figure.update_traces(
+        visible="legendonly",
+        selector=(
+            lambda barline: barline.name in ("Net Rake",) or "800" in barline.name
+        ),
     )
     figure.update_traces(xaxis="x")
     figure.update_yaxes(
