@@ -16,9 +16,12 @@ BANKROLL_PLOT_TITLE: typing.Final[str] = (
     "Bankroll Analysis with Monte-Carlo Simulation "
     "based on RR (Only if your performance is winning)"
 )
+
+# fmt: off
 PRIZE_PIE_CHART_TITLE: typing.Final[
     str
 ] = "Your Prizes (Small prizes are grouped as 'Others')"
+# fmt: on
 
 TRANSLATION: typing.Final[dict[Language, dict[str, str]]] = {
     Language.KOREAN: {
