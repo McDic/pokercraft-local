@@ -12,6 +12,7 @@ from .bankroll import analyze_bankroll
 from .constants import BASE_HTML_FRAME, DEFAULT_WINDOW_SIZES
 from .data_structures import TournamentBrand, TournamentSummary
 from .translate import (
+    RR_PLOT_TITLE,
     Language,
     get_html_title,
     get_software_credits,
@@ -26,9 +27,9 @@ def log2_or_nan(x: float | typing.Any) -> float:
 
 def get_historical_charts(
     tournaments: list[TournamentSummary],
+    lang: Language,
     max_data_points: int = 2000,
     window_sizes: tuple[int, ...] = DEFAULT_WINDOW_SIZES,
-    lang: Language = Language.ENGLISH,
 ):
     """
     Get historical charts.
@@ -219,7 +220,10 @@ def get_historical_charts(
     return figure
 
 
-def get_profit_heatmap_charts(tournaments: list[TournamentSummary]):
+def get_profit_heatmap_charts(
+    tournaments: list[TournamentSummary],
+    lang: Language,
+):
     """
     Get profit scatter charts.
     """
@@ -237,21 +241,27 @@ def get_profit_heatmap_charts(tournaments: list[TournamentSummary]):
         }
     )
 
-    BLACK_WHITE_COLORSCALE = [
+    BLACK_WHITE_COLORSCALE: typing.Final[list[list]] = [
         [0, "rgba(255, 255, 255, 0.6)"],
         [1, "rgba(0, 0, 0, 0.6)"],
     ]
+    NONZERO_PROFIT_ONLY: typing.Final[str] = translate_to(lang, "Nonzero prize only")
+    GOT_X_PROFIT: typing.Final[str] = translate_to(
+        lang, "Got %sx profit in this region"
+    )
 
     figure = make_subplots(
         1,
         3,
         shared_yaxes=True,
         column_titles=[
-            "By Buy In amount<br>(Nonzero profit only)",
-            "By Total Entries<br>(Nonzero profit only)",
-            "Marginal Distribution",
+            "%s<br>(%s)"
+            % (translate_to(lang, "By Buy In Amount"), NONZERO_PROFIT_ONLY),
+            "%s<br>(%s)"
+            % (translate_to(lang, "By Total Entries"), NONZERO_PROFIT_ONLY),
+            translate_to(lang, "Marginal RR Distribution"),
         ],
-        y_title="Relative Prize Return",
+        y_title=translate_to(lang, "Relative Prize Return (RR)"),
         horizontal_spacing=0.01,
     )
     fig1_common_options = {
@@ -264,9 +274,11 @@ def get_profit_heatmap_charts(tournaments: list[TournamentSummary]):
     figure.add_trace(
         plgo.Histogram2d(
             x=df_base["Buy In"].apply(log2_or_nan),
-            name="RR by Buy In",
-            hovertemplate="Log2(RR) = [%{y}]<br>Log2(BuyIn) = [%{x}]<br>"
-            "Got %{z:.2f}x profit in this region",
+            name=translate_to(lang, "RR by Buy In"),
+            hovertemplate="Log2(RR) = [%{y}]<br>Log2("
+            + translate_to(lang, "Buy In")
+            + ") = [%{x}]<br>"
+            + (GOT_X_PROFIT % ("%{z:.2f}",)),
             **fig1_common_options,
         ),
         row=1,
@@ -275,10 +287,11 @@ def get_profit_heatmap_charts(tournaments: list[TournamentSummary]):
     figure.add_trace(
         plgo.Histogram2d(
             x=df_base["Total Entries"].apply(log2_or_nan),
-            name="RR by Entries",
-            hovertemplate="Log2(RR) = [%{y}]<br>"
-            "Log2(TotalEntries) = [%{x}]<br>"
-            "Got %{z:.2f}x profit in this region",
+            name=translate_to(lang, "RR by Entries"),
+            hovertemplate="Log2(RR) = [%{y}]<br>Log2("
+            + translate_to(lang, "Total Entries")
+            + ") = [%{x}]<br>"
+            + (GOT_X_PROFIT % ("%{z:.2f}",)),
             **fig1_common_options,
         ),
         row=1,
@@ -290,21 +303,18 @@ def get_profit_heatmap_charts(tournaments: list[TournamentSummary]):
         plgo.Histogram(
             x=df_base["Relative Prize"],
             y=fig1_common_options["y"],
-            name="Marginal RR",
+            name=translate_to(lang, "Marginal RR"),
             histfunc=fig1_common_options["histfunc"],
             orientation="h",
             ybins=fig1_common_options["ybins"],
-            hovertemplate="Log2(RR) = [%{y}]<br>"
-            "Got %{x:.2f}x total profit in this region",
+            hovertemplate="Log2(RR) = [%{y}]<br>" + (GOT_X_PROFIT % ("%{x:.2f}",)),
             marker={"color": "rgba(70,70,70,0.35)"},
         ),
         row=1,
         col=3,
     )
 
-    figure.update_layout(
-        title="Relative Prize Returns (RR = Prize / BuyIn / (1 + Re-entries))"
-    )
+    figure.update_layout(title=translate_to(lang, RR_PLOT_TITLE))
     figure.update_coloraxes(colorscale=BLACK_WHITE_COLORSCALE)
 
     for y, color, hline_label in [
@@ -319,7 +329,7 @@ def get_profit_heatmap_charts(tournaments: list[TournamentSummary]):
             row=1,
             col="all",
             label={
-                "text": hline_label,
+                "text": translate_to(lang, hline_label),
                 "textposition": "start",
                 "font": {"color": color, "weight": 5, "size": 20},
                 "yanchor": "bottom",
@@ -452,11 +462,11 @@ def plot_total(
     figures = [
         get_historical_charts(
             tournaments,
+            lang,
             max_data_points=max_data_points,
             window_sizes=window_sizes,
-            lang=lang,
         ),
-        get_profit_heatmap_charts(tournaments),
+        get_profit_heatmap_charts(tournaments, lang),
         get_bankroll_charts(tournaments),
         get_profit_pie(tournaments),
     ]
