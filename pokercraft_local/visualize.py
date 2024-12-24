@@ -9,8 +9,9 @@ import plotly.graph_objects as plgo  # type: ignore [import-untyped]
 from plotly.subplots import make_subplots  # type: ignore [import-untyped]
 
 from .bankroll import analyze_bankroll
-from .constants import BASE_HTML_FRAME, DEFAULT_WINDOW_SIZES
+from .constants import BASE_HTML_FRAME, DEFAULT_WINDOW_SIZES, POKERCRAFT_AHREF
 from .data_structures import TournamentBrand, TournamentSummary
+from .translate import SOFTWARE_CREDITS_FRAME, TITLE_FRAME, Language, translate_to
 
 
 def log2_or_nan(x: float | typing.Any) -> float:
@@ -429,6 +430,7 @@ def plot_total(
     ),
     max_data_points: int = 2000,
     window_sizes: tuple[int, ...] = DEFAULT_WINDOW_SIZES,
+    lang: Language = Language.ENGLISH,
 ) -> str:
     """
     Plots the total prize pool of tournaments.
@@ -444,10 +446,12 @@ def plot_total(
         get_bankroll_charts(tournaments),
         get_profit_pie(tournaments),
     ]
-    return BASE_HTML_FRAME % (
-        nickname,
-        "<hr>".join(
+    return BASE_HTML_FRAME.format(
+        title=translate_to(lang, TITLE_FRAME) % (nickname,),
+        plots="<hr>".join(
             fig.to_html(include_plotlyjs=("cdn" if i == 0 else False), full_html=False)
             for i, fig in enumerate(figures)
         ),
+        software_credits=translate_to(lang, SOFTWARE_CREDITS_FRAME)
+        % (POKERCRAFT_AHREF,),
     )

@@ -4,6 +4,7 @@ from typing import Iterable
 
 from .data_structures import TournamentSummary
 from .parser import PokercraftParser
+from .translate import Language
 from .visualize import plot_total
 
 
@@ -24,6 +25,8 @@ def export(
     output_path: Path,
     nickname: str,
     allow_freerolls: bool,
+    lang: Language,
+    exclude_csv: bool = True,
 ) -> tuple[Path, Path]:
     """
     Export data from given info,
@@ -48,11 +51,12 @@ def export(
 
     # Export CSV
     csv_path = output_path / f"summaries_{current_time_strf}.csv"
-    export_csv(csv_path, summaries)
+    if not exclude_csv:
+        export_csv(csv_path, summaries)
 
     # Export plot HTML
     plot_path = output_path / f"result_{current_time_strf}.html"
     with open(plot_path, "w") as html_file:
-        html_file.write(plot_total(nickname, summaries))
+        html_file.write(plot_total(nickname, summaries, lang=lang))
 
     return csv_path, plot_path

@@ -6,6 +6,7 @@ from tkinter.messagebox import showinfo, showwarning
 
 from .constants import VERSION
 from .export import export as export_main
+from .translate import Language
 
 
 class PokerCraftLocalGUI:
@@ -141,6 +142,7 @@ class PokerCraftLocalGUI:
             output_path=self._output_directory,
             nickname=nickname,
             allow_freerolls=self._boolvar_allow_freerolls.get(),
+            lang=Language.ENGLISH,
         )
         showinfo(
             "Info from Pokercraft Local",
