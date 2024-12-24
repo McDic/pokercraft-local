@@ -13,6 +13,7 @@ from .constants import BASE_HTML_FRAME, DEFAULT_WINDOW_SIZES
 from .data_structures import TournamentBrand, TournamentSummary
 from .translate import (
     BANKROLL_PLOT_TITLE,
+    PRIZE_PIE_CHART_TITLE,
     RR_PLOT_TITLE,
     Language,
     get_html_title,
@@ -404,7 +405,10 @@ def get_bankroll_charts(
     return figure
 
 
-def get_profit_pie(tournaments: list[TournamentSummary]) -> plgo.Figure:
+def get_profit_pie(
+    tournaments: list[TournamentSummary],
+    lang: Language,
+) -> plgo.Figure:
     """
     Get the pie chart of absolute profits from past tournament summaries.
     """
@@ -431,13 +435,13 @@ def get_profit_pie(tournaments: list[TournamentSummary]) -> plgo.Figure:
         df_base,
         values="Prize",
         names="ID",
-        title="Your Prizes (Small prizes are grouped as 'Others')",
+        title=translate_to(lang, PRIZE_PIE_CHART_TITLE),
         hole=0,
     )
     df_base["Custom Data"] = (
         df_base["Tournament Name"] + " (" + df_base["Date"].dt.strftime("%Y%m%d") + ")"
     )
-    df_base.fillna({"Custom Data": "Others"}, inplace=True)
+    df_base.fillna({"Custom Data": translate_to(lang, "Others")}, inplace=True)
     figure.update_traces(
         customdata=df_base["Custom Data"],
         showlegend=False,
@@ -470,7 +474,7 @@ def plot_total(
         ),
         get_profit_heatmap_charts(tournaments, lang),
         get_bankroll_charts(tournaments, lang),
-        get_profit_pie(tournaments),
+        get_profit_pie(tournaments, lang),
     ]
     return BASE_HTML_FRAME.format(
         title=get_html_title(nickname, lang),

@@ -16,6 +16,9 @@ BANKROLL_PLOT_TITLE: typing.Final[str] = (
     "Bankroll Analysis with Monte-Carlo Simulation "
     "based on RR (Only if your performance is winning)"
 )
+PRIZE_PIE_CHART_TITLE: typing.Final[
+    str
+] = "Your Prizes (Small prizes are grouped as 'Others')"
 
 TRANSLATION: typing.Final[dict[Language, dict[str, str]]] = {
     Language.KOREAN: {
@@ -61,6 +64,9 @@ TRANSLATION: typing.Final[dict[Language, dict[str, str]]] = {
         "Bankruptcy Rate": "파산 확률",
         "Survival Rate": "생존 확률",
         "%.1f Buy-ins": "%.1f 바이인",
+        # Prize Pie Chart
+        PRIZE_PIE_CHART_TITLE: "당신의 상금 분포 (작은 상금은 '기타'로 분류됨)",
+        "Others": "기타",
     },
 }
 
