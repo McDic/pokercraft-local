@@ -11,7 +11,13 @@ from plotly.subplots import make_subplots  # type: ignore [import-untyped]
 from .bankroll import analyze_bankroll
 from .constants import BASE_HTML_FRAME, DEFAULT_WINDOW_SIZES
 from .data_structures import TournamentBrand, TournamentSummary
-from .translate import Language, get_html_title, get_software_credits, translate_to
+from .translate import (
+    Language,
+    get_html_title,
+    get_software_credits,
+    get_translated_column_moving_average,
+    translate_to,
+)
 
 
 def log2_or_nan(x: float | typing.Any) -> float:
@@ -22,6 +28,7 @@ def get_historical_charts(
     tournaments: list[TournamentSummary],
     max_data_points: int = 2000,
     window_sizes: tuple[int, ...] = DEFAULT_WINDOW_SIZES,
+    lang: Language = Language.ENGLISH,
 ):
     """
     Get historical charts.
@@ -74,8 +81,11 @@ def get_historical_charts(
         rows=3,
         cols=1,
         shared_xaxes=True,
-        row_titles=["Net Profit & Rake", "Profitable Ratio", "Average Buy In"],
-        x_title="Tournament Count",
+        row_titles=[
+            translate_to(lang, t)
+            for t in ["Net Profit & Rake", "Profitable Ratio", "Average Buy In"]
+        ],
+        x_title=translate_to(lang, "Tournament Count"),
         vertical_spacing=0.01,
     )
     common_options = {"x": df_base.index, "mode": "lines"}
@@ -85,8 +95,8 @@ def get_historical_charts(
             plgo.Scatter(
                 y=df_base[col],
                 legendgroup="Profit",
-                legendgrouptitle_text="Profits & Rakes",
-                name=col,
+                legendgrouptitle_text=translate_to(lang, "Profits & Rakes"),
+                name=translate_to(lang, col),
                 hovertemplate="%{y:$,.2f}",
                 **common_options,
             ),
@@ -100,28 +110,27 @@ def get_historical_charts(
             if window_size == 0
             else f"Profitable Ratio W{window_size}"
         )
-        name = "Since 0" if window_size == 0 else f"Recent {window_size}"
-
         figure.add_trace(
             plgo.Scatter(
                 y=df_base[pr_col],
                 meta=[y * 100 for y in df_base[pr_col]],
                 legendgroup="Profitable Ratio",
-                legendgrouptitle_text="Profitable Ratio",
-                name=name,
+                legendgrouptitle_text=translate_to(lang, "Profitable Ratio"),
+                name=get_translated_column_moving_average(lang, window_size),
                 hovertemplate="%{meta:.3f}%",
                 **common_options,
             ),
             row=2,
             col=1,
         )
+
         avb_col = "Avg Buy In" if window_size == 0 else f"Avg Buy In W{window_size}"
         figure.add_trace(
             plgo.Scatter(
                 y=df_base[avb_col],
                 legendgroup="Avg Buy In",
-                legendgrouptitle_text="Avg Buy In",
-                name=name,
+                legendgrouptitle_text=translate_to(lang, "Avg Buy In"),
+                name=get_translated_column_moving_average(lang, window_size),
                 hovertemplate="%{y:$,.2f}",
                 **common_options,
             ),
@@ -131,7 +140,7 @@ def get_historical_charts(
 
     # Update layouts and axes
     figure.update_layout(
-        title="Historical Performance",
+        title=translate_to(lang, "Historical Performance"),
         hovermode="x unified",
         yaxis1={"tickformat": "$"},
         yaxis2={"tickformat": ".2%"},
@@ -141,7 +150,11 @@ def get_historical_charts(
     figure.update_traces(
         visible="legendonly",
         selector=(
-            lambda barline: barline.name in ("Net Rake",) or "800" in barline.name
+            lambda barline: (
+                barline.name
+                in [translate_to(any_lang, "Net Rake") for any_lang in Language]
+            )
+            or ("800" in barline.name)
         ),
     )
     figure.update_traces(xaxis="x")
@@ -175,7 +188,7 @@ def get_historical_charts(
         row=1,
         col=1,
         label={
-            "text": "Break-even",
+            "text": translate_to(lang, "Break-even"),
             "textposition": "end",
             "font": {"color": opacity_red, "weight": 5, "size": 24},
             "yanchor": "top",
@@ -194,7 +207,7 @@ def get_historical_charts(
             row=3,
             col=1,
             label={
-                "text": text,
+                "text": translate_to(lang, text),
                 "textposition": "start",
                 "font": {"color": opacity_black, "weight": 5, "size": 18},
                 "yanchor": "top",
@@ -441,6 +454,7 @@ def plot_total(
             tournaments,
             max_data_points=max_data_points,
             window_sizes=window_sizes,
+            lang=lang,
         ),
         get_profit_heatmap_charts(tournaments),
         get_bankroll_charts(tournaments),
