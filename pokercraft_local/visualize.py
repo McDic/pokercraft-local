@@ -12,6 +12,7 @@ from .bankroll import analyze_bankroll
 from .constants import BASE_HTML_FRAME, DEFAULT_WINDOW_SIZES
 from .data_structures import TournamentBrand, TournamentSummary
 from .translate import (
+    BANKROLL_PLOT_TITLE,
     RR_PLOT_TITLE,
     Language,
     get_html_title,
@@ -30,7 +31,7 @@ def get_historical_charts(
     lang: Language,
     max_data_points: int = 2000,
     window_sizes: tuple[int, ...] = DEFAULT_WINDOW_SIZES,
-):
+) -> plgo.Figure:
     """
     Get historical charts.
     """
@@ -223,7 +224,7 @@ def get_historical_charts(
 def get_profit_heatmap_charts(
     tournaments: list[TournamentSummary],
     lang: Language,
-):
+) -> plgo.Figure:
     """
     Get profit scatter charts.
     """
@@ -343,11 +344,16 @@ def get_profit_heatmap_charts(
 
 def get_bankroll_charts(
     tournaments: list[TournamentSummary],
+    lang: Language,
     initial_capitals: typing.Iterable[int] = (10, 20, 50, 100, 200, 500),
-):
+) -> plgo.Figure | None:
     """
     Get bankroll charts.
     """
+    INITIAL_CAPITAL: typing.Final[str] = translate_to(lang, "Initial Capital")
+    BANKRUPTCY_RATE: typing.Final[str] = translate_to(lang, "Bankruptcy Rate")
+    SURVIVAL_RATE: typing.Final[str] = translate_to(lang, "Survival Rate")
+
     try:
         analyzed = analyze_bankroll(
             tournaments,
@@ -362,34 +368,30 @@ def get_bankroll_charts(
             )
             % (err,)
         )
-        df_base = pd.DataFrame(
-            {
-                "Initial Capital": ["%.1f Buy-ins" % (ic,) for ic in initial_capitals],
-                "Bankruptcy Rate": [1.0 for _ in initial_capitals],
-                "Profitable Rate": [0.0 for _ in initial_capitals],
-            }
-        )
+        return None
     else:
         df_base = pd.DataFrame(
             {
-                "Initial Capital": ["%.1f Buy-ins" % (k,) for k in analyzed.keys()],
-                "Bankruptcy Rate": [v.get_bankruptcy_rate() for v in analyzed.values()],
-                "Profitable Rate": [v.get_profitable_rate() for v in analyzed.values()],
+                INITIAL_CAPITAL: [
+                    translate_to(lang, "%.1f Buy-ins") % (k,) for k in analyzed.keys()
+                ],
+                BANKRUPTCY_RATE: [v.get_bankruptcy_rate() for v in analyzed.values()],
+                SURVIVAL_RATE: [v.get_profitable_rate() for v in analyzed.values()],
             }
         )
 
     figure = px.bar(
         df_base,
-        x="Initial Capital",
-        y=["Bankruptcy Rate", "Profitable Rate"],
-        title=(
-            "Bankroll Analysis with Monte-Carlo Simulation "
-            "based on RR (Only if your performance is winning)"
-        ),
+        x=INITIAL_CAPITAL,
+        y=[BANKRUPTCY_RATE, SURVIVAL_RATE],
+        title=translate_to(lang, BANKROLL_PLOT_TITLE),
         color_discrete_sequence=["rgb(242, 111, 111)", "rgb(113, 222, 139)"],
         text_auto=True,
     )
-    figure.update_layout(legend_title_text="Metric")
+    figure.update_layout(
+        legend_title_text=translate_to(lang, "Metric"),
+        yaxis_title=None,
+    )
     figure.update_traces(hovertemplate="%{x}: %{y:.2%}")
     figure.update_xaxes(fixedrange=True)
     figure.update_yaxes(
@@ -402,7 +404,7 @@ def get_bankroll_charts(
     return figure
 
 
-def get_profit_pie(tournaments: list[TournamentSummary]):
+def get_profit_pie(tournaments: list[TournamentSummary]) -> plgo.Figure:
     """
     Get the pie chart of absolute profits from past tournament summaries.
     """
@@ -459,7 +461,7 @@ def plot_total(
     Plots the total prize pool of tournaments.
     """
     tournaments = sorted(tournaments, key=sort_key)
-    figures = [
+    figures: list[plgo.Figure | None] = [
         get_historical_charts(
             tournaments,
             lang,
@@ -467,14 +469,14 @@ def plot_total(
             window_sizes=window_sizes,
         ),
         get_profit_heatmap_charts(tournaments, lang),
-        get_bankroll_charts(tournaments),
+        get_bankroll_charts(tournaments, lang),
         get_profit_pie(tournaments),
     ]
     return BASE_HTML_FRAME.format(
         title=get_html_title(nickname, lang),
-        plots="<br><hr><br>".join(
+        plots="<br><hr><br>".join(  # type: ignore[var-annotated]
             fig.to_html(include_plotlyjs=("cdn" if i == 0 else False), full_html=False)
-            for i, fig in enumerate(figures)
+            for i, fig in enumerate(filter(None, figures))
         ),
         software_credits=get_software_credits(lang),
     )
