@@ -28,6 +28,13 @@ TRANSLATION: typing.Final[dict[Language, dict[str, str]]] = {
         # Title and credits
         TITLE_FRAME: "%s님의 GGNetwork 토너먼트에서의 현실적인 성적",
         SOFTWARE_CREDITS_FRAME: "McDic이 만든 %s에 의해 생성됨",
+        # GUI
+        "Select Language": "언어 선택",
+        "Data Directory: %s": "선택된 데이터 폴더: %s",
+        "Choose Data Directory": "데이터 폴더 선택",
+        "Output Directory: %s": "분석파일 내보낼 폴더: %s",
+        "Choose Output Directory": "분석파일 내보낼 폴더 선택",
+        "Your GG nickname": "당신의 GG 닉네임",
         # Historical Performance
         "Historical Performance": "과거 성적",
         "Tournament Count": "토너먼트 참가 횟수",

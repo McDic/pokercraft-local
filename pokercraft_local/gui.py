@@ -2,11 +2,12 @@ import tkinter as tk
 import typing
 from pathlib import Path
 from tkinter import filedialog
+from tkinter.font import Font
 from tkinter.messagebox import showinfo, showwarning
 
 from .constants import VERSION
 from .export import export as export_main
-from .translate import Language
+from .translate import Language, translate_to
 
 
 class PokerCraftLocalGUI:
@@ -14,23 +15,34 @@ class PokerCraftLocalGUI:
     Represents the GUI of Pokercraft Local.
     """
 
-    DATA_DIRECTORY_NOT_SELECTED: typing.Final[str] = "Data Directory not selected"
-    OUTPUT_DIRECTORY_NOT_SELECTED: typing.Final[str] = "Output Directory not selected"
-
     def __init__(self) -> None:
         self._window: tk.Tk = tk.Tk()
         self._window.title(f"PokerCraft Local v{VERSION} - By McDic")
-        self._window.geometry("400x200")
+        self._window.geometry("400x250")
         self._window.resizable(False, False)
+
+        # Language selection
+        self._label_language_selection: tk.Label = tk.Label(
+            self._window, text="label_language_selection"
+        )
+        self._label_language_selection.pack()
+        self._strvar_language_selection: tk.StringVar = tk.StringVar(value="en")
+        self._menu_language_selection: tk.OptionMenu = tk.OptionMenu(
+            self._window,
+            self._strvar_language_selection,
+            *[lang.value for lang in Language],
+            command=lambda strvar: self.reset_display_by_language(strvar),
+        )
+        self._menu_language_selection.pack()
 
         # Target directory
         self._label_data_directory: tk.Label = tk.Label(
-            self._window, text=self.DATA_DIRECTORY_NOT_SELECTED
+            self._window, text="label_data_directory"
         )
         self._label_data_directory.pack()
         self._button_data_directory: tk.Button = tk.Button(
             self._window,
-            text="Choose Data Directory",
+            text="button_data_directory",
             command=self.choose_data_directory,
         )
         self._button_data_directory.pack()
@@ -38,19 +50,19 @@ class PokerCraftLocalGUI:
 
         # Output directory
         self._label_output_directory: tk.Label = tk.Label(
-            self._window, text=self.OUTPUT_DIRECTORY_NOT_SELECTED
+            self._window, text="labal_output_directory"
         )
         self._label_output_directory.pack()
         self._button_output_directory: tk.Button = tk.Button(
             self._window,
-            text="Choose Output Directory",
+            text="button_output_directory",
             command=self.choose_output_directory,
         )
         self._button_output_directory.pack()
         self._output_directory: Path | None = None
 
         # Nickname input
-        self._label_nickname: tk.Label = tk.Label(self._window, text="Your GG nickname")
+        self._label_nickname: tk.Label = tk.Label(self._window, text="label_nickname")
         self._label_nickname.pack()
         self._input_nickname: tk.Entry = tk.Entry(self._window)
         self._input_nickname.pack()
@@ -73,6 +85,50 @@ class PokerCraftLocalGUI:
         self._window.bind("<Return>", lambda event: self.export())
         self._button_export.pack()
 
+        # Reset display by language
+        self.reset_display_by_language(self._strvar_language_selection)
+
+    @staticmethod
+    def display_path(path: Path) -> str:
+        """
+        Display path in a readable way.
+        """
+        return f".../{path.parent.name}/{path.name}"
+
+    def reset_display_by_language(self, strvar: tk.StringVar | str) -> None:
+        """
+        Reset display by changed language.
+        """
+        lang = Language(strvar if isinstance(strvar, str) else strvar.get())
+        self._label_language_selection.config(
+            text=translate_to(lang, "Select Language"),
+        )
+        self._label_data_directory.config(
+            text=translate_to(lang, "Data Directory: %s")
+            % (
+                self.display_path(self._data_directory)
+                if self._data_directory and self._data_directory.is_dir()
+                else "-"
+            ),
+        )
+        self._button_data_directory.config(
+            text=translate_to(lang, "Choose Data Directory")
+        )
+        self._label_output_directory.config(
+            text=translate_to(lang, "Output Directory: %s")
+            % (
+                self.display_path(self._output_directory)
+                if self._output_directory and self._output_directory.is_dir()
+                else "-"
+            ),
+        )
+        self._button_output_directory.config(
+            text=translate_to(lang, "Choose Output Directory")
+        )
+        self._label_nickname.config(
+            text=translate_to(lang, "Your GG nickname"),
+        )
+
     def choose_data_directory(self) -> None:
         """
         Choose a data source directory.
@@ -80,16 +136,13 @@ class PokerCraftLocalGUI:
         directory = Path(filedialog.askdirectory())
         if directory.is_dir() and directory.parent != directory:
             self._data_directory = directory
-            self._label_data_directory.config(
-                text=f"Data Directory: .../{directory.parent.name}/{directory.name}"
-            )
         else:
             self._data_directory = None
-            self._label_data_directory.config(text=self.DATA_DIRECTORY_NOT_SELECTED)
             showwarning(
                 "Warning from Pokercraft Local",
                 f'Given directory "{directory}" is invalid.',
             )
+        self.reset_display_by_language(self._strvar_language_selection)
 
     def choose_output_directory(self) -> None:
         """
@@ -98,17 +151,13 @@ class PokerCraftLocalGUI:
         directory = Path(filedialog.askdirectory())
         if directory.is_dir() and directory.parent != directory:
             self._output_directory = directory
-            self._label_output_directory.config(
-                text=f"Output Directory: .../{directory.parent.name}"
-                f"/{directory.name}"
-            )
         else:
             self._output_directory = None
-            self._label_output_directory.config(text=self.OUTPUT_DIRECTORY_NOT_SELECTED)
             showwarning(
                 "Warning from Pokercraft Local",
                 f'Given directory "{directory}" is invalid.',
             )
+        self.reset_display_by_language(self._strvar_language_selection)
 
     def export(self) -> None:
         """
@@ -142,7 +191,8 @@ class PokerCraftLocalGUI:
             output_path=self._output_directory,
             nickname=nickname,
             allow_freerolls=self._boolvar_allow_freerolls.get(),
-            lang=Language.ENGLISH,
+            lang=Language(self._strvar_language_selection.get()),
+            exclude_csv=False,
         )
         showinfo(
             "Info from Pokercraft Local",
