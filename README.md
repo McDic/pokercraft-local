@@ -45,16 +45,19 @@ For GUI, if you successfully run the program, you will be able to view something
 
 #### 3A. When you cloned this whole repo
 
-For CLI, run `run_cli.py` with some arguments.
-If you installed dependencies in your virtual environment, make sure you enabled it before.
+Run `run_cli.py` with some arguments.
+Make sure you installed all dependencies before running.
 
 ```bash
-python run_cli.py -d (YOUR_DATA_FOLDER) -o (OUTPUT_FOLDER) -n (YOUR_GG_NICKNAME)
+python run_cli.py \
+    -d (YOUR_DATA_FOLDER) \  # Specify your data directory
+    -o (OUTPUT_FOLDER) \     # Specify your output directory
+    -n (YOUR_GG_NICKNAME) \  # Specify your GG nickname
+    --lang en \              # Specify your language for the report
+    --export-csv \           # Export CSV data file (optional)
 ```
 
-For GUI, simply run `run_gui.py` or you can directly download binaries from [Releases](https://github.com/McDic/pokercraft-local/releases) to execute compiled program directly.
-When you start the GUI program, then you will be able to view something like above image.
-Choose data directory and output directory, input your nickname, then run the process by clicking the bottom button.
+Or alternatively, you can run `run_gui.py` instead.
 
 ```bash
 python run_gui.py
@@ -75,7 +78,7 @@ To do something programatic, check `run_cli.py` for example references.
 
 #### 3C. When you directly downloaded releases
 
-Execute `run_gui-(YOUR_OS)/dist/run_gui/run_gui.exe` from downloaded zip file on your local machine.
+Execute `run_gui-(YOUR_OS)/run_gui/run_gui.exe` from downloaded zip file on your local machine.
 
 ### 4. Check results
 
