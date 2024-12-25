@@ -56,7 +56,7 @@ def export(
 
     # Export plot HTML
     plot_path = output_path / f"result_{current_time_strf}.html"
-    with open(plot_path, "w") as html_file:
+    with open(plot_path, "w", encoding="utf-8") as html_file:
         html_file.write(plot_total(nickname, summaries, lang=lang))
 
     return csv_path, plot_path
