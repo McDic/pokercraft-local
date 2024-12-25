@@ -23,9 +23,8 @@ repos:
     rev: v1.8.0
     hooks:
       - id: mypy
-        exclude: examples
+        args: [--ignore-missing-imports, --disable-error-code=import-untyped]
         verbose: true
-        additional_dependencies: ["types-requests"]
 
   - repo: https://github.com/psf/black
     rev: 23.1.0

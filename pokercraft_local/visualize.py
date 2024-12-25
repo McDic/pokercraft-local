@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd  # type: ignore [import-untyped]
 import plotly.express as px  # type: ignore [import-untyped]
 import plotly.graph_objects as plgo  # type: ignore [import-untyped]
+from markdown import markdown
 from plotly.subplots import make_subplots  # type: ignore [import-untyped]
 
 from .bankroll import analyze_bankroll
@@ -13,6 +14,7 @@ from .constants import BASE_HTML_FRAME, DEFAULT_WINDOW_SIZES
 from .data_structures import TournamentBrand, TournamentSummary
 from .translate import (
     BANKROLL_PLOT_TITLE,
+    PLOT_DOCUMENTATIONS,
     PRIZE_PIE_CHART_TITLE,
     RR_PLOT_TITLE,
     Language,
@@ -480,7 +482,12 @@ def plot_total(
         title=get_html_title(nickname, lang),
         plots="<br><hr><br>".join(  # type: ignore[var-annotated]
             fig.to_html(include_plotlyjs=("cdn" if i == 0 else False), full_html=False)
-            for i, fig in enumerate(filter(None, figures))
+            + "<br>"
+            + markdown(doc_dict[lang])
+            for i, (doc_dict, fig) in enumerate(
+                zip(PLOT_DOCUMENTATIONS, figures, strict=True)
+            )
+            if fig is not None
         ),
         software_credits=get_software_credits(lang),
     )

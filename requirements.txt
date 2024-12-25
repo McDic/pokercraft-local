@@ -1,6 +1,7 @@
 # 3rd Party Libraries
 pandas
 plotly
+markdown
 
 # Pokercraft Local Utilities
 pokercraft-local-bankroll
