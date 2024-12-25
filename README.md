@@ -84,80 +84,10 @@ Note that plotly javascripts are included by CDN, so you need working internet c
 
 ## Features
 
-### Historical performances
+Each plots are now described in plot, so please read when you generated a file.
+There are 4 sections;
 
-![historical_perf](./images/features/historical_performance.png)
-
-You can see 3 line graphs in this section;
-
-1. Net profit, net rake, and ideal profit(when you do not pay the rake)
-2. *"Profitable ratio"*, including moving average -
-   Pokercraft does not give you an information of ITM,
-   instead it lets you know amount of your prizes(including bounties) instead.
-   Because of this, if you got enough bounty(more than buy-in) from some tournaments,
-   then the system classifies that as "profitable".
-   This value is slightly higher than actual ITM ratio.
-3. Average buy in of your tournaments, including moving average.
-   Note that buy-in is log-scaled.
-
-*My comment:
-This section is classic and probably the most fundamental graph for all tournament grinders.
-Note that the Pokercraft does not show the true PnL. It does not correctly mirror the rake.*
-
-### Relative prize returns
-
-![relative_rr](./images/features/relative_prize_returns.png)
-
-RR(Relative Prize Returns) is a relative return of your investment for individual tournament.
-For example, if you got $30 from a tournament with $10 buy-in and you made 1 re-entry, then your total investment is $20, therefore $RR = \frac{\$30}{\$10 \times 2} = 1.5$.
-
-You can see 3 heatmaps in this section;
-
-1. RR by buy-in of tournaments
-2. RR by total entries of tournaments
-3. Marginal distribution of each RR range
-
-Note that X and Y axes are in log2 scale in these plots,
-because these metrics have wide range of values
-so it makes no sense to display in linear scale.
-
-*My comment:
-This section shows you are strong/weak in which buy-in and which entry sizes,
-and also how much of your relative profits are from in RR range.*
-
-### Bankroll analysis with Monte-Carlo simulation
-
-![bankroll_analysis](./images/features/bankroll_analysis.png)
-
-This section shows simplified result of bankroll analysis simulations.
-The exact procedure of simulation follows;
-
-- From your Pokercraft data, gather $RR-1$ of every tournament results.
-- Assuming you are continuously playing tournaments of $1 dollar buy-in, where each tournament yields one of $RR-1$ as return, in uniform and independent manner.
-- For single simulation, run `max(10 * YOUR_TOURNAMENT_COUNT, 1e4)` times and see if you are bankrupted or not.
-- Run 25000 parellel simulations.
-
-Then each individual simulation yields one of two results;
-
-- *"Profitable"* (The final capital is non-zero)
-- *"Bankruptcy"* (It bankrupted before reaching maximum iteration)
-
-So profitable rate is basically likelihood of your survival when you start playing tournaments with specific BI.
-
-*My comment:
-I personally think 200 BI is the optimal bankroll for tournament grinders,
-especially if you play massive tournaments with thousands of participants.*
-
-### Prize pie chart
-
-![prize_pie_chart](./images/features/your_prizes.png)
-
-This section shows how much of your total prizes are from specific tournaments.
-Since there might be too much number of slices,
-only tournaments gave you more than 0.5% of your total prizes are shown,
-and all other tournaments are merged into "Others",
-which is the biggest separated slice.
-
-*My comment:
-You can see if you ignore small prizes, then lots of portion of your prizes are gone,
-which means you should not ignore them.*
+1. Historical Performance
+2. Relative Prize Returns
+3. Bankroll Analysis with Monte-Carlo simulation
+4. Your Prizes
