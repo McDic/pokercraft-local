@@ -16,3 +16,7 @@ dist/
 *.egg-info/
 build/
 run_gui.spec
+
+# IDE
+.vscode/
+.idea/

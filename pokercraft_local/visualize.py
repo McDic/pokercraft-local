@@ -2,12 +2,11 @@ import math
 import typing
 import warnings
 
-import numpy as np
-import pandas as pd  # type: ignore [import-untyped]
-import plotly.express as px  # type: ignore [import-untyped]
-import plotly.graph_objects as plgo  # type: ignore [import-untyped]
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as plgo
 from markdown import markdown
-from plotly.subplots import make_subplots  # type: ignore [import-untyped]
+from plotly.subplots import make_subplots
 
 from .bankroll import analyze_bankroll
 from .constants import BASE_HTML_FRAME, DEFAULT_WINDOW_SIZES
