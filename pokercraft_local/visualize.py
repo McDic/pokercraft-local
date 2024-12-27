@@ -518,7 +518,6 @@ def plot_total(
         title=get_html_title(nickname, lang),
         plots="<br><hr><br>".join(  # type: ignore[var-annotated]
             fig.to_html(include_plotlyjs=("cdn" if i == 0 else False), full_html=False)
-            + "<br>"
             + markdown(doc_dict[lang])
             for i, (doc_dict, fig) in enumerate(
                 zip(PLOT_DOCUMENTATIONS, figures, strict=True)
