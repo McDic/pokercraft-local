@@ -116,6 +116,11 @@ class PokercraftParser:
                 )
                 t_rake = buy_ins[0]
                 t_buy_in_pure = sum(buy_ins) - t_rake
+                # If rake is too big, then probably no rake is specified,
+                # Therefore set the rake to zero
+                if t_rake >= 0.3 * (t_buy_in_pure + t_rake):
+                    t_buy_in_pure += t_rake
+                    t_rake = 0.0
 
             elif cls.LINE3_ENTRIES.fullmatch(line):
                 t_total_players = take_first_int(line)
