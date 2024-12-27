@@ -146,7 +146,7 @@ Pokercraft는 레이크를 제대로 반영하지 않음으로써
 RRE(Relative Returns with re-Entries) is a relative return of your investment
 for individual tournament, considering re-entries.
 For example, if you got $30 from a tournament with
-$10 buy-in and you made 1 re-entry, then RR = 30/20 = 1.5.
+$10 buy-in and you made 1 re-entry, then RRE = 30/20 = 1.5.
 
 You can see 3 plots in this section;
 
