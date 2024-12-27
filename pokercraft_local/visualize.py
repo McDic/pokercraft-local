@@ -17,8 +17,8 @@ from .translate import (
     PLOT_DOCUMENTATIONS,
     PRIZE_PIE_CHART_SUBTITLE,
     PRIZE_PIE_CHART_TITLE,
-    RR_PLOT_SUBTITLE,
-    RR_PLOT_TITLE,
+    RRE_PLOT_SUBTITLE,
+    RRE_PLOT_TITLE,
     Language,
     get_html_title,
     get_software_credits,
@@ -250,7 +250,7 @@ def get_profit_heatmap_charts(
         {
             "Tournament Name": [t.name for t in tournaments],
             "Buy In": [t.buy_in for t in tournaments],
-            "Relative Prize": [t.relative_return + 1 for t in tournaments],
+            "RRE": [t.rre for t in tournaments],
             "Prize Ratio": [t.my_prize / t.total_prize_pool for t in tournaments],
             "Total Entries": [t.total_players for t in tournaments],
             "Tournament Brand": [
@@ -275,23 +275,23 @@ def get_profit_heatmap_charts(
         column_titles=[
             translate_to(lang, "By Buy In Amount"),
             translate_to(lang, "By Total Entries"),
-            translate_to(lang, "Marginal RR Distribution"),
+            translate_to(lang, "Marginal RRE Distribution"),
         ],
-        y_title=translate_to(lang, "Relative Prize Return (RR)"),
+        y_title=translate_to(lang, "RRE"),
         horizontal_spacing=0.01,
     )
     fig1_common_options = {
-        "y": df_base["Relative Prize"].apply(log2_or_nan),
+        "y": df_base["RRE"].apply(log2_or_nan),
         "ybins": {"size": 1.0},
-        "z": df_base["Relative Prize"],
+        "z": df_base["RRE"],
         "coloraxis": "coloraxis",
         "histfunc": "sum",
     }
     figure.add_trace(
         plgo.Histogram2d(
             x=df_base["Buy In"].apply(log2_or_nan),
-            name=translate_to(lang, "RR by Buy In"),
-            hovertemplate="Log2(RR) = [%{y}]<br>Log2("
+            name=translate_to(lang, "RRE by Buy In"),
+            hovertemplate="Log2(RRE) = [%{y}]<br>Log2("
             + translate_to(lang, "Buy In")
             + ") = [%{x}]<br>"
             + (GOT_X_PROFIT % ("%{z:.2f}",)),
@@ -303,8 +303,8 @@ def get_profit_heatmap_charts(
     figure.add_trace(
         plgo.Histogram2d(
             x=df_base["Total Entries"].apply(log2_or_nan),
-            name=translate_to(lang, "RR by Entries"),
-            hovertemplate="Log2(RR) = [%{y}]<br>Log2("
+            name=translate_to(lang, "RRE by Entries"),
+            hovertemplate="Log2(RRE) = [%{y}]<br>Log2("
             + translate_to(lang, "Total Entries")
             + ") = [%{x}]<br>"
             + (GOT_X_PROFIT % ("%{z:.2f}",)),
@@ -317,13 +317,13 @@ def get_profit_heatmap_charts(
     # Marginal distribution
     figure.add_trace(
         plgo.Histogram(
-            x=df_base["Relative Prize"],
+            x=df_base["RRE"],
             y=fig1_common_options["y"],
-            name=translate_to(lang, "Marginal RR"),
+            name=translate_to(lang, "Marginal RRE"),
             histfunc=fig1_common_options["histfunc"],
             orientation="h",
             ybins=fig1_common_options["ybins"],
-            hovertemplate="Log2(RR) = [%{y}]<br>" + (GOT_X_PROFIT % ("%{x:.2f}",)),
+            hovertemplate="Log2(RRE) = [%{y}]<br>" + (GOT_X_PROFIT % ("%{x:.2f}",)),
             marker={"color": "rgba(70,70,70,0.35)"},
         ),
         row=1,
@@ -331,8 +331,8 @@ def get_profit_heatmap_charts(
     )
 
     figure.update_layout(
-        title=translate_to(lang, RR_PLOT_TITLE),
-        title_subtitle_text=translate_to(lang, RR_PLOT_SUBTITLE),
+        title=translate_to(lang, RRE_PLOT_TITLE),
+        title_subtitle_text=translate_to(lang, RRE_PLOT_SUBTITLE),
         title_subtitle_font_style="italic",
     )
     figure.update_coloraxes(colorscale=BLACK_WHITE_COLORSCALE)

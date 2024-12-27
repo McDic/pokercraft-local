@@ -15,11 +15,9 @@ def analyze_bankroll(
     """
     Analyze bankroll with the given summaries.
     """
-    relative_returns: list[float] = [
-        summary.relative_return
-        for summary in summaries
-        if not math.isnan(summary.relative_return)
-    ]
+    relative_returns: list[float] = []
+    for summary in summaries:
+        relative_returns.extend(summary.rrs)
 
     results: dict[int | float, BankruptcyMetric] = {}
     for initial_capital, profit_exit_multiplier in initial_capital_and_exits:

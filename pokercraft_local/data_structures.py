@@ -93,20 +93,41 @@ class TournamentSummary:
         return self.my_prize - self.buy_in * self.my_entries
 
     @property
-    def relative_return(self) -> float:
+    def rre(self) -> float:
         """
-        Returns the relative return. For examples,
-        - $3 prize from a $1 buy-in returns 2.0
-        - No prize from a $2 buy-in returns -1.0
-        - $5 prize from a $1 buy-in with 3 re-entries returns 0.25
+        Returns RRE(Relative Return with re-Entries). For examples,
+        - $3 prize from a $1 buy-in returns `3.0`
+        - No prize from a $2 buy-in returns `0.0`
+        - $5 prize from a $1 buy-in with 3 re-entries returns `1.25`
 
         For freerolls, this returns `NaN`.
         """
-        return (
-            (self.my_prize / self.buy_in / self.my_entries) - 1
-            if self.buy_in > 0
-            else math.nan
-        )
+        if self.buy_in > 0:
+            return self.my_prize / self.buy_in / self.my_entries
+        else:
+            return math.nan
+
+    @property
+    def rrs(self) -> list[float]:
+        """
+        Returns list of relative returns.
+        Unlike `self.rre`, this adds `-1` on each
+        element of the result. For examples,
+        - $3 prize from a $1 buy-in returns `[2.0]`
+        - No prize from a $2 buy-in returns `[-1.0]`
+        - $5 prize from a $1 buy-in with 3 re-entries
+            returns `[-1.0, -1.0, -1.0, 4.0]`
+        - No prize from a $1 buy-in with 5 re-entries
+            returns `[-1.0, -1.0, -1.0, -1.0, -1.0, -1.0]`
+
+        For freerolls, this returns an empty list.
+        """
+        if self.buy_in > 0:
+            return [-1.0 for _ in range(self.my_entries - 1)] + [
+                self.my_prize / self.buy_in - 1.0
+            ]
+        else:
+            return []
 
     def __str__(self) -> str:
         return "%d,%s,%s,%.2f,%.2f,%d,#%d" % (
