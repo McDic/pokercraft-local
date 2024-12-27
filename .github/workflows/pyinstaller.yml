@@ -47,5 +47,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-              run_gui-*.zip
-              run_gui-*.tar.gz
+            run_gui-*.zip
+            run_gui-*.tar.gz
