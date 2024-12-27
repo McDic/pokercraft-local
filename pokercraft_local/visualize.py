@@ -347,7 +347,10 @@ def get_profit_heatmap_charts(
 def get_bankroll_charts(
     tournaments: list[TournamentSummary],
     lang: Language,
+    *,
     initial_capitals: typing.Iterable[int] = (10, 20, 50, 100, 200, 500),
+    min_simulation_iterations: int,
+    simulation_count: int,
 ) -> plgo.Figure | None:
     """
     Get bankroll charts.
@@ -360,7 +363,8 @@ def get_bankroll_charts(
         analyzed = analyze_bankroll(
             tournaments,
             initial_capital_and_exits=tuple((ic, 0.0) for ic in initial_capitals),
-            max_iteration=max(10000, len(tournaments) * 10),
+            max_iteration=max(min_simulation_iterations, len(tournaments) * 10),
+            simulation_count=simulation_count,
         )
     except ValueError as err:
         warnings.warn(
@@ -378,7 +382,7 @@ def get_bankroll_charts(
                     translate_to(lang, "%.1f Buy-ins") % (k,) for k in analyzed.keys()
                 ],
                 BANKRUPTCY_RATE: [v.get_bankruptcy_rate() for v in analyzed.values()],
-                SURVIVAL_RATE: [v.get_profitable_rate() for v in analyzed.values()],
+                SURVIVAL_RATE: [v.get_survival_rate() for v in analyzed.values()],
             }
         )
 
@@ -455,12 +459,15 @@ def get_profit_pie(
 def plot_total(
     nickname: str,
     tournaments: typing.Iterable[TournamentSummary],
+    lang: Language = Language.ENGLISH,
+    *,
     sort_key: typing.Callable[[TournamentSummary], typing.Any] = (
         lambda t: t.sorting_key()
     ),
     max_data_points: int = 2000,
     window_sizes: tuple[int, ...] = DEFAULT_WINDOW_SIZES,
-    lang: Language = Language.ENGLISH,
+    bankroll_simulation_count: int = 25_000,
+    bankroll_min_simulation_iterations: int = 40_000,
 ) -> str:
     """
     Plots the total prize pool of tournaments.
@@ -474,7 +481,12 @@ def plot_total(
             window_sizes=window_sizes,
         ),
         get_profit_heatmap_charts(tournaments, lang),
-        get_bankroll_charts(tournaments, lang),
+        get_bankroll_charts(
+            tournaments,
+            lang,
+            simulation_count=bankroll_simulation_count,
+            min_simulation_iterations=bankroll_min_simulation_iterations,
+        ),
         get_profit_pie(tournaments, lang),
     ]
     return BASE_HTML_FRAME.format(

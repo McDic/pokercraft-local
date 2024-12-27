@@ -4,4 +4,4 @@ plotly
 markdown
 
 # Pokercraft Local Utilities
-pokercraft-local-bankroll
+pokercraft-local-bankroll == 0.4

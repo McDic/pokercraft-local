@@ -170,7 +170,7 @@ The exact procedure of the simulation is as follows;
 - Assuming you are continuously playing tournaments of 1 dollar buy-in,
     where each tournament yields one of `RR-1` as return,
     in uniform and independent manner.
-- For single simulation, run `max(10 * YOUR_TOURNAMENT_COUNT, 1e4)` times
+- For single simulation, run `max(10 * YOUR_TOURNAMENT_COUNT, 4e4)` times
     and see if you are bankrupted or not.
 - Run 25k parellel simulations.
 
@@ -193,7 +193,7 @@ with thousands of participants.*
 - 당신의 Pokercraft 데이터로부터, 각 토너먼트 결과의 `RR-1`을 모읍니다.
 - 1달러 바인 금액의 토너먼트를 연속적으로 플레이한다고 가정하고,
     각 토너먼트의 상금은 과거 `RR-1`들 중 하나를 랜덤하게 리턴합니다.
-- 단일 시뮬레이션에서는 `max(10 * 당신의 토너먼트 수, 1e4)`번
+- 단일 시뮬레이션에서는 `max(10 * 당신의 토너먼트 수, 4e4)`번
     시뮬레이션을 돌리고, 파산했는지 안했는지를 확인합니다.
 - 25,000개의 병렬 시뮬레이션을 돌립니다.
 

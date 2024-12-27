@@ -10,7 +10,7 @@ def analyze_bankroll(
     *,
     initial_capital_and_exits: tuple[tuple[int | float, float], ...],
     max_iteration: int,
-    simulation_count: int = 25_000,
+    simulation_count: int,
 ) -> dict[int | float, BankruptcyMetric]:
     """
     Analyze bankroll with the given summaries.
