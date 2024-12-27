@@ -12,9 +12,12 @@ from .bankroll import analyze_bankroll
 from .constants import BASE_HTML_FRAME, DEFAULT_WINDOW_SIZES
 from .data_structures import TournamentBrand, TournamentSummary
 from .translate import (
+    BANKROLL_PLOT_SUBTITLE,
     BANKROLL_PLOT_TITLE,
     PLOT_DOCUMENTATIONS,
+    PRIZE_PIE_CHART_SUBTITLE,
     PRIZE_PIE_CHART_TITLE,
+    RR_PLOT_SUBTITLE,
     RR_PLOT_TITLE,
     Language,
     get_html_title,
@@ -261,7 +264,6 @@ def get_profit_heatmap_charts(
         [0, "rgba(255, 255, 255, 0.6)"],
         [1, "rgba(0, 0, 0, 0.6)"],
     ]
-    NONZERO_PROFIT_ONLY: typing.Final[str] = translate_to(lang, "Nonzero prize only")
     GOT_X_PROFIT: typing.Final[str] = translate_to(
         lang, "Got %sx profit in this region"
     )
@@ -271,10 +273,8 @@ def get_profit_heatmap_charts(
         3,
         shared_yaxes=True,
         column_titles=[
-            "%s<br>(%s)"
-            % (translate_to(lang, "By Buy In Amount"), NONZERO_PROFIT_ONLY),
-            "%s<br>(%s)"
-            % (translate_to(lang, "By Total Entries"), NONZERO_PROFIT_ONLY),
+            translate_to(lang, "By Buy In Amount"),
+            translate_to(lang, "By Total Entries"),
             translate_to(lang, "Marginal RR Distribution"),
         ],
         y_title=translate_to(lang, "Relative Prize Return (RR)"),
@@ -330,7 +330,11 @@ def get_profit_heatmap_charts(
         col=3,
     )
 
-    figure.update_layout(title=translate_to(lang, RR_PLOT_TITLE))
+    figure.update_layout(
+        title=translate_to(lang, RR_PLOT_TITLE),
+        title_subtitle_text=translate_to(lang, RR_PLOT_SUBTITLE),
+        title_subtitle_font_style="italic",
+    )
     figure.update_coloraxes(colorscale=BLACK_WHITE_COLORSCALE)
 
     for y, color, hline_label in [
@@ -419,7 +423,11 @@ def get_bankroll_charts(
         maxallowed=1.0,
         fixedrange=True,
     )
-    figure.update_layout(modebar_remove=["select2d", "lasso2d"])
+    figure.update_layout(
+        modebar_remove=["select2d", "lasso2d"],
+        title_subtitle_text=translate_to(lang, BANKROLL_PLOT_SUBTITLE),
+        title_subtitle_font_style="italic",
+    )
     return figure
 
 
@@ -465,6 +473,10 @@ def get_profit_pie(
         showlegend=False,
         hovertemplate="%{customdata[0]}: %{value:$,.2f}",
         pull=[0.075 if id_ == 0 else 0 for id_ in df_base.index],
+    )
+    figure.update_layout(
+        title_subtitle_text=translate_to(lang, PRIZE_PIE_CHART_SUBTITLE),
+        title_subtitle_font_style="italic",
     )
     return figure
 
