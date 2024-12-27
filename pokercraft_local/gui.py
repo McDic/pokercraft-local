@@ -7,7 +7,7 @@ from tkinter.messagebox import showinfo, showwarning
 
 from .constants import VERSION
 from .export import export as export_main
-from .translate import Language, translate_to
+from .translate import GUI_EXPORTED_SUCCESS, Language, translate_to
 
 
 class PokerCraftLocalGUI:
@@ -71,7 +71,7 @@ class PokerCraftLocalGUI:
         self._boolvar_allow_freerolls: tk.BooleanVar = tk.BooleanVar(self._window)
         self._checkbox_allow_freerolls: tk.Checkbutton = tk.Checkbutton(
             self._window,
-            text="Include Freerolls",
+            text="checkbox_allow_freerolls",
             variable=self._boolvar_allow_freerolls,
             onvalue=True,
             offvalue=False,
@@ -80,7 +80,7 @@ class PokerCraftLocalGUI:
 
         # Run button
         self._button_export: tk.Button = tk.Button(
-            self._window, text="Export plot and CSV data (Enter)", command=self.export
+            self._window, text="button_export", command=self.export
         )
         self._window.bind("<Return>", lambda event: self.export())
         self._button_export.pack()
@@ -128,6 +128,12 @@ class PokerCraftLocalGUI:
         self._label_nickname.config(
             text=translate_to(lang, "Your GG nickname"),
         )
+        self._checkbox_allow_freerolls.config(
+            text=translate_to(lang, "Include Freerolls")
+        )
+        self._button_export.config(
+            text=translate_to(lang, "Export plot and CSV data (Enter)")
+        )
 
     def choose_data_directory(self) -> None:
         """
@@ -159,24 +165,42 @@ class PokerCraftLocalGUI:
             )
         self.reset_display_by_language(self._strvar_language_selection)
 
+    @staticmethod
+    def get_warning_popup_title() -> str:
+        """
+        Get warning popup title.
+        """
+        return "Warning!"
+
+    @staticmethod
+    def get_info_popup_title() -> str:
+        """
+        Get information popup title.
+        """
+        return "Info!"
+
     def export(self) -> None:
         """
         Export data.
         """
+        THIS_LANG = Language(self._strvar_language_selection.get())
         nickname = self._input_nickname.get().strip()
         if not nickname:
-            showwarning("Warning from Pokercraft Local", "Nickname is not given.")
+            showwarning(
+                self.get_warning_popup_title(),
+                translate_to(THIS_LANG, "Nickname is not given."),
+            )
             return
         elif not self._data_directory or not self._data_directory.is_dir():
             showwarning(
-                "Warning from Pokercraft Local",
-                "Data directory is not selected or not valid.",
+                self.get_warning_popup_title(),
+                translate_to(THIS_LANG, "Data directory is not selected or invalid."),
             )
             return
         elif not self._output_directory or not self._output_directory.is_dir():
             showwarning(
-                "Warning from Pokercraft Local",
-                "Output directory is not selected or not valid.",
+                self.get_warning_popup_title(),
+                translate_to(THIS_LANG, "Output directory is not selected or invalid."),
             )
             return
 
@@ -191,14 +215,16 @@ class PokerCraftLocalGUI:
             output_path=self._output_directory,
             nickname=nickname,
             allow_freerolls=self._boolvar_allow_freerolls.get(),
-            lang=Language(self._strvar_language_selection.get()),
+            lang=THIS_LANG,
             exclude_csv=False,
         )
         showinfo(
-            "Info from Pokercraft Local",
-            "Exported CSV and plot successfully; "
-            f"Please check {csv_path.name} and {plot_path.name} "
-            f"in {self._output_directory}.",
+            self.get_info_popup_title(),
+            translate_to(THIS_LANG, GUI_EXPORTED_SUCCESS).format(
+                output_dir=self._output_directory,
+                csv_path=csv_path.name,
+                plot_path=plot_path.name,
+            ),
         )
 
     def run_gui(self) -> None:

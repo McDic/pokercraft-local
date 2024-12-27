@@ -16,6 +16,10 @@ BANKROLL_PLOT_TITLE: typing.Final[str] = (
     "Bankroll Analysis with Monte-Carlo Simulation "
     "based on RR (Only if your performance is winning)"
 )
+GUI_EXPORTED_SUCCESS: typing.Final[str] = (
+    "Exported CSV and plot successfully;"
+    "Please check {csv_path} and {plot_path} in {output_dir}."
+)
 
 # fmt: off
 PRIZE_PIE_CHART_TITLE: typing.Final[
@@ -23,6 +27,7 @@ PRIZE_PIE_CHART_TITLE: typing.Final[
 ] = "Your Prizes (Small prizes are grouped as 'Others')"
 # fmt: on
 
+# fmt: off
 TRANSLATION: typing.Final[dict[Language, dict[str, str]]] = {
     Language.KOREAN: {
         # Title and credits
@@ -35,6 +40,16 @@ TRANSLATION: typing.Final[dict[Language, dict[str, str]]] = {
         "Output Directory: %s": "분석파일 내보낼 폴더: %s",
         "Choose Output Directory": "분석파일 내보낼 폴더 선택",
         "Your GG nickname": "당신의 GG 닉네임",
+        GUI_EXPORTED_SUCCESS: (
+            "CSV와 그래프 파일이 성공적으로 생성되었습니다. "
+            "{output_dir} 안에 있는 {csv_path}와 {plot_path}를 확인해주세요."
+        ),
+        "Nickname is not given.": "GG 닉네임이 입력되지 않았습니다.",
+        "Data directory is not selected or invalid.": "데이터 폴더가 선택되지 않았거나 올바르지 않습니다.",
+        "Output directory is not selected or invalid.": \
+        "분석파일 내보낼 폴더가 선택되지 않았거나 올바르지 않습니다.",
+        "Include Freerolls": "프리롤 포함하기",
+        "Export plot and CSV data (Enter)": "CSV랑 분석 파일 생성하기 (Enter 키)",
         # Historical Performance
         "Historical Performance": "과거 성적",
         "Tournament Count": "토너먼트 참가 횟수",
@@ -79,6 +94,7 @@ TRANSLATION: typing.Final[dict[Language, dict[str, str]]] = {
         "Others": "기타",
     },
 }
+# fmt: on
 
 PLOT_DOCUMENTATIONS: typing.Final[list[dict[Language, str]]] = [
     # Historical Performances
