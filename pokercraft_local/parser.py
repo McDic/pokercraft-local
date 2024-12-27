@@ -3,6 +3,7 @@ import typing
 from datetime import datetime
 from io import TextIOWrapper
 from pathlib import Path
+from zipfile import ZipFile
 
 from .constants import ANY_INT, ANY_MONEY, STR_PATTERN
 from .data_structures import Currency, TournamentSummary
@@ -156,6 +157,43 @@ class PokercraftParser:
             my_entries=t_my_entries,
         )
 
+    @staticmethod
+    def is_ggtxt(name: Path | str) -> bool:
+        """
+        Check if the given file is a valid GG summary file.
+        """
+        if isinstance(name, Path):
+            return (
+                name.is_file() and name.suffix == ".txt" and name.stem.startswith("GG")
+            )
+        elif isinstance(name, str):
+            name = name.split("/")[-1]
+            return name.endswith(".txt") and name.startswith("GG")
+        else:
+            return False
+
+    @classmethod
+    def yield_streams(
+        cls, paths: typing.Iterable[Path], follow_symlink: bool = True
+    ) -> typing.Generator[tuple[Path, TextIOWrapper], None, None]:
+        """
+        Yield streams of files, recursively.
+        """
+        for path in paths:
+            if path.is_dir() and (not path.is_symlink() or follow_symlink):
+                yield from cls.yield_streams(
+                    path.iterdir(), follow_symlink=follow_symlink
+                )
+            elif cls.is_ggtxt(path):
+                with path.open("r", encoding="utf-8") as file:
+                    yield path, file
+            elif path.is_file() and path.suffix == ".zip":
+                with ZipFile(path, "r") as zipfile:
+                    for name in zipfile.namelist():
+                        if cls.is_ggtxt(name):
+                            with zipfile.open(name, "r") as file:
+                                yield path / name, TextIOWrapper(file)
+
     @classmethod
     def crawl_files(
         cls,
@@ -167,29 +205,19 @@ class PokercraftParser:
         Crawl files and parse them, recursively.
         Be careful of infinite recursion when `follow_symlink` is True.
         """
-        for path in paths:
-            if path.is_dir() and (not path.is_symlink() or follow_symlink):
-                yield from cls.crawl_files(
-                    path.iterdir(),
-                    follow_symlink=follow_symlink,
-                    allow_freerolls=allow_freerolls,
+        for path, stream in cls.yield_streams(paths, follow_symlink=follow_symlink):
+            try:
+                summary = cls.parse(stream)
+                if summary.buy_in == 0 and not allow_freerolls:
+                    print(f"Detected freeroll {summary.name}, skipping.")
+                else:
+                    yield summary
+            except (ValueError, UnboundLocalError, StopIteration) as err:
+                print(
+                    f"Failed to parse file {path}, skipping. "
+                    f"(Reason: {err} ({type(err).__name__}))"
                 )
-            elif (
-                path.is_file() and path.suffix == ".txt" and path.stem.startswith("GG")
-            ):
-                with path.open("r", encoding="utf-8") as file:
-                    try:
-                        summary = cls.parse(file)
-                        if summary.buy_in == 0 and not allow_freerolls:
-                            print(f"Detected freeroll {summary.name}, skipping.")
-                        else:
-                            yield summary
-                    except (ValueError, UnboundLocalError, StopIteration) as err:
-                        print(
-                            f"Failed to parse file {path}, skipping. "
-                            f"(Reason: {err} ({type(err).__name__}))"
-                        )
-                        pass
-                    except Exception:
-                        print(f"Failed to parse file {path} with fatal error.")
-                        raise
+                pass
+            except Exception:
+                print(f"Failed to parse file {path} with fatal error.")
+                raise
