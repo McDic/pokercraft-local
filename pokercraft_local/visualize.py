@@ -89,7 +89,6 @@ def get_historical_charts(
             translate_to(lang, t)
             for t in ["Net Profit & Rake", "Profitable Ratio", "Average Buy In"]
         ],
-        x_title=translate_to(lang, "Tournament Count"),
         vertical_spacing=0.01,
     )
     common_options = {"x": df_base.index, "mode": "lines"}
@@ -121,7 +120,7 @@ def get_historical_charts(
                 legendgroup="Profitable Ratio",
                 legendgrouptitle_text=translate_to(lang, "Profitable Ratio"),
                 name=get_translated_column_moving_average(lang, window_size),
-                hovertemplate="%{meta:.3f}%",
+                hovertemplate="%{meta:.2f}%",
                 **common_options,
             ),
             row=2,
@@ -133,7 +132,7 @@ def get_historical_charts(
             plgo.Scatter(
                 y=df_base[avb_col],
                 legendgroup="Avg Buy In",
-                legendgrouptitle_text=translate_to(lang, "Avg Buy In"),
+                legendgrouptitle_text=translate_to(lang, "Average Buy In"),
                 name=get_translated_column_moving_average(lang, window_size),
                 hovertemplate="%{y:$,.2f}",
                 **common_options,
@@ -149,6 +148,13 @@ def get_historical_charts(
         yaxis1={"tickformat": "$"},
         yaxis2={"tickformat": ".2%"},
         yaxis3={"tickformat": "$"},
+        xaxis={
+            "rangeslider": {"visible": True, "autorange": True},
+            "labelalias": {
+                i: translate_to(lang, "Tourney #%d") % (i,)
+                for i in range(1, len(df_base) + 1)
+            },
+        },
         legend_groupclick="toggleitem",
     )
     figure.update_traces(
@@ -181,6 +187,13 @@ def get_historical_charts(
             "nticks": 8,
         },
     )
+    figure.update_xaxes(
+        autorange=True,
+        minallowed=1,
+        maxallowed=len(df_base),
+        rangeslider_thickness=0.075,
+    )
+    figure.update_yaxes(fixedrange=False)
 
     # Hlines
     opacity_red = "rgba(255,0,0,0.25)"
