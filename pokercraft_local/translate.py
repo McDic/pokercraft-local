@@ -36,7 +36,7 @@ GUI_EXPORTED_SUCCESS: typing.Final[str] = (
 
 RR_RANK_CHART_TITLE: typing.Final[str] = "RR by Rank Percentile"
 RR_RANK_CHART_SUBTITLE: typing.Final[str] = (
-    "Only non-zero profits are shown. " "(RR = Prize / BuyIn)"
+    "Only non-zero profits are shown. " "(RR = Prize / BuyIn, PERR = RR * Percentile)"
 )
 RR_RANK_CHART_HOVERTEMPLATE: typing.Final[str] = (
     "Got %{customdata[3]:.2f}x profit at top %{x:.3%}; "
