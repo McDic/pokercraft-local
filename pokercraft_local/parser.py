@@ -221,7 +221,7 @@ class PokercraftParser:
                     for name in zipfile.namelist():
                         if cls.is_ggtxt(name):
                             with zipfile.open(name, "r") as file:
-                                yield path / name, TextIOWrapper(file)
+                                yield path / name, TextIOWrapper(file, encoding="utf-8")
 
     @classmethod
     def crawl_files(
