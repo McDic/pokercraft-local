@@ -211,7 +211,7 @@ def get_historical_charts(
         label={
             "text": translate_to(lang, "Break-even"),
             "textposition": "end",
-            "font": {"color": OPACITY_RED, "weight": 5, "size": 24},
+            "font": {"color": OPACITY_RED, "weight": 1000, "size": 24},
             "yanchor": "top",
         },
         exclude_empty_subplots=False,
@@ -230,7 +230,7 @@ def get_historical_charts(
             label={
                 "text": translate_to(lang, text),
                 "textposition": "start",
-                "font": {"color": OPACITY_BLACK, "weight": 5, "size": 18},
+                "font": {"color": OPACITY_BLACK, "weight": 1000, "size": 18},
                 "yanchor": "top",
             },
             exclude_empty_subplots=False,
@@ -352,7 +352,7 @@ def get_profit_heatmap_charts(
             label={
                 "text": translate_to(lang, hline_label),
                 "textposition": "start",
-                "font": {"color": color, "weight": 5, "size": 20},
+                "font": {"color": color, "weight": 1000, "size": 20},
                 "yanchor": "bottom",
             },
         )
@@ -549,7 +549,19 @@ def get_rr_by_rank_chart(
     OPACITY_RED = "rgba(255,0,0,0.3)"
     EVEN_MORE_TRANSPARENT_RED = "rgba(255,0,0,0.1)"
     OPACITY_GRAY = "rgb(40,40,40)"
+    OPACITY_GREEN = "rgba(74,131,78,0.7)"
     figure.add_vline(x=1.0, line_dash="dash", line_color=OPACITY_GRAY)
+    figure.add_vline(
+        x=1 / 8.0,
+        line_dash="dash",
+        name="Rough ITM Cut",
+        line_color=OPACITY_GREEN,
+        label={
+            "text": lang << "Rough ITM Cut (1/8)",
+            "font": {"size": 16, "color": OPACITY_GREEN, "weight": 1000},
+            "textposition": "middle",
+        },
+    )
     figure.add_hline(y=1.0, line_dash="dash", line_color=OPACITY_RED)
     figure.add_hrect(
         y0=0,
