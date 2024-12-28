@@ -50,4 +50,4 @@ jobs:
             run_gui-*.zip
             run_gui-*.tar.gz
           body: |
-            Please read CHANGELOG.md for more information.
+            Please read [CHANGELOG.md](https://github.com/McDic/pokercraft-local/blob/master/CHANGELOG.md) for more information.
