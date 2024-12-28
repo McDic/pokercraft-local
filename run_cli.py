@@ -47,10 +47,10 @@ if __name__ == "__main__":
         help="Also export CSV if this flag is provided",
     )
     parser.add_argument(
-        "--no-forex",
+        "--use-forex",
         action="store_true",
         required=False,
-        help="Do not fetch currency rate from the Forex if this flag is provided",
+        help="Fetch currency rate from the Forex if this flag is provided",
     )
 
     namespace = parser.parse_args()
@@ -63,7 +63,7 @@ if __name__ == "__main__":
         allow_freerolls=namespace.include_freerolls,
         lang=namespace.lang,
         exclude_csv=(not namespace.export_csv),
-        use_realtime_currency_rate=(not namespace.no_forex),
+        use_realtime_currency_rate=namespace.use_forex,
     )
 
     if namespace.export_csv:
