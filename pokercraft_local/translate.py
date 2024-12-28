@@ -260,6 +260,11 @@ of your prizes are gone. In a long term, there is no such thing like "one hit wo
 장기적으로, "한방찍기"란 없다는 것을 이 섹션에서 알 수 있습니다.*
 """,
     },
+    # Rank Profit Chart
+    {
+        Language.ENGLISH: """""",
+        Language.KOREAN: """""",
+    },
 ]
 
 
