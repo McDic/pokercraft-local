@@ -1,8 +1,9 @@
 # 3rd Party Libraries
 pandas
 plotly
+statsmodels == 0.14.*
 markdown
-forex-python == 1.8
+forex-python == 1.8.*
 
 # Pokercraft Local Utilities
-pokercraft-local-bankroll == 0.4
+pokercraft-local-bankroll == 0.4.*

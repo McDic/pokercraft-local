@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as plgo
+import statsmodels.api as smapi
 from markdown import markdown
 from plotly.subplots import make_subplots
 
@@ -211,7 +212,7 @@ def get_historical_charts(
         label={
             "text": translate_to(lang, "Break-even"),
             "textposition": "end",
-            "font": {"color": OPACITY_RED, "weight": 1000, "size": 24},
+            "font": {"color": OPACITY_RED, "weight": 1000, "size": 28},
             "yanchor": "top",
         },
         exclude_empty_subplots=False,
@@ -505,6 +506,26 @@ def get_rr_by_rank_chart(
     max_rr = df_base["RR"].max()
     best_percentile_log = math.log10(df_base["Rank Percentile"].min())
 
+    # Linear regression
+    df_hhh_only = df_base[df_base["Rank Percentile"] <= 1 / 8.0].copy()
+    df_hhh_only["RR"] = df_hhh_only["RR"].apply(log2_or_nan)
+    df_hhh_only["Rank Percentile"] = df_hhh_only["Rank Percentile"].apply(log2_or_nan)
+    fit_results = (
+        smapi.OLS(
+            df_hhh_only["RR"],
+            smapi.add_constant(df_hhh_only["Rank Percentile"]),
+            missing="drop",
+        )
+        .fit()
+        .predict()
+    )
+    df_hhh_only["Fitted"] = fit_results
+    df_hhh_only["Fitted"] = df_hhh_only["Fitted"].apply(lambda x: 2**x)
+    df_hhh_only["RR"] = df_hhh_only["RR"].apply(lambda x: 2**x)
+    df_hhh_only["Rank Percentile"] = df_hhh_only["Rank Percentile"].apply(
+        lambda x: 2**x
+    )
+
     COMMON_CUSTOM_DATA = np.stack(
         (
             df_base["Name"],
@@ -540,6 +561,17 @@ def get_rr_by_rank_chart(
         ),
         secondary_y=True,
     )
+    figure.add_trace(
+        plgo.Scatter(
+            x=df_hhh_only["Rank Percentile"],
+            y=df_hhh_only["Fitted"],
+            name=lang << "RR Trendline",
+            showlegend=True,
+            mode="lines",
+            hoverinfo="skip",
+            marker_color="RGBA(54,234,201,0.4)",
+        )
+    )
     figure.update_layout(
         title=translate_to(lang, RR_RANK_CHART_TITLE),
         title_subtitle_text=translate_to(lang, RR_RANK_CHART_SUBTITLE),
@@ -547,27 +579,30 @@ def get_rr_by_rank_chart(
         xaxis_title=translate_to(lang, "Rank Percentile"),
     )
     OPACITY_RED = "rgba(255,0,0,0.3)"
-    EVEN_MORE_TRANSPARENT_RED = "rgba(255,0,0,0.1)"
-    OPACITY_GRAY = "rgb(40,40,40)"
+    OPACITY_GRAY = "rgb(180,180,180)"
     OPACITY_GREEN = "rgba(74,131,78,0.7)"
     figure.add_vline(x=1.0, line_dash="dash", line_color=OPACITY_GRAY)
     figure.add_vline(
         x=1 / 8.0,
         line_dash="dash",
-        name="Rough ITM Cut",
         line_color=OPACITY_GREEN,
         label={
             "text": lang << "Rough ITM Cut (1/8)",
             "font": {"size": 16, "color": OPACITY_GREEN, "weight": 1000},
-            "textposition": "middle",
+            "textposition": "end",
+            "xanchor": "right",
         },
     )
-    figure.add_hline(y=1.0, line_dash="dash", line_color=OPACITY_RED)
-    figure.add_hrect(
-        y0=0,
-        y1=1.0,
-        fillcolor=EVEN_MORE_TRANSPARENT_RED,
-        line_width=0,
+    figure.add_hline(
+        y=1.0,
+        line_dash="dash",
+        line_color=OPACITY_RED,
+        label={
+            "text": lang << "Break-even",
+            "font": {"size": 28, "color": OPACITY_RED, "weight": 1000},
+            "textposition": "end",
+            "yanchor": "top",
+        },
     )
     figure.update_xaxes(
         type="log",
