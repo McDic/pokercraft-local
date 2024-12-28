@@ -60,6 +60,7 @@ TRANSLATION: typing.Final[dict[Language, dict[str, str]]] = {
         "Output directory is not selected or invalid.": \
         "분석파일 내보낼 폴더가 선택되지 않았거나 올바르지 않습니다.",
         "Include Freerolls": "프리롤 포함하기",
+        "Fetch the latest forex rate (May fail)": "최신 환율 반영하기 (실패할 수 있음)",
         "Export plot and CSV data (Enter)": "CSV랑 분석 파일 생성하기 (Enter 키)",
         # Historical Performance
         "Historical Performance": "과거 성적",

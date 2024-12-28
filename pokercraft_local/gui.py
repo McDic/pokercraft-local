@@ -18,7 +18,7 @@ class PokerCraftLocalGUI:
     def __init__(self) -> None:
         self._window: tk.Tk = tk.Tk()
         self._window.title(f"PokerCraft Local v{VERSION} - By McDic")
-        self._window.geometry("400x250")
+        self._window.geometry("400x280")
         self._window.resizable(False, False)
 
         # Language selection
@@ -78,6 +78,17 @@ class PokerCraftLocalGUI:
         )
         self._checkbox_allow_freerolls.pack()
 
+        # Use realtime forex conversion
+        self._boolvar_fetch_forex: tk.BooleanVar = tk.BooleanVar(self._window)
+        self._checkbox_fetch_forex: tk.Checkbutton = tk.Checkbutton(
+            self._window,
+            text="checkbox_fetch_forex",
+            variable=self._boolvar_fetch_forex,
+            onvalue=True,
+            offvalue=False,
+        )
+        self._checkbox_fetch_forex.pack()
+
         # Run button
         self._button_export: tk.Button = tk.Button(
             self._window, text="button_export", command=self.export
@@ -130,6 +141,9 @@ class PokerCraftLocalGUI:
         )
         self._checkbox_allow_freerolls.config(
             text=translate_to(lang, "Include Freerolls")
+        )
+        self._checkbox_fetch_forex.config(
+            text=translate_to(lang, "Fetch the latest forex rate (May fail)")
         )
         self._button_export.config(
             text=translate_to(lang, "Export plot and CSV data (Enter)")
@@ -217,6 +231,7 @@ class PokerCraftLocalGUI:
             allow_freerolls=self._boolvar_allow_freerolls.get(),
             lang=THIS_LANG,
             exclude_csv=False,
+            use_realtime_currency_rate=self._boolvar_fetch_forex.get(),
         )
         showinfo(
             self.get_info_popup_title(),
