@@ -18,13 +18,24 @@ BANKROLL_PLOT_TITLE: typing.Final[str] = (
 )
 BANKROLL_PLOT_SUBTITLE: typing.Final[str] = (
     "This plot is calculated only if your performance is winning. "
-    "(RR = Prize / Buy-in)"
+    "(RR = Prize / Buy-in, PERR = Percentile * RR)"
 )
 PRIZE_PIE_CHART_TITLE: typing.Final[str] = "Your Prizes"
 PRIZE_PIE_CHART_SUBTITLE: typing.Final[str] = "Small prizes are grouped as 'Others'."
 GUI_EXPORTED_SUCCESS: typing.Final[str] = (
-    "Exported CSV and plot successfully;"
+    "Exported CSV and plot successfully; "
     "Please check {csv_path} and {plot_path} in {output_dir}."
+)
+
+RR_RANK_CHART_TITLE: typing.Final[str] = "RR by Rank Percentile"
+RR_RANK_CHART_SUBTITLE: typing.Final[str] = (
+    "Only non-zero profits are shown. " "(RR = Prize / BuyIn)"
+)
+RR_RANK_CHART_HOVERTEMPLATE: typing.Final[str] = (
+    "Got %{customdata[3]:.2f}x profit at top %{x:.2%}; "
+    "PERR = %{customdata[4]:.3f}<br>"
+    "Exact rank: #%{customdata[2]} of %{customdata[1]} entries<br>"
+    "..from <i>%{customdata[0]}</i>"
 )
 
 # fmt: off
@@ -95,6 +106,19 @@ TRANSLATION: typing.Final[dict[Language, dict[str, str]]] = {
         PRIZE_PIE_CHART_TITLE: "당신의 상금 분포",
         PRIZE_PIE_CHART_SUBTITLE: "작은 상금은 '기타'로 분류됩니다.",
         "Others": "기타",
+        # RR by Rank Percentile
+        RR_RANK_CHART_TITLE: "순위 백분위별 RR",
+        RR_RANK_CHART_SUBTITLE: "수익이 0이 아닌 토너만 표시됩니다. "
+        "(RR = 상금 / 바인금액, PERR = 백분위 * RR)",
+        RR_RANK_CHART_HOVERTEMPLATE: (
+            "상금 %{customdata[3]:.2f} BI를 상위 %{x:.2%}에서 받음; "
+            "PERR = %{customdata[4]:.3f}<br>"
+            "순위: %{customdata[2]}등 / %{customdata[1]} 엔트리<br>"
+            "토너 출처: <i>%{customdata[0]}</i>"
+        ),
+        "RR by Percentile": "백분위별 RR",
+        "PERR": "PERR",
+        "Rank Percentile": "순위 백분위",
     },
 }
 # fmt: on
@@ -262,8 +286,28 @@ of your prizes are gone. In a long term, there is no such thing like "one hit wo
     },
     # Rank Profit Chart
     {
-        Language.ENGLISH: """""",
-        Language.KOREAN: """""",
+        Language.ENGLISH: """
+This section shows how RR grows over your rank percentile.
+RR is calculated as prize divided by buy-in(re-entries are not considered),
+and PERR is calculated as RR multiplied by rank percentile.
+
+*Creator's comment:
+You can see RR and Rank Percentile are having roughly linear relationship.
+You can check PERR of some important points to know
+how much you should frequently achieve such deep runs,
+and also how hard to make profits in tournaments in long term.*
+""",
+        Language.KOREAN: """
+이 섹션은 당신의 토너 순위 백분위에 따른 RR의 변화를 보여줍니다.
+RR은 상금을 바인비로 나눈 값이고(리엔트리 고려 안함),
+PERR은 RR을 순위 백분위로 곱한 값입니다.
+
+*제작자의 코멘트:
+RR과 순위 백분위는 대략적으로 서로 비례함을 확인할 수 있습니다.
+당신은 주요 딥런한 토너들의 PERR을 확인하여 얼마나 자주
+그런 딥런을 만들어야 수익성이 생기는 지, 그리고 토너먼트에서
+장기적으로 수익을 챙기는 것이 왜 어려운 지를 확인할 수 있습니다.*
+""",
     },
 ]
 

@@ -18,6 +18,9 @@ from .translate import (
     PLOT_DOCUMENTATIONS,
     PRIZE_PIE_CHART_SUBTITLE,
     PRIZE_PIE_CHART_TITLE,
+    RR_RANK_CHART_HOVERTEMPLATE,
+    RR_RANK_CHART_SUBTITLE,
+    RR_RANK_CHART_TITLE,
     RRE_PLOT_SUBTITLE,
     RRE_PLOT_TITLE,
     Language,
@@ -479,11 +482,11 @@ def get_profit_pie(
     return figure
 
 
-def get_rank_profit_chart(
+def get_rr_by_rank_chart(
     tournaments: list[TournamentSummary], lang: Language
 ) -> plgo.Figure:
     """
-    Get rank-profit scatter chart.
+    Get `RR by Rank Percentile` chart.
     """
     df_base = pd.DataFrame(
         {
@@ -512,31 +515,25 @@ def get_rank_profit_chart(
         ),
         axis=-1,
     )
-    COMMON_HOVERTEMPLATE: typing.Final[str] = (
-        "Got %{customdata[3]:.2f}x profit at %{x:.2%} percentile; "
-        "PERR = %{customdata[4]:.3f}<br>"
-        "Exact rank: #%{customdata[2]} of %{customdata[1]} entries<br>"
-        "..from %{customdata[0]}"
-    )
     COMMON_OPTIONS = {
         "x": df_base["Rank Percentile"],
         "mode": "markers",
         "customdata": COMMON_CUSTOM_DATA,
-        "hovertemplate": COMMON_HOVERTEMPLATE,
+        "hovertemplate": translate_to(lang, RR_RANK_CHART_HOVERTEMPLATE),
     }
 
     figure = make_subplots(specs=[[{"secondary_y": True}]])
     figure.add_trace(
         plgo.Scatter(
             y=df_base["RR"],
-            name="RR by Percentile",
+            name=translate_to(lang, "RR by Percentile"),
             **COMMON_OPTIONS,
         )
     )
     figure.add_trace(
         plgo.Scatter(
             y=df_base["Percentile mul RR"],
-            name="PERR",
+            name=translate_to(lang, "PERR"),
             visible="legendonly",
             marker_color="#BB75FF",
             **COMMON_OPTIONS,
@@ -544,10 +541,10 @@ def get_rank_profit_chart(
         secondary_y=True,
     )
     figure.update_layout(
-        title="RR by Rank Percentile",
-        title_subtitle_text="Only nonzero-profits are shown.",
+        title=translate_to(lang, RR_RANK_CHART_TITLE),
+        title_subtitle_text=translate_to(lang, RR_RANK_CHART_SUBTITLE),
         title_subtitle_font_style="italic",
-        xaxis_title="Rank Percentile",
+        xaxis_title=translate_to(lang, "Rank Percentile"),
     )
     OPACITY_RED = "rgba(255,0,0,0.3)"
     EVEN_MORE_TRANSPARENT_RED = "rgba(255,0,0,0.1)"
@@ -565,6 +562,8 @@ def get_rank_profit_chart(
         range=[0, best_percentile_log - 0.2],
         minallowed=-7.0,
         maxallowed=1.0,
+        tickformat=",.2%",
+        dtick=0.5,
     )
     figure.update_yaxes(
         type="log",
@@ -615,7 +614,7 @@ def plot_total(
             min_simulation_iterations=bankroll_min_simulation_iterations,
         ),
         get_profit_pie(tournaments, lang),
-        get_rank_profit_chart(tournaments, lang),
+        get_rr_by_rank_chart(tournaments, lang),
     ]
     return BASE_HTML_FRAME.format(
         title=get_html_title(nickname, lang),
