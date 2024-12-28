@@ -32,7 +32,7 @@ RR_RANK_CHART_SUBTITLE: typing.Final[str] = (
     "Only non-zero profits are shown. " "(RR = Prize / BuyIn)"
 )
 RR_RANK_CHART_HOVERTEMPLATE: typing.Final[str] = (
-    "Got %{customdata[3]:.2f}x profit at top %{x:.2%}; "
+    "Got %{customdata[3]:.2f}x profit at top %{x:.3%}; "
     "PERR = %{customdata[4]:.3f}<br>"
     "Exact rank: #%{customdata[2]} of %{customdata[1]} entries<br>"
     "..from <i>%{customdata[0]}</i>"
@@ -111,7 +111,7 @@ TRANSLATION: typing.Final[dict[Language, dict[str, str]]] = {
         RR_RANK_CHART_SUBTITLE: "수익이 0이 아닌 토너만 표시됩니다. "
         "(RR = 상금 / 바인금액, PERR = 백분위 * RR)",
         RR_RANK_CHART_HOVERTEMPLATE: (
-            "상금 %{customdata[3]:.2f} BI를 상위 %{x:.2%}에서 받음; "
+            "상금 %{customdata[3]:.2f} BI를 상위 %{x:.3%}에서 받음; "
             "PERR = %{customdata[4]:.3f}<br>"
             "순위: %{customdata[2]}등 / %{customdata[1]} 엔트리<br>"
             "토너 출처: <i>%{customdata[0]}</i>"
@@ -295,7 +295,9 @@ and PERR is calculated as RR multiplied by rank percentile.
 You can see RR and Rank Percentile are having roughly linear relationship.
 You can check PERR of some important points to know
 how much you should frequently achieve such deep runs,
-and also how hard to make profits in tournaments in long term.*
+and also how hard to make profits in tournaments in long term.
+Some tournaments like `Flip & Go (Go Stage)` or Day1 tourneys
+may make a noise due to how GGPoker gives an incomplete data.*
 """,
         Language.KOREAN: """
 이 섹션은 당신의 토너 순위 백분위에 따른 RR의 변화를 보여줍니다.
@@ -306,7 +308,9 @@ PERR은 RR을 순위 백분위로 곱한 값입니다.
 RR과 순위 백분위는 대략적으로 서로 비례함을 확인할 수 있습니다.
 당신은 주요 딥런한 토너들의 PERR을 확인하여 얼마나 자주
 그런 딥런을 만들어야 수익성이 생기는 지, 그리고 토너먼트에서
-장기적으로 수익을 챙기는 것이 왜 어려운 지를 확인할 수 있습니다.*
+장기적으로 수익을 챙기는 것이 왜 어려운 지를 확인할 수 있습니다.
+`플립앤고`나 Day1 같은 토너들이 데이터에 노이즈를 줄 수 있는데,
+그것은 GGPoker가 데이터를 불완전하게 제공하기 때문입니다.*
 """,
     },
 ]
