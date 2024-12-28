@@ -6,10 +6,14 @@ from pathlib import Path
 from zipfile import ZipFile
 
 from .constants import ANY_INT, ANY_MONEY, STR_PATTERN
-from .data_structures import Currency, TournamentSummary
+from .data_structures import Currency, CurrencyRateConverter, TournamentSummary
 
 
-def convert_money_to_float(s: str, supposed_currency: Currency | None = None) -> float:
+def convert_money_to_float(
+    s: str,
+    rate_converter: CurrencyRateConverter,
+    supposed_currency: Currency | None = None,
+) -> float:
     """
     Convert a string to a float.
     """
@@ -17,25 +21,29 @@ def convert_money_to_float(s: str, supposed_currency: Currency | None = None) ->
     if ANY_MONEY.fullmatch(s) is None:
         raise ValueError(f"Failed to parse given string {s} as money.")
     for cur in Currency:
-        if cur.value[0] == s[0]:
-            if supposed_currency is not None and s[0] != supposed_currency.value[0]:
+        if cur.value == s[0]:
+            if supposed_currency is not None and s[0] != supposed_currency.value:
                 raise ValueError(
-                    f"Supposed currency {supposed_currency.value[0]} is "
-                    f"different from detected currency {s[0]}."
+                    f"Supposed currency {supposed_currency.value} is "
+                    f"different from detected currency {s}."
                 )
-            return float(s[1:].replace(",", "")) / cur.value[1]
+            return rate_converter.convert(cur, amount=float(s[1:].replace(",", "")))
     else:
         raise ValueError(f"Unknown currency {s[0]} detected")
 
 
 def take_all_money(
-    s: str, supposed_currency: Currency | None = None
+    s: str,
+    rate_converter: CurrencyRateConverter,
+    supposed_currency: Currency | None = None,
 ) -> typing.Generator[float, None, None]:
     """
     Take all money from a string.
     """
     for match in ANY_MONEY.finditer(s):
-        yield convert_money_to_float(match.group(), supposed_currency=supposed_currency)
+        yield convert_money_to_float(
+            match.group(), rate_converter, supposed_currency=supposed_currency
+        )
 
 
 def take_first_int(s: str) -> int:
@@ -72,7 +80,11 @@ class PokercraftParser:
     LINE8_ADVANCED_DAY1: STR_PATTERN = regex.compile(r"You have advanced to .+")
 
     @classmethod
-    def parse(cls, instream: TextIOWrapper) -> TournamentSummary:
+    def parse(
+        cls,
+        instream: TextIOWrapper,
+        rate_converter: CurrencyRateConverter,
+    ) -> TournamentSummary:
         """
         Parse given file into `TournamentSummary` object.
         """
@@ -112,7 +124,11 @@ class PokercraftParser:
 
             elif cls.LINE2_BUYIN.fullmatch(line):
                 buy_ins: list[float] = sorted(
-                    take_all_money(line, supposed_currency=first_detected_currency)
+                    take_all_money(
+                        line,
+                        rate_converter,
+                        supposed_currency=first_detected_currency,
+                    )
                 )
                 t_rake = buy_ins[0]
                 t_buy_in_pure = sum(buy_ins) - t_rake
@@ -127,7 +143,11 @@ class PokercraftParser:
 
             elif cls.LINE4_PRIZEPOOL.fullmatch(line):
                 t_total_prize_pool = next(
-                    take_all_money(line, supposed_currency=first_detected_currency)
+                    take_all_money(
+                        line,
+                        rate_converter,
+                        supposed_currency=first_detected_currency,
+                    )
                 )
 
             elif cls.LINE5_START_TIME.fullmatch(line):
@@ -139,7 +159,11 @@ class PokercraftParser:
             elif cls.LINE6_MY_RANK_AND_PRIZE.fullmatch(line):
                 t_my_rank = take_first_int(line)
                 t_my_prize = sum(
-                    take_all_money(line, supposed_currency=first_detected_currency)
+                    take_all_money(
+                        line,
+                        rate_converter,
+                        supposed_currency=first_detected_currency,
+                    )
                 )
                 # Flip & Go displays "$0 Entry" as prize
                 if t_my_prize <= 0.0 and "$0 Entry" in line:
@@ -203,6 +227,7 @@ class PokercraftParser:
     def crawl_files(
         cls,
         paths: typing.Iterable[Path],
+        rate_converter: CurrencyRateConverter,
         follow_symlink: bool = True,
         allow_freerolls: bool = False,
     ) -> typing.Generator[TournamentSummary, None, None]:
@@ -212,7 +237,7 @@ class PokercraftParser:
         """
         for path, stream in cls.yield_streams(paths, follow_symlink=follow_symlink):
             try:
-                summary = cls.parse(stream)
+                summary = cls.parse(stream, rate_converter)
                 if summary.buy_in == 0 and not allow_freerolls:
                     print(f"Detected freeroll {summary.name}, skipping.")
                 else:

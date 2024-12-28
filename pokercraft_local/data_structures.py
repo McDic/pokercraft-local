@@ -1,9 +1,12 @@
 import math
 import typing
+import warnings
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from enum import auto as enumauto
+
+from forex_python.converter import CurrencyRates
 
 
 class PokerGameType(Enum):
@@ -141,14 +144,68 @@ class TournamentSummary:
         )
 
 
+def get_exchange_rate_raw(
+    to_currency: str,
+    default: float,
+    from_currency: str = "USD",
+) -> float:
+    """
+    Get exchange rate from `from_currency` to `to_currency`.
+    """
+    try:
+        print("Getting exchange rate: %s -> %s" % (from_currency, to_currency))
+        return CurrencyRates().get_rate(from_currency, to_currency)
+    except Exception as err:
+        warnings.warn(
+            "Failed to fetch exchange rate(%s -> %s) with reason: [%s] %s"
+            % (from_currency, to_currency, type(err), err)
+        )
+        return default
+
+
 class Currency(Enum):
     """
     Enumeration of currencies.
     """
 
-    USD = ("$", 1.0)
-    CNY = ("¥", 7.25)
-    THB = ("฿", 34.61)
-    VND = ("₫", 25420.00)
-    PHP = ("₱", 58.98)
-    KRW = ("₩", 1399.58)
+    USD = "$"
+    CNY = "¥"
+    THB = "฿"
+    VND = "₫"
+    PHP = "₱"
+    KRW = "₩"
+
+
+class CurrencyRateConverter:
+    """
+    Represent a currency rate converter.
+    """
+
+    def __init__(self, update_from_forex: bool = True) -> None:
+        self._usd_rates: dict[Currency, float] = {
+            Currency.USD: 1.0,  # default rates
+            Currency.CNY: 7.25,
+            Currency.THB: 34.61,
+            Currency.VND: 25420.00,
+            Currency.PHP: 58.98,
+            Currency.KRW: 1399.58,
+        }
+        if update_from_forex:
+            for currency in Currency:
+                if currency is Currency.USD:
+                    continue
+                self._usd_rates[currency] = get_exchange_rate_raw(
+                    currency.name, self._usd_rates[currency]
+                )
+
+    def convert(
+        self,
+        to_currency: Currency,
+        *,
+        from_currency: Currency = Currency.USD,
+        amount: float = 1.0,
+    ) -> float:
+        """
+        Convert given amount from `from_currency` to `to_currency`.
+        """
+        return amount * self._usd_rates[from_currency] / self._usd_rates[to_currency]

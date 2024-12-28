@@ -2,6 +2,7 @@
 pandas
 plotly
 markdown
+forex-python == 1.8
 
 # Pokercraft Local Utilities
 pokercraft-local-bankroll == 0.4

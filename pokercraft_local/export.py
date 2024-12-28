@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
-from .data_structures import TournamentSummary
+from .data_structures import CurrencyRateConverter, TournamentSummary
 from .parser import PokercraftParser
 from .translate import Language
 from .visualize import plot_total
@@ -27,6 +27,7 @@ def export(
     allow_freerolls: bool,
     lang: Language,
     exclude_csv: bool = True,
+    use_realtime_currency_rate: bool = True,
 ) -> tuple[Path, Path]:
     """
     Export data from given info,
@@ -43,6 +44,9 @@ def export(
                 [main_path],
                 follow_symlink=True,
                 allow_freerolls=allow_freerolls,
+                rate_converter=CurrencyRateConverter(
+                    update_from_forex=use_realtime_currency_rate
+                ),
             )
         ),
         key=lambda t: t.sorting_key(),
