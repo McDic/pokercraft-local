@@ -8,6 +8,7 @@
 - Improved minor translations
 - Add subtitles for each plot
 - Added option to fetch realtime currency conversion rate from the Forex
+- Removed maximum data points for resampling
 
 # v1.6.1
 
