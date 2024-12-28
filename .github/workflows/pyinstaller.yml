@@ -49,3 +49,5 @@ jobs:
           files: |
             run_gui-*.zip
             run_gui-*.tar.gz
+          body: |
+            Please read CHANGELOG.md for more information.
