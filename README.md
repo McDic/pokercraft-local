@@ -34,8 +34,9 @@ therefore you may have to download separately monthly or weekly records.
 
 ![pokercraft_download](./images/pokercraft_download.png)
 
-After you downloaded, unzip your downloaded `.zip` files, and put all of them under single folder.
-The library finds all `GG(blabla).txt` files recursively by default, so it's ok to make multiple folders inside to make better organization of files.
+After you downloaded, just put all `.zip` files in single folder.
+The unzipping is not necessary anymore from `v1.7.0`.
+The library finds all `GG(blabla).txt` files from both directory and `.zip` files recursively by default.
 
 ### 3. Running a program
 
@@ -49,12 +50,7 @@ Run `run_cli.py` with some arguments.
 Make sure you installed all dependencies before running.
 
 ```bash
-python run_cli.py \
-    -d (YOUR_DATA_FOLDER) \  # Specify your data directory
-    -o (OUTPUT_FOLDER) \     # Specify your output directory
-    -n (YOUR_GG_NICKNAME) \  # Specify your GG nickname
-    --lang en \              # Specify your language for the report
-    --export-csv \           # Export CSV data file (optional)
+python run_cli.py --help
 ```
 
 Or alternatively, you can run `run_gui.py` instead.
@@ -87,10 +83,12 @@ Note that plotly javascripts are included by CDN, so you need working internet c
 
 ## Features
 
-Each plots are now described in plot, so please read when you generated a file.
-There are 4 sections;
+Each plots are now providing documentations in `.html`,
+so please read when you generated a file.
+There are following sections;
 
-1. Historical Performance
-2. Relative Prize Returns
+1. Historical Performances
+2. RRE Heatmaps
 3. Bankroll Analysis with Monte-Carlo simulation
 4. Your Prizes
+5. RR by Rank Percentiles
