@@ -9,6 +9,7 @@
 - Add subtitles for each plot
 - Added option to fetch realtime currency conversion rate from the Forex
 - Removed maximum data points for resampling
+- Added range-slider on the "Historical Performance" section
 
 # v1.6.1
 
