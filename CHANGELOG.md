@@ -1,4 +1,4 @@
-# v1.7.1
+## v1.7.1
 
 - Now unzipping is not necessary anymore; You can directly analyze `.zip` files
 - Added new RR-RankPercentile chart
@@ -11,7 +11,7 @@
 - Removed maximum data points for resampling
 - Added range-slider on the "Historical Performance" section
 
-# v1.6.1
+## v1.6.1
 
 - Now supports multiple languages; English, Korean
 - Added in-html documentations for each plot
