@@ -6,10 +6,7 @@ Here is working [demo](https://blog.mcdic.net/assets/raw_html/damavaco_performan
 
 ## Dependencies
 
-- Python 3.12
-    - plotly, pandas
-
-I develop most stuffs on WSL and did not tested on other operating systems yet.
+- Python 3.12 (for libraries, check `requirements.txt`.)
 
 ## How to run
 

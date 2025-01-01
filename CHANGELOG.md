@@ -1,3 +1,7 @@
+## v1.7.2
+
+- Now GUI makes a warning pop-up at the beginning if the current program version is outdated
+
 ## v1.7.1
 
 - Now unzipping is not necessary anymore; You can directly analyze `.zip` files
