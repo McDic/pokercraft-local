@@ -118,43 +118,31 @@ class PokerCraftLocalGUI:
         Reset display by changed language.
         """
         lang = Language(strvar if isinstance(strvar, str) else strvar.get())
-        self._label_language_selection.config(
-            text=translate_to(lang, "Select Language"),
-        )
+        self._label_language_selection.config(text=lang << "Select Language")
         self._label_data_directory.config(
-            text=translate_to(lang, "Data Directory: %s")
+            text=(lang << "Data Directory: %s")
             % (
                 self.display_path(self._data_directory)
                 if self._data_directory and self._data_directory.is_dir()
                 else "-"
             ),
         )
-        self._button_data_directory.config(
-            text=translate_to(lang, "Choose Data Directory")
-        )
+        self._button_data_directory.config(text=lang << "Choose Data Directory")
         self._label_output_directory.config(
-            text=translate_to(lang, "Output Directory: %s")
+            text=(lang << "Output Directory: %s")
             % (
                 self.display_path(self._output_directory)
                 if self._output_directory and self._output_directory.is_dir()
                 else "-"
             ),
         )
-        self._button_output_directory.config(
-            text=translate_to(lang, "Choose Output Directory")
-        )
-        self._label_nickname.config(
-            text=translate_to(lang, "Your GG nickname"),
-        )
-        self._checkbox_allow_freerolls.config(
-            text=translate_to(lang, "Include Freerolls")
-        )
+        self._button_output_directory.config(text=lang << "Choose Output Directory")
+        self._label_nickname.config(text=lang << "Your GG nickname")
+        self._checkbox_allow_freerolls.config(text=lang << "Include Freerolls")
         self._checkbox_fetch_forex.config(
-            text=translate_to(lang, "Fetch the latest forex rate (May fail)")
+            text=lang << "Fetch the latest forex rate (May fail)"
         )
-        self._button_export.config(
-            text=translate_to(lang, "Export plot and CSV data (Enter)")
-        )
+        self._button_export.config(text=lang << "Export plot and CSV data (Enter)")
 
     def choose_data_directory(self) -> None:
         """
@@ -209,19 +197,19 @@ class PokerCraftLocalGUI:
         if not nickname:
             showwarning(
                 self.get_warning_popup_title(),
-                translate_to(THIS_LANG, "Nickname is not given."),
+                THIS_LANG << "Nickname is not given.",
             )
             return
         elif not self._data_directory or not self._data_directory.is_dir():
             showwarning(
                 self.get_warning_popup_title(),
-                translate_to(THIS_LANG, "Data directory is not selected or invalid."),
+                THIS_LANG << "Data directory is not selected or invalid.",
             )
             return
         elif not self._output_directory or not self._output_directory.is_dir():
             showwarning(
                 self.get_warning_popup_title(),
-                translate_to(THIS_LANG, "Output directory is not selected or invalid."),
+                THIS_LANG << "Output directory is not selected or invalid.",
             )
             return
 
@@ -242,7 +230,7 @@ class PokerCraftLocalGUI:
         )
         showinfo(
             self.get_info_popup_title(),
-            translate_to(THIS_LANG, GUI_EXPORTED_SUCCESS).format(
+            (THIS_LANG << GUI_EXPORTED_SUCCESS).format(
                 output_dir=self._output_directory,
                 csv_path=csv_path.name,
                 plot_path=plot_path.name,

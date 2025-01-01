@@ -91,7 +91,7 @@ def get_historical_charts(
         cols=1,
         shared_xaxes=True,
         row_titles=[
-            translate_to(lang, t)
+            lang << t
             for t in ["Net Profit & Rake", "Profitable Ratio", "Average Buy In"]
         ],
         vertical_spacing=0.01,
@@ -103,8 +103,8 @@ def get_historical_charts(
             plgo.Scatter(
                 y=df_base[col],
                 legendgroup="Profit",
-                legendgrouptitle_text=translate_to(lang, "Profits & Rakes"),
-                name=translate_to(lang, col),
+                legendgrouptitle_text=lang << "Profits & Rakes",
+                name=lang << col,
                 hovertemplate="%{y:$,.2f}",
                 **common_options,
             ),
@@ -123,7 +123,7 @@ def get_historical_charts(
                 y=df_base[pr_col],
                 meta=[y * 100 for y in df_base[pr_col]],
                 legendgroup="Profitable Ratio",
-                legendgrouptitle_text=translate_to(lang, "Profitable Ratio"),
+                legendgrouptitle_text=lang << "Profitable Ratio",
                 name=get_translated_column_moving_average(lang, window_size),
                 hovertemplate="%{meta:.2f}%",
                 **common_options,
@@ -137,7 +137,7 @@ def get_historical_charts(
             plgo.Scatter(
                 y=df_base[avb_col],
                 legendgroup="Avg Buy In",
-                legendgrouptitle_text=translate_to(lang, "Average Buy In"),
+                legendgrouptitle_text=lang << "Average Buy In",
                 name=get_translated_column_moving_average(lang, window_size),
                 hovertemplate="%{y:$,.2f}",
                 **common_options,
@@ -148,7 +148,7 @@ def get_historical_charts(
 
     # Update layouts and axes
     figure.update_layout(
-        title=translate_to(lang, "Historical Performance"),
+        title=lang << "Historical Performance",
         hovermode="x unified",
         yaxis1={"tickformat": "$"},
         yaxis2={"tickformat": ".2%"},
@@ -156,8 +156,7 @@ def get_historical_charts(
         xaxis={
             "rangeslider": {"visible": True, "autorange": True},
             "labelalias": {
-                i: translate_to(lang, "Tourney #%d") % (i,)
-                for i in range(1, len(df_base) + 1)
+                i: (lang << "Tourney #%d") % (i,) for i in range(1, len(df_base) + 1)
             },
         },
         legend_groupclick="toggleitem",
@@ -166,8 +165,7 @@ def get_historical_charts(
         visible="legendonly",
         selector=(
             lambda barline: (
-                barline.name
-                in [translate_to(any_lang, "Net Rake") for any_lang in Language]
+                barline.name in [any_lang << "Net Rake" for any_lang in Language]
             )
             or ("800" in barline.name)
         ),
@@ -210,7 +208,7 @@ def get_historical_charts(
         row=1,
         col=1,
         label={
-            "text": translate_to(lang, "Break-even"),
+            "text": lang << "Break-even",
             "textposition": "end",
             "font": {"color": OPACITY_RED, "weight": 1000, "size": 28},
             "yanchor": "top",
@@ -229,7 +227,7 @@ def get_historical_charts(
             row=3,
             col=1,
             label={
-                "text": translate_to(lang, text),
+                "text": lang << text,
                 "textposition": "start",
                 "font": {"color": OPACITY_BLACK, "weight": 1000, "size": 18},
                 "yanchor": "top",
@@ -266,20 +264,18 @@ def get_profit_heatmap_charts(
         [0, "rgba(255, 255, 255, 0.6)"],
         [1, "rgba(0, 0, 0, 0.6)"],
     ]
-    GOT_X_PROFIT: typing.Final[str] = translate_to(
-        lang, "Got %sx profit in this region"
-    )
+    GOT_X_PROFIT: typing.Final[str] = lang << "Got %sx profit in this region"
 
     figure = make_subplots(
         1,
         3,
         shared_yaxes=True,
         column_titles=[
-            translate_to(lang, "By Buy In Amount"),
-            translate_to(lang, "By Total Entries"),
-            translate_to(lang, "Marginal RRE Distribution"),
+            lang << "By Buy In Amount",
+            lang << "By Total Entries",
+            lang << "Marginal RRE Distribution",
         ],
-        y_title=translate_to(lang, "RRE"),
+        y_title=lang << "RRE",
         horizontal_spacing=0.01,
     )
     fig1_common_options = {
@@ -292,9 +288,9 @@ def get_profit_heatmap_charts(
     figure.add_trace(
         plgo.Histogram2d(
             x=df_base["Buy In"].apply(log2_or_nan),
-            name=translate_to(lang, "RRE by Buy In"),
+            name=lang << "RRE by Buy In",
             hovertemplate="Log2(RRE) = [%{y}]<br>Log2("
-            + translate_to(lang, "Buy In")
+            + (lang << "Buy In")
             + ") = [%{x}]<br>"
             + (GOT_X_PROFIT % ("%{z:.2f}",)),
             **fig1_common_options,
@@ -305,9 +301,9 @@ def get_profit_heatmap_charts(
     figure.add_trace(
         plgo.Histogram2d(
             x=df_base["Total Entries"].apply(log2_or_nan),
-            name=translate_to(lang, "RRE by Entries"),
+            name=lang << "RRE by Entries",
             hovertemplate="Log2(RRE) = [%{y}]<br>Log2("
-            + translate_to(lang, "Total Entries")
+            + (lang << "Total Entries")
             + ") = [%{x}]<br>"
             + (GOT_X_PROFIT % ("%{z:.2f}",)),
             **fig1_common_options,
@@ -321,7 +317,7 @@ def get_profit_heatmap_charts(
         plgo.Histogram(
             x=df_base["RRE"],
             y=fig1_common_options["y"],
-            name=translate_to(lang, "Marginal RRE"),
+            name=lang << "Marginal RRE",
             histfunc=fig1_common_options["histfunc"],
             orientation="h",
             ybins=fig1_common_options["ybins"],
@@ -333,8 +329,8 @@ def get_profit_heatmap_charts(
     )
 
     figure.update_layout(
-        title=translate_to(lang, RRE_PLOT_TITLE),
-        title_subtitle_text=translate_to(lang, RRE_PLOT_SUBTITLE),
+        title=lang << RRE_PLOT_TITLE,
+        title_subtitle_text=lang << RRE_PLOT_SUBTITLE,
         title_subtitle_font_style="italic",
     )
     figure.update_coloraxes(colorscale=BLACK_WHITE_COLORSCALE)
@@ -351,7 +347,7 @@ def get_profit_heatmap_charts(
             row=1,
             col="all",
             label={
-                "text": translate_to(lang, hline_label),
+                "text": lang << hline_label,
                 "textposition": "start",
                 "font": {"color": color, "weight": 1000, "size": 20},
                 "yanchor": "bottom",
@@ -374,9 +370,9 @@ def get_bankroll_charts(
     """
     Get bankroll charts.
     """
-    INITIAL_CAPITAL: typing.Final[str] = translate_to(lang, "Initial Capital")
-    BANKRUPTCY_RATE: typing.Final[str] = translate_to(lang, "Bankruptcy Rate")
-    SURVIVAL_RATE: typing.Final[str] = translate_to(lang, "Survival Rate")
+    INITIAL_CAPITAL: typing.Final[str] = lang << "Initial Capital"
+    BANKRUPTCY_RATE: typing.Final[str] = lang << "Bankruptcy Rate"
+    SURVIVAL_RATE: typing.Final[str] = lang << "Survival Rate"
 
     try:
         analyzed = analyze_bankroll(
@@ -398,7 +394,7 @@ def get_bankroll_charts(
         df_base = pd.DataFrame(
             {
                 INITIAL_CAPITAL: [
-                    translate_to(lang, "%.1f Buy-ins") % (k,) for k in analyzed.keys()
+                    lang << "%.1f Buy-ins" % (k,) for k in analyzed.keys()
                 ],
                 BANKRUPTCY_RATE: [v.get_bankruptcy_rate() for v in analyzed.values()],
                 SURVIVAL_RATE: [v.get_survival_rate() for v in analyzed.values()],
@@ -409,12 +405,12 @@ def get_bankroll_charts(
         df_base,
         x=INITIAL_CAPITAL,
         y=[BANKRUPTCY_RATE, SURVIVAL_RATE],
-        title=translate_to(lang, BANKROLL_PLOT_TITLE),
+        title=lang << BANKROLL_PLOT_TITLE,
         color_discrete_sequence=["rgb(242, 111, 111)", "rgb(113, 222, 139)"],
         text_auto=True,
     )
     figure.update_layout(
-        legend_title_text=translate_to(lang, "Metric"),
+        legend_title_text=lang << "Metric",
         yaxis_title=None,
     )
     figure.update_traces(hovertemplate="%{x}: %{y:.2%}")
@@ -427,7 +423,7 @@ def get_bankroll_charts(
     )
     figure.update_layout(
         modebar_remove=["select2d", "lasso2d"],
-        title_subtitle_text=translate_to(lang, BANKROLL_PLOT_SUBTITLE),
+        title_subtitle_text=lang << BANKROLL_PLOT_SUBTITLE,
         title_subtitle_font_style="italic",
     )
     return figure
@@ -463,13 +459,13 @@ def get_profit_pie(
         df_base,
         values="Prize",
         names="ID",
-        title=translate_to(lang, PRIZE_PIE_CHART_TITLE),
+        title=lang << PRIZE_PIE_CHART_TITLE,
         hole=0,
     )
     df_base["Custom Data"] = (
         df_base["Tournament Name"] + " (" + df_base["Date"].dt.strftime("%Y%m%d") + ")"
     )
-    df_base.fillna({"Custom Data": translate_to(lang, "Others")}, inplace=True)
+    df_base.fillna({"Custom Data": lang << "Others"}, inplace=True)
     figure.update_traces(
         customdata=df_base["Custom Data"],
         showlegend=False,
@@ -477,7 +473,7 @@ def get_profit_pie(
         pull=[0.075 if id_ == 0 else 0 for id_ in df_base.index],
     )
     figure.update_layout(
-        title_subtitle_text=translate_to(lang, PRIZE_PIE_CHART_SUBTITLE),
+        title_subtitle_text=lang << PRIZE_PIE_CHART_SUBTITLE,
         title_subtitle_font_style="italic",
     )
     return figure
@@ -540,21 +536,21 @@ def get_rr_by_rank_chart(
         "x": df_base["Rank Percentile"],
         "mode": "markers",
         "customdata": COMMON_CUSTOM_DATA,
-        "hovertemplate": translate_to(lang, RR_RANK_CHART_HOVERTEMPLATE),
+        "hovertemplate": lang << RR_RANK_CHART_HOVERTEMPLATE,
     }
 
     figure = make_subplots(specs=[[{"secondary_y": True}]])
     figure.add_trace(
         plgo.Scatter(
             y=df_base["RR"],
-            name=translate_to(lang, "RR by Percentile"),
+            name=lang << "RR by Percentile",
             **COMMON_OPTIONS,
         )
     )
     figure.add_trace(
         plgo.Scatter(
             y=df_base["Percentile mul RR"],
-            name=translate_to(lang, "PERR"),
+            name=lang << "PERR",
             visible="legendonly",
             marker_color="#BB75FF",
             **COMMON_OPTIONS,
@@ -573,10 +569,10 @@ def get_rr_by_rank_chart(
         )
     )
     figure.update_layout(
-        title=translate_to(lang, RR_RANK_CHART_TITLE),
-        title_subtitle_text=translate_to(lang, RR_RANK_CHART_SUBTITLE),
+        title=lang << RR_RANK_CHART_TITLE,
+        title_subtitle_text=lang << RR_RANK_CHART_SUBTITLE,
         title_subtitle_font_style="italic",
-        xaxis_title=translate_to(lang, "Rank Percentile"),
+        xaxis_title=lang << "Rank Percentile",
     )
     OPACITY_RED = "rgba(255,0,0,0.3)"
     OPACITY_GRAY = "rgb(180,180,180)"

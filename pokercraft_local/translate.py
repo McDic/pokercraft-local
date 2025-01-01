@@ -350,14 +350,14 @@ def get_html_title(nickname: str, lang: Language) -> str:
     """
     Get HTML title in the given language.
     """
-    return translate_to(lang, TITLE_FRAME) % (nickname,)
+    return (lang << TITLE_FRAME) % (nickname,)
 
 
 def get_software_credits(lang: Language) -> str:
     """
     Get software credits in the given language.
     """
-    return translate_to(lang, SOFTWARE_CREDITS_FRAME) % (POKERCRAFT_AHREF,)
+    return (lang << SOFTWARE_CREDITS_FRAME) % (POKERCRAFT_AHREF,)
 
 
 def get_translated_column_moving_average(lang: Language, window_size: int) -> str:
@@ -365,6 +365,6 @@ def get_translated_column_moving_average(lang: Language, window_size: int) -> st
     Get translated column name for moving average.
     """
     if window_size == 0:
-        return translate_to(lang, "Since 0")
+        return lang << "Since 0"
     else:
-        return translate_to(lang, "Recent %d") % (window_size,)
+        return (lang << "Recent %d") % (window_size,)
