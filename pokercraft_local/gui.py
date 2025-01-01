@@ -7,6 +7,7 @@ from tkinter.messagebox import showinfo, showwarning
 
 from .constants import VERSION
 from .export import export as export_main
+from .pypi_query import VERSION_EXTRACTED, get_library_versions
 from .translate import GUI_EXPORTED_SUCCESS, Language, translate_to
 
 
@@ -106,6 +107,12 @@ class PokerCraftLocalGUI:
         """
         return f".../{path.parent.name}/{path.name}"
 
+    def get_lang(self) -> Language:
+        """
+        Get current selected language.
+        """
+        return Language(self._strvar_language_selection.get())
+
     def reset_display_by_language(self, strvar: tk.StringVar | str) -> None:
         """
         Reset display by changed language.
@@ -197,7 +204,7 @@ class PokerCraftLocalGUI:
         """
         Export data.
         """
-        THIS_LANG = Language(self._strvar_language_selection.get())
+        THIS_LANG = self.get_lang()
         nickname = self._input_nickname.get().strip()
         if not nickname:
             showwarning(
@@ -246,4 +253,17 @@ class PokerCraftLocalGUI:
         """
         Start GUI.
         """
+        THIS_LANG = self.get_lang()
+        if VERSION_EXTRACTED < (NEWEST_VERSION := max(get_library_versions())):
+            showwarning(
+                self.get_warning_popup_title(),
+                (
+                    THIS_LANG
+                    << (
+                        "You are using an outdated version of Pokercraft Local. "
+                        "Please update to the latest version (%d.%d.%d -> %d.%d.%d)."
+                    )
+                )
+                % (VERSION_EXTRACTED + NEWEST_VERSION),
+            )
         self._window.mainloop()
