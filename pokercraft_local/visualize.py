@@ -28,7 +28,6 @@ from .translate import (
     get_html_title,
     get_software_credits,
     get_translated_column_moving_average,
-    translate_to,
 )
 
 

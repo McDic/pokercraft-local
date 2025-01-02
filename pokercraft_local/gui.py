@@ -8,7 +8,7 @@ from tkinter.messagebox import showinfo, showwarning
 from .constants import VERSION
 from .export import export as export_main
 from .pypi_query import VERSION_EXTRACTED, get_library_versions
-from .translate import GUI_EXPORTED_SUCCESS, Language, translate_to
+from .translate import GUI_EXPORTED_SUCCESS, Language
 
 
 class PokerCraftLocalGUI:

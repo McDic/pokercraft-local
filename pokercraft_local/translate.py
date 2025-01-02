@@ -11,7 +11,10 @@ class Language(Enum):
     def __lshift__(self, text: typing.Any) -> str:
         # lang << "text"
         if isinstance(text, str):
-            return translate_to(self, text)
+            if self is Language.ENGLISH:
+                return text
+            else:
+                return TRANSLATION[self].get(text, text)
         else:
             raise TypeError("Only str is allowed for translation.")
 
@@ -334,16 +337,6 @@ RR과 순위 백분위는 대략적으로 서로 비례함을 확인할 수 있�
 """,
     },
 ]
-
-
-def translate_to(lang: Language, text: str) -> str:
-    """
-    Translate given text to target language.
-    """
-    if lang is Language.ENGLISH:
-        return text
-    else:
-        return TRANSLATION[lang].get(text, text)
 
 
 def get_html_title(nickname: str, lang: Language) -> str:
