@@ -279,7 +279,7 @@ def get_profit_heatmap_charts(
     )
     fig1_common_options = {
         "y": df_base["RRE"].apply(log2_or_nan),
-        "ybins": {"size": 1.0},
+        "ybins": {"size": 1.0, "start": -3},
         "z": df_base["RRE"],
         "coloraxis": "coloraxis",
         "histfunc": "sum",
