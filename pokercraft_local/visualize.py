@@ -457,50 +457,89 @@ def get_bankroll_charts(
     return figure
 
 
-def get_profit_pie(
+def get_profit_pies(
     tournaments: list[TournamentSummary],
     lang: Language,
 ) -> plgo.Figure:
     """
-    Get the pie chart of absolute profits from past tournament summaries.
+    Get pie charts of absolute profits
+    from past tournament summaries.
     """
+    weekday_strs = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    weekday_strs = [lang << s for s in weekday_strs]
     df_base = pd.DataFrame(
         {
             "ID": [t.id for t in tournaments],
-            "Tournament Name": [t.name for t in tournaments],
+            "Tournament Name": [t.name_with_date() for t in tournaments],
             "Prize": [t.my_prize for t in tournaments],
             "Date": [t.start_time for t in tournaments],
+            "Weekday": [weekday_strs[t.time_of_week[0]] for t in tournaments],
         }
     )
-
     total_prizes: float = df_base["Prize"].sum()
-    other_condition = df_base["Prize"] < total_prizes * 0.005
-    df_base.loc[other_condition, "ID"] = 0
-    df_base.loc[other_condition, "Tournament Name"] = "Others"
-    df_base.loc[other_condition, "Date"] = math.nan
-    df_base = df_base.groupby("ID").aggregate(
+
+    figure = make_subplots(
+        2,
+        1,
+        specs=[[{"type": "pie"}], [{"type": "sunburst"}]],
+        horizontal_spacing=0.01,
+        vertical_spacing=0.01,
+    )
+
+    df_main = df_base.copy(deep=True)
+    other_condition = df_main["Prize"] < total_prizes * 0.01
+    df_main.loc[other_condition, "ID"] = 0
+    df_main.loc[other_condition, "Tournament Name"] = "Others"
+    df_main.loc[other_condition, "Date"] = math.nan
+    df_main = df_main.groupby("ID").aggregate(
         {"Prize": "sum", "Tournament Name": "first", "Date": "first"}
     )
-    df_base["ID"] = df_base.index
+    figure.add_trace(
+        plgo.Pie(
+            labels=df_main["Tournament Name"],
+            values=df_main["Prize"],
+            name=lang << "Individual Prizes",
+        ),
+        row=1,
+        col=1,
+    )
 
-    figure = px.pie(
-        df_base,
-        values="Prize",
-        names="ID",
-        title=lang << PRIZE_PIE_CHART_TITLE,
-        hole=0,
+    df_weekday = df_base.copy(deep=True)
+    for weekday_idx, weekday_str in enumerate(weekday_strs):
+        df_weekday.loc[-1] = {
+            "ID": weekday_str,
+            "Tournament Name": f"{weekday_str}",
+            "Prize": df_weekday[df_weekday["Weekday"] == weekday_str]["Prize"].sum(),
+            "Weekday": weekday_str,
+        }
+        df_weekday.index = df_weekday.index + 1
+    df_weekday = df_weekday.sort_index()
+    df_weekday["Parent"] = df_weekday.apply(
+        (lambda r: r["Weekday"] if r["ID"] != r["Weekday"] else ""),
+        axis=1,
     )
-    df_base["Custom Data"] = (
-        df_base["Tournament Name"] + " (" + df_base["Date"].dt.strftime("%Y%m%d") + ")"
+    df_weekday = df_weekday[df_weekday["Prize"] > 0.005 * total_prizes]
+    figure.add_trace(
+        plgo.Sunburst(
+            labels=df_weekday["Tournament Name"],
+            parents=df_weekday["Parent"],
+            values=df_weekday["Prize"],
+            maxdepth=2,
+            name=lang << "Prizes by Weekday",
+        ),
+        row=2,
+        col=1,
     )
-    df_base.fillna({"Custom Data": lang << "Others"}, inplace=True)
+
     figure.update_traces(
-        customdata=df_base["Custom Data"],
+        row=1,
+        col=1,
         showlegend=False,
-        hovertemplate="%{customdata[0]}: %{value:$,.2f}",
-        pull=[0.075 if id_ == 0 else 0 for id_ in df_base.index],
+        pull=[0.075 if id_ == 0 else 0 for id_ in df_main.index],
     )
+    figure.update_traces(hovertemplate="%{label}: %{value:$,.2f}")
     figure.update_layout(
+        title=lang << PRIZE_PIE_CHART_TITLE,
         title_subtitle_text=lang << PRIZE_PIE_CHART_SUBTITLE,
         title_subtitle_font_style="italic",
     )
@@ -684,7 +723,7 @@ def plot_total(
             simulation_count=bankroll_simulation_count,
             min_simulation_iterations=bankroll_min_simulation_iterations,
         ),
-        get_profit_pie(tournaments, lang),
+        get_profit_pies(tournaments, lang),
         get_rr_by_rank_chart(tournaments, lang),
     ]
     return BASE_HTML_FRAME.format(

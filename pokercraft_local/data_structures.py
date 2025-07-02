@@ -38,11 +38,24 @@ class TournamentSummary:
         """
         return (self.start_time, self.id)
 
+    def name_with_date(self) -> str:
+        """
+        Returns the name of this tourney with date.
+        Format: `name (YYYY-MM-DD HH:MM)`
+        """
+        return "%s (%s)" % (
+            self.name,
+            self.start_time.strftime("%Y-%m-%d %H:%M"),
+        )
+
     @property
     def time_of_week(self) -> tuple[int, int]:
         """
         Returns the time of this tourney in week.
-        Format: `(day of week: [0, 6], hour/minute of day: [0, 1440))`
+        Format: `(day of week: [0, 7), hour/minute of day: [0, 1440))`
+
+        For weekdays, `0` is Monday and `6` is Sunday.
+        For hour/minute of day, `0` is `00:00` and `1439` is `23:59`.
         """
         return (
             self.start_time.weekday(),

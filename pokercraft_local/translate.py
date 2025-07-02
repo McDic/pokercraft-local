@@ -119,6 +119,15 @@ TRANSLATION: typing.Final[dict[Language, dict[str, str]]] = {
         # Prize Pie Chart
         PRIZE_PIE_CHART_TITLE: "당신의 상금 분포",
         PRIZE_PIE_CHART_SUBTITLE: "작은 상금은 '기타'로 분류됩니다.",
+        "Individual Prizes": "개별 상금",
+        "Prizes by Weekday": "요일별 상금",
+        "Mon": "월요일",
+        "Tue": "화요일",
+        "Wed": "수요일",
+        "Thu": "목요일",
+        "Fri": "금요일",
+        "Sat": "토요일",
+        "Sun": "일요일",
         "Others": "기타",
         # RR by Rank Percentile
         RR_RANK_CHART_TITLE: "순위 백분위별 RR",
@@ -286,17 +295,25 @@ with thousands of participants.*
     {
         Language.ENGLISH: """
 This section shows how much of your total prizes are from specific tournaments.
-Since there might be too much number of slices,
-only tournaments gave you more than 0.5% of your total prizes are shown,
+
+In main pie chart, since there might be too much number of slices,
+only tournaments gave you more than 1% of your total prizes are shown,
 and the rest are grouped as "Others", which is the biggest separated slice.
+
+The second pie chart shows your prizes by weekday.
+In most cases, weekend tournaments are usually more profitable than weekdays.
 
 *Creator's comment: You can see if you ignore small prizes, then lots of portion
 of your prizes are gone. In a long term, there is no such thing like "one hit wonder".*
 """,
         Language.KOREAN: """
 이 섹션은 당신의 총 상금 중에서 특정 토너먼트에서 얼마나 상금을 받았는지를 보여줍니다.
-너무 많은 조각이 있을 수 있기 때문에 총 상금의 0.5% 이상을 받은 토너만을 보여주고,
+
+1번째 메인 차트에서는 너무 많은 조각이 있을 수 있기 때문에 총 상금의 1% 이상을 받은 토너만을 보여주고,
 나머지는 "기타"로 묶어서 표시합니다. "기타"는 가장 큰 조각으로 분리됩니다.
+
+두번째 파이 차트는 요일별 상금을 보여줍니다.
+대부분의 경우, 주말 토너먼트가 평일보다 더 수익성이 높습니다.
 
 *제작자의 코멘트: 작은 상금을 무시한다면, 당신의 상금의 상당 부분이 사라집니다.
 장기적으로, "한방찍기"란 없다는 것을 이 섹션에서 알 수 있습니다.*
