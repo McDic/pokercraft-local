@@ -290,6 +290,7 @@ def get_profit_heatmap_charts(
         ],
         y_title=lang << "RRE",
         horizontal_spacing=0.01,
+        column_widths=[0.2, 0.2, 0.2, 0.1],
     )
     fig1_common_options = {
         "y": df_base["RRE"].apply(log2_or_nan),
@@ -368,19 +369,20 @@ def get_profit_heatmap_charts(
         (2.0, "rgb(90, 90, 90)", "Good run: 4x Profit"),
         (5.0, "rgb(40, 40, 40)", "Deep run: 32x Profit"),
     ]:
-        figure.add_hline(
-            y=y,
-            line_color=color,
-            line_dash="dash",
-            row=1,
-            col="all",
-            label={
-                "text": lang << hline_label,
-                "textposition": "start",
-                "font": {"color": color, "weight": 1000, "size": 16},
-                "yanchor": "bottom",
-            },
-        )
+        for col in range(1, 4):
+            figure.add_hline(
+                y=y,
+                line_color=color,
+                line_dash="dash",
+                row=1,
+                col=col,
+                label={
+                    "text": lang << hline_label,
+                    "textposition": "start",
+                    "font": {"color": color, "weight": 1000, "size": 16},
+                    "yanchor": "bottom",
+                },
+            )
 
     figure.update_xaxes(fixedrange=True)
     figure.update_yaxes(fixedrange=True)
