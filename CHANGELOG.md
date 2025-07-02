@@ -1,3 +1,11 @@
+## v1.8.0
+
+- Added "Current Net Profit" horizontal line in "Historical Performance" section
+- Updated "Relative Prize Returns with Re-entries" section (RRE Heatmaps)
+  - Added RRE by time of day
+  - Adjusted column widths
+- Added "Prizes by Weekday" sunburst chart in "Your Prizes" section
+
 ## v1.7.2
 
 - Now GUI makes a warning pop-up at the beginning if the current program version is outdated
