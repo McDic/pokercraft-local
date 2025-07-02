@@ -94,10 +94,12 @@ TRANSLATION: typing.Final[dict[Language, dict[str, str]]] = {
         RRE_PLOT_SUBTITLE: "(RRE = 상금 / 바인금액 / (1 + 리엔트리횟수))",
         "By Buy In Amount": "바인 금액별 분포",
         "By Total Entries": "엔트리수별 분포",
+        "By Time of Day": "시간대별 분포",
         "Marginal RRE Distribution": "누적 RRE 분포",
         "RRE": "RRE",
         "RRE by Buy In": "바인 금액별 RRE",
         "RRE by Entries": "엔트리수별 RRE",
+        "RRE by Time of Day": "시간대별 RRE",
         "Got %sx profit in this region": "이 구간에서 %s배 수익을 냄",
         "Buy In": "바인금액",
         "Total Entries": "총 엔트리 수",
@@ -189,9 +191,10 @@ You can see 3 plots in this section;
 
 1. RRE by buy-in amount (Heatmap)
 2. RRE by total entries (Heatmap)
-3. Marginal distribution for each RRE range (Horizontal bar chart)
+3. RRE by time of day (Heatmap, your local timezone is applied)
+4. Marginal distribution for each RRE range (Horizontal bar chart)
 
-Note that X and Y axes are in log2 scale in these plots,
+Note that the Y axis and some plots's X axes are in log2 scale,
 because these metrics have wide range of values so it makes
 no sense to display in linear scale.
 
@@ -207,9 +210,10 @@ RRE(리엔트리를 고려한 상대적인 상금 리턴)은 당신의 투자에
 
 1. 바인 금액별 RRE (히트맵)
 2. 총 엔트리수별 RRE (히트맵)
-3. 각 RRE 구간별 누적 분포 (수평 막대 그래프)
+3. 시간대별 RRE (히트맵, 당신의 시간대가 적용됩니다)
+4. 각 RRE 구간별 누적 분포 (수평 막대 그래프)
 
-이 그래프들은 X와 Y축이 로그(log2) 스케일로 표시됩니다.
+이 그래프들은 Y축과 몇몇 X축들이 log2(로그) 스케일로 표시됩니다.
 왜냐하면 이 메트릭들은 값의 범위가 넓기 때문에
 선형(linear) 스케일로 표시하는 것은 의미가 없기 때문입니다.
 
