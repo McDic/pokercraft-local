@@ -27,4 +27,4 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
       - name: Execute pre-commit
-        uses: pre-commit/action@v2.0.3
+        uses: pre-commit/action@v3.0.1
