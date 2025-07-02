@@ -85,6 +85,7 @@ TRANSLATION: typing.Final[dict[Language, dict[str, str]]] = {
         "Since 0": "전체 기준",
         "Recent %d": "최근 %d개 토너 기준",
         "Break-even": "멘징 지점",
+        "Current Net Profit": "현재 수익 지점",
         "Micro / Low": "마이크로 / 로우",
         "Low / Mid": "로우 / 미들",
         "Mid / High": "미들 / 하이롤러",
