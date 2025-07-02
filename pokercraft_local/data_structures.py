@@ -9,49 +9,6 @@ from enum import auto as enumauto
 from forex_python.converter import CurrencyRates
 
 
-class PokerGameType(Enum):
-    """
-    Enumeration of game types.
-    Not used currently, will use in future.
-    """
-
-    NLH = enumauto()
-    PLO = enumauto()
-    SD = enumauto()
-    Unknown = enumauto()
-
-
-class TournamentBrand(Enum):
-    """
-    Enumeration of tournament brands.
-    """
-
-    GGMasters = ("GGMasters", 0)
-    Zodiac = ("Zodiac", 0)
-    BountyHunters = ("Bounty Hunters", -2)
-    SpeedRacer = ("Speed Racer", -1)
-    GlobalMillion = ("Global Million", 0)
-    MicroFestival = ("microFestival", 1)
-    FlipAndGo = ("Flip & Go", 0)
-    APL = ("APL", 1)
-    WSOP = ("WSOP", 2)
-    APT = ("APT", 1)
-    KSOP = ("KSOP", 1)
-    DailyGames = ("Daily", -1)
-    Unknown = ("Unknown", -999)
-
-    @classmethod
-    def find(cls, name: str) -> "TournamentBrand":
-        """
-        Find a brand by name.
-        """
-        current_brand = cls.Unknown
-        for brand in cls:
-            if brand.value[0] in name and brand.value[1] > current_brand.value[1]:
-                current_brand = brand
-        return current_brand
-
-
 @dataclass(frozen=True, slots=True)
 class TournamentSummary:
     """

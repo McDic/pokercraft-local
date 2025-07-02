@@ -12,7 +12,7 @@ from plotly.subplots import make_subplots
 
 from .bankroll import analyze_bankroll
 from .constants import BASE_HTML_FRAME, DEFAULT_WINDOW_SIZES
-from .data_structures import TournamentBrand, TournamentSummary
+from .data_structures import TournamentSummary
 from .translate import (
     BANKROLL_PLOT_SUBTITLE,
     BANKROLL_PLOT_TITLE,
@@ -252,9 +252,6 @@ def get_profit_heatmap_charts(
             "RRE": [t.rre for t in tournaments],
             "Prize Ratio": [t.my_prize / t.total_prize_pool for t in tournaments],
             "Total Entries": [t.total_players for t in tournaments],
-            "Tournament Brand": [
-                TournamentBrand.find(t.name).name for t in tournaments
-            ],
             "Profitable": [t.profit > 0 for t in tournaments],
             "Weekday": [t.time_of_week[0] for t in tournaments],
             "TimeOfDay": [t.time_of_week[1] for t in tournaments],
