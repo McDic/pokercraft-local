@@ -155,6 +155,7 @@ class PokercraftParser:
                 t_start_time = datetime.strptime(
                     splitted[-2] + " " + splitted[-1], "%Y/%m/%d %H:%M:%S"
                 )
+                # Pokercraft timezone data is set to local system time
 
             elif cls.LINE6_MY_RANK_AND_PRIZE.fullmatch(line):
                 t_my_rank = take_first_int(line)

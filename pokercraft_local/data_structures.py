@@ -2,7 +2,7 @@ import math
 import typing
 import warnings
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from enum import auto as enumauto
 
@@ -80,6 +80,17 @@ class TournamentSummary:
         Returns the sorting key.
         """
         return (self.start_time, self.id)
+
+    @property
+    def time_of_week(self) -> tuple[int, int]:
+        """
+        Returns the time of this tourney in week.
+        Format: `(day of week: [0, 6], hour/minute of day: [0, 1440))`
+        """
+        return (
+            self.start_time.weekday(),
+            self.start_time.hour * 60 + self.start_time.minute,
+        )
 
     @property
     def buy_in(self) -> float:

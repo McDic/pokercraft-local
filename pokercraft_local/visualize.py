@@ -256,6 +256,8 @@ def get_profit_heatmap_charts(
                 TournamentBrand.find(t.name).name for t in tournaments
             ],
             "Profitable": [t.profit > 0 for t in tournaments],
+            "Weekday": [t.time_of_week[0] for t in tournaments],
+            "TimeOfDay": [t.time_of_week[1] for t in tournaments],
         }
     )
 
@@ -267,11 +269,12 @@ def get_profit_heatmap_charts(
 
     figure = make_subplots(
         1,
-        3,
+        4,
         shared_yaxes=True,
         column_titles=[
             lang << "By Buy In Amount",
             lang << "By Total Entries",
+            lang << "By Time of Day",
             lang << "Marginal RRE Distribution",
         ],
         y_title=lang << "RRE",
@@ -279,7 +282,7 @@ def get_profit_heatmap_charts(
     )
     fig1_common_options = {
         "y": df_base["RRE"].apply(log2_or_nan),
-        "ybins": {"size": 1.0, "start": -3},
+        "ybins": {"size": 0.5, "start": -3},
         "z": df_base["RRE"],
         "coloraxis": "coloraxis",
         "histfunc": "sum",
@@ -305,10 +308,25 @@ def get_profit_heatmap_charts(
             + (lang << "Total Entries")
             + ") = [%{x}]<br>"
             + (GOT_X_PROFIT % ("%{z:.2f}",)),
+            xbins={"start": 1.0, "size": 1.0},
             **fig1_common_options,
         ),
         row=1,
         col=2,
+    )
+    figure.add_trace(
+        plgo.Histogram2d(
+            x=df_base["TimeOfDay"],
+            name=lang << "RRE by Time of Day",
+            hovertemplate="Log2(RRE) = [%{y}]<br>"
+            + (lang << "Time of Day")
+            + " = [%{x}] mins<br>"
+            + (GOT_X_PROFIT % ("%{z:.2f}",)),
+            xbins={"start": 0.0, "size": 60.0 * 2, "end": 60.0 * 24},
+            **fig1_common_options,
+        ),
+        row=1,
+        col=3,
     )
 
     # Marginal distribution
@@ -324,7 +342,7 @@ def get_profit_heatmap_charts(
             marker={"color": "rgba(70,70,70,0.35)"},
         ),
         row=1,
-        col=3,
+        col=4,
     )
 
     figure.update_layout(
@@ -348,7 +366,7 @@ def get_profit_heatmap_charts(
             label={
                 "text": lang << hline_label,
                 "textposition": "start",
-                "font": {"color": color, "weight": 1000, "size": 20},
+                "font": {"color": color, "weight": 1000, "size": 16},
                 "yanchor": "bottom",
             },
         )
