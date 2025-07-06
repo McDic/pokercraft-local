@@ -166,7 +166,7 @@ def get_historical_charts(
             lambda barline: (
                 barline.name in [any_lang << "Net Rake" for any_lang in Language]
             )
-            or ("800" in barline.name)
+            or any(str(num) in barline.name for num in (100, 400, 800))
         ),
     )
     figure.update_traces(xaxis="x")
