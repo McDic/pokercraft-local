@@ -207,6 +207,7 @@ def get_historical_charts(
     OPACITY_RED = "rgba(255,0,0,0.3)"
     OPACITY_BLUE = "rgba(0,0,255,0.3)"
     OPACITY_BLACK = "rgba(0,0,0,0.3)"
+    OPACITY_PURPLE = "rgba(171,99,250,0.5)"
     figure.add_hline(
         y=0.0,
         line_color=OPACITY_RED,
@@ -231,6 +232,19 @@ def get_historical_charts(
             "text": lang << "Current Net Profit",
             "textposition": "start",
             "font": {"color": OPACITY_BLUE, "weight": 1000, "size": 18},
+            "yanchor": "bottom",
+        },
+    )
+    figure.add_hline(
+        y=df_base["Max Drawdown"].min(),
+        line_color=OPACITY_PURPLE,
+        line_dash="dash",
+        row=1,
+        col=1,
+        label={
+            "text": lang << "Max Drawdown",
+            "textposition": "start",
+            "font": {"color": OPACITY_PURPLE, "weight": 1000, "size": 18},
             "yanchor": "bottom",
         },
     )
