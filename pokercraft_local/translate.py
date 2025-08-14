@@ -81,6 +81,7 @@ TRANSLATION: typing.Final[dict[Language, dict[str, str]]] = {
         "Profits & Rakes": "수익 & 레이크",
         "Net Profit": "순수익 (레이크 고려)",
         "Net Rake": "지불한 레이크",
+        "Max Drawdown": "고점 대비 최대 하락폭",
         "Ideal Profit w.o. Rake": "레이크 없을 때 이상적인 수익",
         "Since 0": "전체 기준",
         "Recent %d": "최근 %d개 토너 기준",

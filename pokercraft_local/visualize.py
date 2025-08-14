@@ -57,6 +57,9 @@ def get_historical_charts(
     df_base["Net Profit"] = df_base["Profit"].cumsum()
     df_base["Net Rake"] = df_base["Rake"].cumsum()
     df_base["Ideal Profit w.o. Rake"] = df_base["Net Profit"] + df_base["Net Rake"]
+    df_base["Max Profit"] = df_base["Net Profit"].cummax()
+    df_base["Drawdown"] = df_base["Net Profit"] - df_base["Max Profit"]
+    df_base["Max Drawdown"] = df_base["Drawdown"].cummin()
     df_base.index += 1
 
     # Profitable ratio
@@ -97,7 +100,7 @@ def get_historical_charts(
     )
     common_options = {"x": df_base.index, "mode": "lines"}
 
-    for col in ("Net Profit", "Net Rake", "Ideal Profit w.o. Rake"):
+    for col in ("Net Profit", "Net Rake", "Ideal Profit w.o. Rake", "Max Drawdown"):
         figure.add_trace(
             plgo.Scatter(
                 y=df_base[col],
