@@ -1,5 +1,6 @@
 import re as regex
 import typing
+import warnings
 from datetime import datetime
 from io import TextIOWrapper
 from pathlib import Path
@@ -239,6 +240,12 @@ class PokercraftParser:
         for path, stream in cls.yield_streams(paths, follow_symlink=follow_symlink):
             try:
                 summary = cls.parse(stream, rate_converter)
+
+                # Warnings
+                if summary.total_prize_pool <= 0:
+                    warnings.warn(f"Detected zero prize pool for {summary.name}")
+
+                # Yielding parsed summaries
                 if summary.buy_in == 0 and not allow_freerolls:
                     print(f"Detected freeroll {summary.name}, skipping.")
                 else:

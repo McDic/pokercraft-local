@@ -264,7 +264,10 @@ def get_profit_heatmap_charts(
             "Tournament Name": [t.name for t in tournaments],
             "Buy In": [t.buy_in for t in tournaments],
             "RRE": [t.rre for t in tournaments],
-            "Prize Ratio": [t.my_prize / t.total_prize_pool for t in tournaments],
+            "Prize Ratio": [
+                t.my_prize / t.total_prize_pool if t.total_prize_pool > 0 else math.nan
+                for t in tournaments
+            ],
             "Total Entries": [t.total_players for t in tournaments],
             "Profitable": [t.profit > 0 for t in tournaments],
             "Weekday": [t.time_of_week[0] for t in tournaments],
