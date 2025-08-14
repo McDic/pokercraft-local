@@ -25,6 +25,9 @@ from .translate import (
     RRE_PLOT_SUBTITLE,
     RRE_PLOT_TITLE,
     Language,
+    format_dollar,
+    format_percent,
+    generate_summary_html,
     get_html_title,
     get_software_credits,
     get_translated_column_moving_average,
@@ -702,6 +705,40 @@ def get_rr_by_rank_chart(
     return figure
 
 
+def get_summaries(tournaments: list[TournamentSummary]) -> list[tuple[str, typing.Any]]:
+    """
+    Get summaries from tournament results.
+    """
+    df_base = pd.DataFrame(
+        {
+            "Time": [t.start_time for t in tournaments],
+            "Profit": [t.profit for t in tournaments],
+            "Rake": [t.rake * t.my_entries for t in tournaments],
+            "Profitable": [1 if t.profit > 0 else 0 for t in tournaments],
+            "Buy In": [t.buy_in for t in tournaments],
+            "Entries": [t.my_entries for t in tournaments],
+        }
+    )
+    df_base["Net Profit"] = df_base["Profit"].cumsum()
+    df_base["Max Profit"] = df_base["Net Profit"].cummax()
+    df_base["Drawdown"] = df_base["Net Profit"] - df_base["Max Profit"]
+    net_profit = df_base["Profit"].sum()
+    total_buy_in = df_base["Buy In"].sum()
+
+    return [
+        ("Net Profit", format_dollar(net_profit)),
+        ("ROI", format_percent(net_profit / total_buy_in)),
+        (
+            "Profitable Ratio",
+            format_percent(df_base["Profitable"].sum() / len(df_base)),
+        ),
+        ("Paid Rake", format_dollar(df_base["Rake"].sum())),
+        ("Total Entries", "#%d" % (df_base["Entries"].sum(),)),
+        ("Highest Buy In", format_dollar(df_base["Buy In"].max())),
+        ("Max Drawdown", format_dollar(df_base["Drawdown"].min())),
+    ]
+
+
 def plot_total(
     nickname: str,
     tournaments: typing.Iterable[TournamentSummary],
@@ -736,6 +773,10 @@ def plot_total(
     ]
     return BASE_HTML_FRAME.format(
         title=get_html_title(nickname, lang),
+        summary=markdown(
+            generate_summary_html(lang, *get_summaries(tournaments)),
+            extensions=["tables"],
+        ),
         plots="<br><hr><br>".join(  # type: ignore[var-annotated]
             fig.to_html(include_plotlyjs=("cdn" if i == 0 else False), full_html=False)
             + markdown(doc_dict[lang])

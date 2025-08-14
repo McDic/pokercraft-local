@@ -18,6 +18,10 @@ BASE_HTML_FRAME: typing.Final[
 <h1>{title}</h1>
 <hr>
 <br>
+{summary}
+<br>
+<hr>
+<br>
 {plots}
 <br>
 <hr>

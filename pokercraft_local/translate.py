@@ -9,6 +9,9 @@ class Language(Enum):
     KOREAN = "ko"
 
     def __lshift__(self, text: typing.Any) -> str:
+        """
+        Perform a translation on this text.
+        """
         # lang << "text"
         if isinstance(text, str):
             if self is Language.ENGLISH:
@@ -17,6 +20,16 @@ class Language(Enum):
                 return TRANSLATION[self].get(text, text)
         else:
             raise TypeError("Only str is allowed for translation.")
+
+
+def generate_summary_html(lang: Language, *kvs: tuple[str, typing.Any]) -> str:
+    """
+    Generate summary HTML.
+    """
+    head = f"| {lang << 'Category'} | {lang << 'Value'} |"
+    hr = "| --- | --- |"
+    rows = "\n".join(f"| {lang << k} | {v} |" for k, v in kvs)
+    return "\n".join((head, hr, rows))
 
 
 TITLE_FRAME: typing.Final[str] = "%s's realistic tournament performance on GGNetwork"
@@ -72,6 +85,11 @@ TRANSLATION: typing.Final[dict[Language, dict[str, str]]] = {
         "Include Freerolls": "프리롤 포함하기",
         "Fetch the latest forex rate (May fail)": "최신 환율 반영하기 (실패할 수 있음)",
         "Export plot and CSV data (Enter)": "CSV랑 분석 파일 생성하기 (Enter 키)",
+        # Head summary
+        "Category": "카테고리",
+        "Value": "값",
+        "Paid Rake": "지불한 레이크",
+        "Highest Buy In": "가장 비싼 바이인",
         # Historical Performance
         "Historical Performance": "과거 성적",
         "Tournament Count": "토너먼트 참가 횟수",
@@ -384,3 +402,20 @@ def get_translated_column_moving_average(lang: Language, window_size: int) -> st
         return lang << "Since 0"
     else:
         return (lang << "Recent %d") % (window_size,)
+
+
+def format_dollar(value: float | int) -> str:
+    """
+    Format a dollar value to string with two decimal places.
+    """
+    if value >= 0:
+        return "$%.2f" % value
+    else:
+        return "-$%.2f" % -value
+
+
+def format_percent(value: float | int) -> str:
+    """
+    Format a percentage value to string with two decimal places.
+    """
+    return "%.2f%%" % (value * 100,)
