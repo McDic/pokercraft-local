@@ -1,3 +1,9 @@
+## v1.8.1
+
+- Introduced "Max Drawdown" on "Historical Performance" section
+- Fixed zero division error on tournament with zero prize pool
+- Added head summaries on HTML report
+
 ## v1.8.0
 
 - Added "Current Net Profit" horizontal line in "Historical Performance" section
