@@ -38,3 +38,7 @@ optional-dependencies = { dev = { file = ["requirements-dev.txt"] } }
 
 [tool.mypy]
 ignore_missing_imports = true
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+module-name = "pokercraft_local._rust"

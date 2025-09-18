@@ -20,3 +20,9 @@ run_gui.spec
 # IDE
 .vscode/
 .idea/
+
+# Rust
+Cargo.lock
+target/
+maturin_sample/
+**/*.so

@@ -1,0 +1,13 @@
+[package]
+name = "pokercraft_local_rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "pokercraft_local_rust"
+crate-type = ["cdylib"]
+path = "pokercraft_local_rust/lib.rs"
+
+[dependencies]
+pyo3 = "0.25.0"
