@@ -19,7 +19,7 @@ class PokerCraftLocalGUI:
     def __init__(self) -> None:
         self._window: tk.Tk = tk.Tk()
         self._window.title(f"PokerCraft Local v{VERSION} - By McDic")
-        self._window.geometry("400x280")
+        self._window.geometry("400x310")
         self._window.resizable(False, False)
 
         # Language selection
@@ -90,11 +90,21 @@ class PokerCraftLocalGUI:
         )
         self._checkbox_fetch_forex.pack()
 
-        # Run button
-        self._button_export: tk.Button = tk.Button(
-            self._window, text="button_export", command=self.export
+        # Export chart button
+        self._button_export_chart: tk.Button = tk.Button(
+            self._window,
+            text="button_export",
+            command=self.export_chart,
         )
-        self._button_export.pack()
+        self._button_export_chart.pack()
+
+        # Hand history analysis button
+        self._button_analyze_hand_history: tk.Button = tk.Button(
+            self._window,
+            text="button_analyze_hand_history",
+            command=self.analyze_hand_history,
+        )
+        self._button_analyze_hand_history.pack()
 
         # Reset display by language
         self.reset_display_by_language(self._strvar_language_selection)
@@ -141,7 +151,8 @@ class PokerCraftLocalGUI:
         self._checkbox_fetch_forex.config(
             text=lang << "Fetch the latest forex rate (May fail)"
         )
-        self._button_export.config(text=lang << "Export plot and CSV data")
+        self._button_export_chart.config(text=lang << "Export plot and CSV data")
+        self._button_analyze_hand_history.config(text=lang << "Analyze hand history")
 
     def choose_data_directory(self) -> None:
         """
@@ -187,9 +198,9 @@ class PokerCraftLocalGUI:
         """
         return "Info!"
 
-    def export(self) -> None:
+    def export_chart(self) -> None:
         """
-        Export data.
+        Export the visualization charts.
         """
         THIS_LANG = self.get_lang()
         nickname = self._input_nickname.get().strip()
@@ -234,6 +245,16 @@ class PokerCraftLocalGUI:
                 csv_path=csv_path.name,
                 plot_path=plot_path.name,
             ),
+        )
+
+    def analyze_hand_history(self) -> None:
+        """
+        Analyze hand history files.
+        """
+        THIS_LANG = self.get_lang()
+        showinfo(
+            self.get_info_popup_title(),
+            THIS_LANG << "This feature is coming soon!",
         )
 
     def run_gui(self) -> None:

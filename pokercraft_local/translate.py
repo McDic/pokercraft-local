@@ -85,6 +85,7 @@ TRANSLATION: typing.Final[dict[Language, dict[str, str]]] = {
         "Include Freerolls": "프리롤 포함하기",
         "Fetch the latest forex rate (May fail)": "최신 환율 반영하기 (실패할 수 있음)",
         "Export plot and CSV data": "CSV랑 분석 파일 생성하기",
+        "Analyze hand history": "핸드 히스토리 분석하기",
         # Head summary
         "Category": "카테고리",
         "Value": "값",
