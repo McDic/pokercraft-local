@@ -94,7 +94,6 @@ class PokerCraftLocalGUI:
         self._button_export: tk.Button = tk.Button(
             self._window, text="button_export", command=self.export
         )
-        self._window.bind("<Return>", lambda event: self.export())
         self._button_export.pack()
 
         # Reset display by language
@@ -142,7 +141,7 @@ class PokerCraftLocalGUI:
         self._checkbox_fetch_forex.config(
             text=lang << "Fetch the latest forex rate (May fail)"
         )
-        self._button_export.config(text=lang << "Export plot and CSV data (Enter)")
+        self._button_export.config(text=lang << "Export plot and CSV data")
 
     def choose_data_directory(self) -> None:
         """
