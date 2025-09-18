@@ -1,6 +1,7 @@
 use pyo3::prelude::*;
 
 mod bankroll;
+mod card;
 
 /// A Python module implemented in Rust.
 #[pymodule]
