@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
 
 [project]
 name = "pokercraft-local"
@@ -25,20 +25,21 @@ dynamic = ["dependencies", "version"]
 [project.urls]
 "Homepage" = "https://github.com/McDic/pokercraft-local"
 
-[tool.setuptools]
-packages = ["pokercraft_local"]
-
-[tool.setuptools.package-data]
-"pokercraft_local" = ["py.typed"]
-
-[tool.setuptools.dynamic]
-version = { attr = "pokercraft_local.constants.VERSION" }
-dependencies = { file = ["requirements.txt"] }
-optional-dependencies = { dev = { file = ["requirements-dev.txt"] } }
+# [tool.setuptools]
+# packages = ["pokercraft_local"]
+#
+# [tool.setuptools.package-data]
+# "pokercraft_local" = ["py.typed"]
+#
+# [tool.setuptools.dynamic]
+# version = { attr = "pokercraft_local.constants.VERSION" }
+# dependencies = { file = ["requirements.txt"] }
+# optional-dependencies = { dev = { file = ["requirements-dev.txt"] } }
 
 [tool.mypy]
 ignore_missing_imports = true
 
 [tool.maturin]
+bindings = "pyo3"
 features = ["pyo3/extension-module"]
 module-name = "pokercraft_local._rust"
