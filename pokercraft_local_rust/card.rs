@@ -1,4 +1,6 @@
+use itertools::Itertools;
 use pyo3::prelude::*;
+use rayon::prelude::*;
 
 use crate::errors::PokercraftLocalError;
 
@@ -216,6 +218,33 @@ impl Card {
     }
 }
 
+#[pymethods]
+impl Card {
+    #[new]
+    fn new_py(value: &str) -> PyResult<Self> {
+        if let Ok(card) = Card::try_from(value) {
+            Ok(card)
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Invalid card string: \"{}\"",
+                value
+            )))
+        }
+    }
+
+    /// Get the number of this card.
+    #[getter]
+    fn get_number(&self) -> PyResult<CardNumber> {
+        Ok(self.number)
+    }
+
+    /// Get the shape of this card.
+    #[getter]
+    fn get_shape(&self) -> PyResult<CardShape> {
+        Ok(self.shape)
+    }
+}
+
 impl std::fmt::Display for Card {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let number_char: char = self.number.into();
@@ -254,6 +283,7 @@ impl TryFrom<&str> for Card {
 
 /// Represents the rank of a poker hand.
 /// Due to the complex structure, this enum is not exported to Python.
+#[pyclass]
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum HandRank {
     HighCard([Card; 5]),
@@ -374,7 +404,7 @@ impl HandRank {
 
     /// Evaluate the rank of the given 5 cards.
     /// This method does not check if there is any duplicate cards.
-    pub fn new(mut cards: [Card; 5]) -> Self {
+    pub fn evaluate(mut cards: [Card; 5]) -> Self {
         Self::sort_decreasing(&mut cards);
         let sorted_numbers = [
             cards[0].number,
@@ -468,6 +498,65 @@ impl HandRank {
             unreachable!("Invalid card frequencies: {:?}", frequencies);
         }
     }
+
+    /// Find the best 5-card hand from the given cards.
+    /// If `cards` has less than 5 cards, return `None`.
+    pub fn find_best5<IC>(cards: IC) -> Result<([Card; 5], HandRank), PokercraftLocalError>
+    where
+        IC: IntoIterator<Item = Card>,
+    {
+        let cards: Vec<Card> = cards.into_iter().collect();
+        if cards.len() < 5 {
+            return Err(PokercraftLocalError::GeneralError(
+                "Not enough cards; Should have at least 5 cards".to_string(),
+            ));
+        }
+        let mut best_hand = [cards[0], cards[1], cards[2], cards[3], cards[4]];
+        let mut best_rank = Self::evaluate(best_hand);
+        for combination in cards.iter().combinations(5) {
+            let hand = [
+                *combination[0],
+                *combination[1],
+                *combination[2],
+                *combination[3],
+                *combination[4],
+            ];
+            let rank = Self::evaluate(hand);
+            if rank > best_rank {
+                best_hand = hand;
+                best_rank = rank;
+            }
+        }
+        Ok((best_hand, best_rank))
+    }
+}
+
+#[pymethods]
+impl HandRank {
+    fn __richcmp__(&self, other: &Self, op: pyo3::basic::CompareOp) -> PyResult<bool> {
+        match op {
+            pyo3::basic::CompareOp::Eq => Ok(self == other),
+            pyo3::basic::CompareOp::Ne => Ok(self != other),
+            pyo3::basic::CompareOp::Lt => Ok(self < other),
+            pyo3::basic::CompareOp::Le => Ok(self <= other),
+            pyo3::basic::CompareOp::Gt => Ok(self > other),
+            pyo3::basic::CompareOp::Ge => Ok(self >= other),
+        }
+    }
+
+    /// Python-exported interface of `self.numerize`.
+    fn numerize_py(&self) -> PyResult<(u8, u64)> {
+        Ok(self.numerize())
+    }
+
+    /// Python-exported interface of `Self::find_best5`.
+    #[staticmethod]
+    pub fn find_best5_py(cards: Vec<Card>) -> PyResult<([Card; 5], HandRank)> {
+        match Self::find_best5(cards) {
+            Ok(result) => Ok(result),
+            Err(e) => Err(e.into()),
+        }
+    }
 }
 
 impl PartialOrd for HandRank {
@@ -482,10 +571,188 @@ impl Ord for HandRank {
     }
 }
 
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct EquityResult {
+    wins: Vec<Vec<u64>>,
+    loses: Vec<u64>,
+}
+
+impl EquityResult {
+    /// Create a new `EquityResult` by calculating the win/loss
+    /// counts for the given player and community cards.
+    pub fn new(
+        cards_people: Vec<(Card, Card)>,
+        cards_community: Vec<Card>,
+    ) -> Result<Self, PokercraftLocalError> {
+        let remaining_cards = Card::all()
+            .into_iter()
+            .filter(|card| {
+                !cards_people.iter().any(|(c1, c2)| card == c1 || card == c2)
+                    && !cards_community.iter().any(|c| card == c)
+            })
+            .collect::<Vec<_>>();
+
+        if cards_community.len() > 5 {
+            return Err(PokercraftLocalError::GeneralError(
+                "Too many community cards; Should have at most 5 cards".to_string(),
+            ));
+        }
+
+        // This is the result
+        let get_empty_wins = || vec![vec![0; cards_people.len()]; cards_people.len()];
+        let get_empty_loses = || vec![0; cards_people.len()];
+
+        let result = remaining_cards
+            .into_iter()
+            .combinations(5 - cards_community.len())
+            .par_bridge()
+            .map(|remaining_communities| {
+                // Create full community cards
+                let mut full_communities = cards_community.clone();
+                full_communities.extend(remaining_communities.iter());
+
+                // Get best hand ranks for each person
+                let mut best_ranks_people = vec![];
+                for (c1, c2) in cards_people.iter() {
+                    let this_cards: Vec<Card> = full_communities
+                        .iter()
+                        .chain([*c1, *c2].iter())
+                        .map(|&c| c)
+                        .collect();
+                    if let Ok((_, best_rank_this_person)) = HandRank::find_best5(this_cards.clone())
+                    {
+                        best_ranks_people.push(best_rank_this_person);
+                    } else {
+                        return Err(PokercraftLocalError::GeneralError(format!(
+                            "Failed to evaluate hand rank: {:?}",
+                            this_cards
+                        )));
+                    }
+                }
+
+                // Compare people hand ranks
+                let mut best_rank = &best_ranks_people[0];
+                let mut tied: Vec<usize> = vec![0];
+                for (i, rank) in best_ranks_people.iter().enumerate().skip(1) {
+                    if rank > best_rank {
+                        best_rank = rank;
+                        tied = vec![i];
+                    } else if rank == best_rank {
+                        tied.push(i);
+                    }
+                }
+
+                let mut this_result: Vec<i32> = vec![0; cards_people.len()];
+
+                // Increment lose counts for all people
+                // Winners' lose counts will be decremented later
+                for i in 0..cards_people.len() {
+                    this_result[i] = -1;
+                }
+
+                // Update win/lose counts
+                let number_of_ties = tied.len() - 1;
+                for &i in tied.iter() {
+                    this_result[i] = number_of_ties as i32;
+                }
+
+                Ok(this_result)
+            })
+            .try_fold(
+                || (get_empty_wins(), get_empty_loses()),
+                |(mut win_acc, mut lose_acc), res| match res {
+                    Ok(this_result) => {
+                        for (i, &val) in this_result.iter().enumerate() {
+                            if val >= 0 {
+                                win_acc[i][val as usize] += 1;
+                            } else {
+                                lose_acc[i] += 1;
+                            }
+                        }
+                        Ok((win_acc, lose_acc))
+                    }
+                    Err(e) => Err(e),
+                },
+            )
+            .try_reduce(
+                || (get_empty_wins(), get_empty_loses()),
+                |(mut win1, mut lose1), (win2, lose2)| {
+                    for i in 0..win1.len() {
+                        for j in 0..win1[i].len() {
+                            win1[i][j] += win2[i][j];
+                        }
+                        lose1[i] += lose2[i];
+                    }
+                    Ok((win1, lose1))
+                },
+            )?;
+
+        Ok(Self {
+            wins: result.0,
+            loses: result.1,
+        })
+    }
+
+    /// Get the equity of the given player index (0-based).
+    pub fn get_equity(&self, player_index: usize) -> Result<f64, PokercraftLocalError> {
+        if player_index >= self.wins.len() {
+            return Err(PokercraftLocalError::GeneralError(
+                "Player index out of range".to_string(),
+            ));
+        }
+        let total_wins: u64 = self.wins[player_index].iter().sum();
+        let total_games: u64 = total_wins + self.loses[player_index];
+        if total_games == 0 {
+            Err(PokercraftLocalError::GeneralError(
+                "No games played; Cannot calculate equity".to_string(),
+            ))
+        } else {
+            Ok(self.wins[player_index]
+                .iter()
+                .enumerate()
+                .fold(0.0, |acc, (ties, &count)| {
+                    acc + (count as f64) / ((ties + 1) as f64)
+                })
+                / (total_games as f64))
+        }
+    }
+}
+
+#[pymethods]
+impl EquityResult {
+    /// Calculate the win/loss count for the given player and community cards.
+    /// `result[i][c]` represents the count of scenarios where
+    /// the `i`-th player wins with `c` other players having the same rank.
+    #[new]
+    pub fn new_py(cards_people: Vec<(Card, Card)>, cards_community: Vec<Card>) -> PyResult<Self> {
+        match Self::new(cards_people, cards_community) {
+            Ok(result) => Ok(result),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    /// Python-exported interface of `self.get_equity`.
+    pub fn get_equity_py(&self, player_index: usize) -> PyResult<f64> {
+        match self.get_equity(player_index) {
+            Ok(equity) => Ok(equity),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    /// Check if the given player index (0-based) has never lost in all scenarios.
+    pub fn never_lost(&self, player_index: usize) -> PyResult<bool> {
+        if player_index >= self.wins.len() {
+            return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
+                "Player index out of range",
+            ));
+        }
+        Ok(self.loses[player_index] == 0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
-
     use super::*;
 
     /// Check if the given cards always result in the expected
@@ -499,7 +766,7 @@ mod tests {
                 *shuffled[3],
                 *shuffled[4],
             ];
-            let rank = HandRank::new(cards);
+            let rank = HandRank::evaluate(cards);
             assert_eq!(rank, expected);
         }
     }
@@ -757,6 +1024,38 @@ mod tests {
                 assert!(ranks[i] < ranks[j]);
             }
         }
+        Ok(())
+    }
+
+    /// Helper function to assert the equity results.
+    fn assert_equity(
+        cards_people: Vec<(Card, Card)>,
+        cards_community: Vec<Card>,
+        expected_equities: Vec<f64>,
+    ) -> Result<(), PokercraftLocalError> {
+        let equity = EquityResult::new(cards_people, cards_community)?;
+        println!("Got equity result: {:?}", equity);
+        for (i, &expected) in expected_equities.iter().enumerate() {
+            let actual = equity.get_equity(i)?;
+            println!(
+                "Player {}: actual equity = {}, expected equity = {}",
+                i, actual, expected
+            );
+            assert!((actual - expected).abs() < 1e-4);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_equity() -> Result<(), PokercraftLocalError> {
+        assert_equity(
+            vec![
+                ("As".try_into()?, "Ad".try_into()?),
+                ("Ks".try_into()?, "Kd".try_into()?),
+            ],
+            vec![],
+            vec![0.8236 + 0.0054 / 2.0, 0.1709 + 0.0054 / 2.0],
+        )?;
         Ok(())
     }
 }
