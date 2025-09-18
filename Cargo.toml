@@ -10,6 +10,13 @@ crate-type = ["cdylib"]
 path = "pokercraft_local_rust/lib.rs"
 
 [dependencies]
-pyo3 = "0.25"
+pyo3 = "0.26"
 rand = "0.8.5"
 rayon = "1.10"
+
+[features]
+extension-module = ["pyo3/extension-module"]
+default = ["extension-module"]
+
+# The reason why `features` tab is added, see here:
+# https://pyo3.rs/v0.23.5/faq.html#i-cant-run-cargo-test-or-i-cant-build-in-a-cargo-workspace-im-having-linker-issues-like-symbol-not-found-or-undefined-reference-to-_pyexc_systemerror
