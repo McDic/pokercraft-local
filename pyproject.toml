@@ -13,7 +13,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Development Status :: 4 - Beta",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
     "Topic :: Games/Entertainment :: Turn Based Strategy",
     "Topic :: Scientific/Engineering :: Visualization",
     "Topic :: Software Development :: Libraries",
