@@ -10,4 +10,6 @@ crate-type = ["cdylib"]
 path = "pokercraft_local_rust/lib.rs"
 
 [dependencies]
-pyo3 = "0.25.0"
+pyo3 = "0.25"
+rand = "0.8.5"
+rayon = "1.10"

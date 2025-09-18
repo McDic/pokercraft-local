@@ -1,15 +1,19 @@
 use pyo3::prelude::*;
 
-/// Formats the sum of two numbers as string.
-#[pyfunction]
-fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
-    Ok((a + b).to_string())
-}
+mod bankroll;
 
 /// A Python module implemented in Rust.
 #[pymodule]
 #[pyo3(name = "_rust")]
 fn main_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
+    m.add_submodule(&bankroll_submodule(m)?)?;
     Ok(())
+}
+
+/// Add the `bankroll` submodule to the parent module.
+fn bankroll_submodule<'a>(parent: &Bound<'a, PyModule>) -> PyResult<Bound<'a, PyModule>> {
+    let m = PyModule::new(parent.py(), "bankroll")?;
+    m.add_function(wrap_pyfunction!(bankroll::simulate, &m)?)?;
+    m.add_class::<bankroll::BankruptcyMetric>()?;
+    Ok(m)
 }

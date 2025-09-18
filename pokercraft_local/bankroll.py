@@ -1,7 +1,6 @@
 import math
 
-from pokercraft_local_bankroll import BankruptcyMetric, calculate
-
+from ._rust import bankroll
 from .data_structures import TournamentSummary
 
 
@@ -11,7 +10,7 @@ def analyze_bankroll(
     initial_capital_and_exits: tuple[tuple[int | float, float], ...],
     max_iteration: int,
     simulation_count: int,
-) -> dict[int | float, BankruptcyMetric]:
+) -> dict[int | float, bankroll.BankruptcyMetric]:
     """
     Analyze bankroll with the given summaries.
     """
@@ -19,9 +18,9 @@ def analyze_bankroll(
     for summary in summaries:
         relative_returns.extend(summary.rrs)
 
-    results: dict[int | float, BankruptcyMetric] = {}
+    results: dict[int | float, bankroll.BankruptcyMetric] = {}
     for initial_capital, profit_exit_multiplier in initial_capital_and_exits:
-        results[initial_capital] = calculate(
+        results[initial_capital] = bankroll.simulate(
             initial_capital,
             relative_returns,
             max_iteration,

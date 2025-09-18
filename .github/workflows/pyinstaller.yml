@@ -32,7 +32,7 @@ jobs:
           pip install -r requirements-dist.txt
       - name: Run maturin
         run: |
-          maturin develop -v
+          maturin develop -v --release
       - name: Run Pyinstaller
         run: |
           pyinstaller run_gui.py

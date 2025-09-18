@@ -5,6 +5,3 @@ statsmodels == 0.14.*
 markdown
 forex-python == 1.8.*
 requests
-
-# Pokercraft Local Utilities
-pokercraft-local-bankroll == 0.4.*
