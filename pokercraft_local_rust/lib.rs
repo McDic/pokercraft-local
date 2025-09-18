@@ -19,9 +19,3 @@ fn bankroll_submodule<'a>(parent: &Bound<'a, PyModule>) -> PyResult<Bound<'a, Py
     m.add_class::<bankroll::BankruptcyMetric>()?;
     Ok(m)
 }
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_empty_func() {}
-}

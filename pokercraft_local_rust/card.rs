@@ -321,14 +321,14 @@ impl HandRank {
 
     /// Get `N` cards from the given cards, excluding the specified card numbers.
     /// Returned card numbers are sorted in decreasing order.
-    fn get_cards_except<const Ret: usize>(cards: &[Card], excludes: &[CardNumber]) -> [Card; Ret] {
-        let mut result = [Card::default(); Ret];
+    fn get_cards_except<const RET: usize>(cards: &[Card], excludes: &[CardNumber]) -> [Card; RET] {
+        let mut result = [Card::default(); RET];
         let mut index = 0;
         for card in cards.iter() {
             if excludes.iter().find(|&&num| num == card.number).is_none() {
                 result[index] = *card;
                 index += 1;
-                if index >= Ret {
+                if index >= RET {
                     break;
                 }
             }
@@ -355,7 +355,7 @@ impl HandRank {
                 }
             }
             if valid {
-                return Some(numbers[(start + 4) % LEN]);
+                return Some(numbers[(start) % LEN]);
             }
         }
         None
@@ -488,7 +488,8 @@ mod tests {
 
     use super::*;
 
-    /// Check if the given cards always result in the expected hand rank.
+    /// Check if the given cards always result in the expected
+    /// hand rank for all permutations of the cards.
     fn check_for_all_permutations(cards: [Card; 5], expected: HandRank) {
         for shuffled in cards.iter().permutations(5) {
             let cards = [
@@ -503,31 +504,258 @@ mod tests {
         }
     }
 
+    /// Convenience function to create an array of `Card`s from strings.
+    /// This method will throw an error if any of the strings is invalid or duplicated.
+    fn create_cards_slice<const N: usize>(
+        card_strs: [&str; N],
+    ) -> Result<[Card; N], PokercraftLocalError> {
+        let mut cards = [Card::default(); N];
+        for (i, s) in card_strs.iter().enumerate() {
+            cards[i] = Card::try_from(*s)?;
+        }
+        for i in 0..N {
+            for j in (i + 1)..N {
+                if cards[i] == cards[j] {
+                    return Err(PokercraftLocalError::GeneralError(format!(
+                        "Duplicated card: {}",
+                        cards[i]
+                    )));
+                }
+            }
+        }
+        Ok(cards)
+    }
+
     #[test]
-    fn test_rank_high_card() -> Result<(), PokercraftLocalError> {
+    /// Test the construction of `HandRank` from various card combinations.
+    fn test_rank_construction() -> Result<(), PokercraftLocalError> {
         for cards in [
-            [
-                "As".try_into()?,
-                "Kh".try_into()?,
-                "9d".try_into()?,
-                "5c".try_into()?,
-                "3s".try_into()?,
-            ],
-            [
-                "3s".try_into()?,
-                "5s".try_into()?,
-                "4s".try_into()?,
-                "2s".try_into()?,
-                "7d".try_into()?,
-            ],
+            create_cards_slice(["As", "Kd", "Jh", "9c", "3s"])?,
+            create_cards_slice(["5s", "7d", "4s", "3s", "2s"])?,
         ] {
             println!(
-                "Testing cards: {} {} {} {} {}",
+                "Testing cards for high: {} {} {} {} {}",
                 cards[0], cards[1], cards[2], cards[3], cards[4]
             );
             let mut sorted_cards = cards.clone();
             HandRank::sort_decreasing(&mut sorted_cards);
             check_for_all_permutations(cards, HandRank::HighCard(sorted_cards));
+        }
+
+        for cards in [
+            create_cards_slice(["As", "Ad", "Jh", "9c", "3s"])?,
+            create_cards_slice(["5s", "5d", "4s", "3s", "2s"])?,
+            create_cards_slice(["Qd", "Qh", "7s", "4c", "2d"])?,
+        ] {
+            println!(
+                "Testing cards for one pair: {} {} {} {} {}",
+                cards[0], cards[1], cards[2], cards[3], cards[4]
+            );
+            let mut sorted_kickers = [cards[2], cards[3], cards[4]];
+            HandRank::sort_decreasing(&mut sorted_kickers);
+            check_for_all_permutations(cards, HandRank::OnePair(cards[0].number, sorted_kickers));
+        }
+
+        for cards in [
+            create_cards_slice(["As", "Ad", "Jh", "Jc", "3s"])?,
+            create_cards_slice(["5s", "5d", "3s", "3c", "4s"])?,
+            create_cards_slice(["Qd", "Qh", "7s", "7c", "Ad"])?,
+        ] {
+            println!(
+                "Testing cards for two pairs: {} {} {} {} {}",
+                cards[0], cards[1], cards[2], cards[3], cards[4]
+            );
+            let mut high_pair = cards[0].number;
+            let mut low_pair = cards[2].number;
+            let kicker = cards[4];
+            if low_pair > high_pair {
+                std::mem::swap(&mut high_pair, &mut low_pair);
+            }
+            check_for_all_permutations(cards, HandRank::TwoPairs(high_pair, low_pair, kicker));
+        }
+
+        for cards in [
+            create_cards_slice(["As", "Ad", "Ac", "9c", "3s"])?,
+            create_cards_slice(["5s", "5d", "5h", "3s", "Js"])?,
+            create_cards_slice(["Qd", "Qh", "Qs", "7c", "Kd"])?,
+        ] {
+            println!(
+                "Testing cards for triple: {} {} {} {} {}",
+                cards[0], cards[1], cards[2], cards[3], cards[4]
+            );
+            let mut sorted_kickers = [cards[3], cards[4]];
+            HandRank::sort_decreasing(&mut sorted_kickers);
+            check_for_all_permutations(cards, HandRank::Triple(cards[0].number, sorted_kickers));
+        }
+
+        for cards in [
+            create_cards_slice(["As", "Kd", "Qh", "Jc", "Ts"])?,
+            create_cards_slice(["5s", "4d", "3h", "2c", "As"])?,
+            create_cards_slice(["9d", "8h", "7s", "6c", "5d"])?,
+        ] {
+            println!(
+                "Testing cards for straight: {} {} {} {} {}",
+                cards[0], cards[1], cards[2], cards[3], cards[4]
+            );
+            check_for_all_permutations(cards, HandRank::Straight(cards[0].number));
+        }
+
+        for cards in [
+            create_cards_slice(["As", "Ks", "Qs", "Js", "9s"])?,
+            create_cards_slice(["5d", "4d", "3d", "2d", "Jd"])?,
+            create_cards_slice(["9c", "3c", "2c", "6c", "Tc"])?,
+        ] {
+            println!(
+                "Testing cards for flush: {} {} {} {} {}",
+                cards[0], cards[1], cards[2], cards[3], cards[4]
+            );
+            let mut sorted_numbers = [
+                cards[0].number,
+                cards[1].number,
+                cards[2].number,
+                cards[3].number,
+                cards[4].number,
+            ];
+            sorted_numbers.sort();
+            sorted_numbers.reverse();
+            check_for_all_permutations(cards, HandRank::Flush(cards[0].shape, sorted_numbers));
+        }
+
+        for cards in [
+            create_cards_slice(["As", "Ad", "Ac", "Ks", "Kd"])?,
+            create_cards_slice(["5s", "5d", "5h", "3c", "3s"])?,
+            create_cards_slice(["Qd", "Qh", "Qs", "Kc", "Kd"])?,
+        ] {
+            println!(
+                "Testing cards for full house: {} {} {} {} {}",
+                cards[0], cards[1], cards[2], cards[3], cards[4]
+            );
+            let three = cards[0].number;
+            let pair = cards[3].number;
+            check_for_all_permutations(cards, HandRank::FullHouse(three, pair));
+        }
+
+        for cards in [
+            create_cards_slice(["As", "Ad", "Ac", "Ah", "Kd"])?,
+            create_cards_slice(["5s", "5d", "5h", "5c", "Js"])?,
+            create_cards_slice(["Qd", "Qh", "Qs", "Qc", "2d"])?,
+        ] {
+            println!(
+                "Testing cards for quads: {} {} {} {} {}",
+                cards[0], cards[1], cards[2], cards[3], cards[4]
+            );
+            let four = cards[0].number;
+            let kicker = cards[4];
+            check_for_all_permutations(cards, HandRank::Quads(four, kicker));
+        }
+
+        for cards in [
+            create_cards_slice(["As", "Ks", "Qs", "Js", "Ts"])?,
+            create_cards_slice(["5d", "4d", "3d", "2d", "Ad"])?,
+            create_cards_slice(["9c", "8c", "7c", "6c", "5c"])?,
+        ] {
+            println!(
+                "Testing cards for straight flush: {} {} {} {} {}",
+                cards[0], cards[1], cards[2], cards[3], cards[4]
+            );
+            let highest = cards[0];
+            check_for_all_permutations(cards, HandRank::StraightFlush(highest));
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_rank_order() -> Result<(), PokercraftLocalError> {
+        let ranks = [
+            // High cards
+            HandRank::HighCard(create_cards_slice(["7s", "6d", "4h", "3c", "2s"])?),
+            HandRank::HighCard(create_cards_slice(["8s", "6c", "4h", "3c", "2s"])?),
+            HandRank::HighCard(create_cards_slice(["As", "Kd", "4c", "3c", "2d"])?),
+            HandRank::HighCard(create_cards_slice(["As", "Kd", "Jh", "5h", "4s"])?),
+            HandRank::HighCard(create_cards_slice(["As", "Kd", "Jh", "9c", "2s"])?),
+            HandRank::HighCard(create_cards_slice(["As", "Kd", "Jh", "9c", "3s"])?),
+            // One pair
+            HandRank::OnePair(CardNumber::Two, create_cards_slice(["Ks", "Qd", "3d"])?),
+            HandRank::OnePair(CardNumber::Two, create_cards_slice(["Ks", "Qd", "Jh"])?),
+            HandRank::OnePair(CardNumber::Two, create_cards_slice(["As", "Kd", "Jh"])?),
+            HandRank::OnePair(CardNumber::Ten, create_cards_slice(["Ks", "Qd", "Jh"])?),
+            HandRank::OnePair(CardNumber::Ace, create_cards_slice(["Ks", "Qd", "Jh"])?),
+            // Two pairs
+            HandRank::TwoPairs(CardNumber::King, CardNumber::Jack, "Qd".try_into()?),
+            HandRank::TwoPairs(CardNumber::Ace, CardNumber::Jack, "Qd".try_into()?),
+            HandRank::TwoPairs(CardNumber::Ace, CardNumber::King, "6d".try_into()?),
+            HandRank::TwoPairs(CardNumber::Ace, CardNumber::King, "Qd".try_into()?),
+            // Triple
+            HandRank::Triple(CardNumber::Three, create_cards_slice(["Jd", "Th"])?),
+            HandRank::Triple(CardNumber::Four, create_cards_slice(["As", "Qh"])?),
+            HandRank::Triple(CardNumber::Ace, create_cards_slice(["Jd", "Th"])?),
+            HandRank::Triple(CardNumber::Ace, create_cards_slice(["Kd", "2h"])?),
+            HandRank::Triple(CardNumber::Ace, create_cards_slice(["Kd", "Jh"])?),
+            // Straight
+            HandRank::Straight(CardNumber::Five),
+            HandRank::Straight(CardNumber::Nine),
+            HandRank::Straight(CardNumber::Ace),
+            // Flush
+            HandRank::Flush(
+                CardShape::Club,
+                [
+                    CardNumber::King,
+                    CardNumber::Jack,
+                    CardNumber::Ten,
+                    CardNumber::Nine,
+                    CardNumber::Two,
+                ],
+            ),
+            HandRank::Flush(
+                CardShape::Spade,
+                [
+                    CardNumber::Ace,
+                    CardNumber::King,
+                    CardNumber::Eight,
+                    CardNumber::Seven,
+                    CardNumber::Six,
+                ],
+            ),
+            HandRank::Flush(
+                CardShape::Spade,
+                [
+                    CardNumber::Ace,
+                    CardNumber::King,
+                    CardNumber::Jack,
+                    CardNumber::Nine,
+                    CardNumber::Three,
+                ],
+            ),
+            HandRank::Flush(
+                CardShape::Spade,
+                [
+                    CardNumber::Ace,
+                    CardNumber::King,
+                    CardNumber::Jack,
+                    CardNumber::Nine,
+                    CardNumber::Eight,
+                ],
+            ),
+            // Full house
+            HandRank::FullHouse(CardNumber::King, CardNumber::Two),
+            HandRank::FullHouse(CardNumber::King, CardNumber::Ace),
+            HandRank::FullHouse(CardNumber::Ace, CardNumber::King),
+            // Quads
+            HandRank::Quads(CardNumber::King, "As".try_into()?),
+            HandRank::Quads(CardNumber::Ace, "Jd".try_into()?),
+            HandRank::Quads(CardNumber::Ace, "Qd".try_into()?),
+            // Straight flush
+            HandRank::StraightFlush("5d".try_into()?),
+            HandRank::StraightFlush("9c".try_into()?),
+            HandRank::StraightFlush("As".try_into()?),
+        ];
+
+        // Brute force comparison
+        for i in 0..ranks.len() {
+            for j in (i + 1)..ranks.len() {
+                assert!(ranks[i] < ranks[j]);
+            }
         }
         Ok(())
     }
