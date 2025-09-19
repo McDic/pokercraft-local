@@ -8,6 +8,7 @@ use rustfft::{num_complex::Complex, FftPlanner};
 use crate::card::{Card, HandRank};
 use crate::errors::PokercraftLocalError;
 
+/// Result of single equity calculation.
 #[pyclass]
 #[derive(Debug, Clone)]
 pub struct EquityResult {
@@ -189,6 +190,7 @@ impl EquityResult {
     }
 }
 
+/// Luck calculator using equity values and results.
 #[pyclass]
 #[derive(Debug, Clone)]
 pub struct LuckCalculator {

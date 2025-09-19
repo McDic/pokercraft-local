@@ -7,7 +7,7 @@ mod errors;
 
 /// A Python module implemented in Rust.
 #[pymodule]
-#[pyo3(name = "_rust")]
+#[pyo3(name = "rust")]
 fn main_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_submodule(&bankroll_submodule(m)?)?;
     m.add_submodule(&card_submodule(m)?)?;

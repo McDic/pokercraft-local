@@ -1,7 +1,7 @@
 import math
 
-from ._rust import bankroll
 from .data_structures import TournamentSummary
+from .rust import bankroll
 
 
 def analyze_bankroll(

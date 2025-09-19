@@ -42,4 +42,4 @@ ignore_missing_imports = true
 [tool.maturin]
 bindings = "pyo3"
 features = ["pyo3/extension-module"]
-module-name = "pokercraft_local._rust"
+module-name = "pokercraft_local.rust"
