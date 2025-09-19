@@ -14,6 +14,7 @@ itertools = "0.14"
 pyo3 = "0.26"
 rand = "0.8.5"
 rayon = "1.10"
+rustfft = "6"
 thiserror = "2.0"
 
 [features]

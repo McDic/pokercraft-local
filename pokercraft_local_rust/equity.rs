@@ -3,6 +3,7 @@
 use itertools::Itertools;
 use pyo3::prelude::*;
 use rayon::prelude::*;
+use rustfft::{num_complex::Complex, FftPlanner};
 
 use crate::card::{Card, HandRank};
 use crate::errors::PokercraftLocalError;
@@ -246,8 +247,8 @@ impl LuckCalculator {
     }
 
     /// Number of actual wincount.
-    fn actual_wincount(&self) -> i64 {
-        self.wins.len() as i64
+    fn actual_wincount(&self) -> u64 {
+        self.wins.len() as u64
     }
 
     /// Calculate the Z-score of the results.
@@ -259,6 +260,150 @@ impl LuckCalculator {
         let numerator = self.actual_wincount() as f64 - self.expected_wincount();
         let denominator = self.variance().sqrt();
         Some(numerator / denominator)
+    }
+
+    /// Convolve two real-coefficient polynomials a and b.
+    /// Returns coefficients of c(x) = a(x) * b(x).
+    /// This implementation is provided by ChatGPT.
+    fn convolve_real(a: &[f64], b: &[f64]) -> Vec<f64> {
+        let need = a.len() + b.len() - 1;
+        let mut n = 1usize;
+        while n < need {
+            n <<= 1;
+        }
+
+        let mut planner = FftPlanner::<f64>::new();
+        let fft = planner.plan_fft_forward(n);
+        let ifft = planner.plan_fft_inverse(n);
+
+        // Pack as Complex<f64>
+        let mut fa = vec![Complex { re: 0.0, im: 0.0 }; n];
+        let mut fb = vec![Complex { re: 0.0, im: 0.0 }; n];
+        for (i, &x) in a.iter().enumerate() {
+            fa[i].re = x;
+        }
+        for (i, &x) in b.iter().enumerate() {
+            fb[i].re = x;
+        }
+
+        // FFT
+        fft.process(&mut fa);
+        fft.process(&mut fb);
+
+        // pointwise multiply
+        for i in 0..n {
+            fa[i] = fa[i] * fb[i];
+        }
+
+        // IFFT
+        ifft.process(&mut fa);
+
+        // normalize and extract real part
+        let inv_n = 1.0 / (n as f64);
+        let mut out = fa
+            .iter()
+            .take(need)
+            .map(|z| z.re * inv_n)
+            .collect::<Vec<_>>();
+
+        // clean tiny negatives due to float noise
+        for x in &mut out {
+            if *x < 0.0 && *x > -1e-15 {
+                *x = 0.0;
+            }
+        }
+        out
+    }
+
+    /// Build the Poisson–Binomial PMF coefficients f[k] = Pr(W = k)
+    /// using an FFT-based product tree.
+    /// This implementation is provided by ChatGPT.
+    fn poisson_binomial_pmf(ps: &[f64]) -> Vec<f64> {
+        // start as a list of degree-1 polys: (1-p) + p x
+        let mut polys: Vec<Vec<f64>> = ps.iter().map(|&p| vec![1.0 - p, p]).collect();
+
+        // edge case: no trials
+        if polys.is_empty() {
+            return vec![1.0];
+        }
+
+        // Multiplying polynomials in pairs, building a binary tree
+        while polys.len() > 1 {
+            let mut next = Vec::with_capacity((polys.len() + 1) / 2);
+            let mut i = 0;
+            while i + 1 < polys.len() {
+                let c = Self::convolve_real(&polys[i], &polys[i + 1]);
+                next.push(c);
+                i += 2;
+            }
+            if i < polys.len() {
+                // odd one out, carry forward
+                next.push(polys[i].clone());
+            }
+            polys = next;
+        }
+
+        // single polynomial remains: that's the pmf
+        polys.pop().unwrap()
+    }
+
+    /// Calculate the upper-tail, lower-tail, and two-sided p-values
+    fn tails_from_pmf(pmf: &[f64], w_obs: usize) -> (f64, f64, f64) {
+        let n = pmf.len() - 1;
+        assert!(w_obs <= n);
+        let upper: f64 = pmf[w_obs..].iter().copied().sum(); // Pr(W >= w_obs)
+        let lower: f64 = pmf[..=w_obs].iter().copied().sum(); // Pr(W <= w_obs)
+        let two_sided = (2.0 * upper.min(lower)).min(1.0);
+        (upper, lower, two_sided)
+    }
+
+    /// The public interface to get the tail p-values;
+    /// Upper-tail, lower-tail, and two-sided p-values.
+    pub fn tails(&self) -> Option<(f64, f64, f64)> {
+        let ps: Vec<f64> = self.get_all_equity_iter().copied().collect();
+        if ps.is_empty() {
+            return None;
+        }
+        let pmf = Self::poisson_binomial_pmf(&ps);
+        let w_obs = self.actual_wincount();
+        Some(Self::tails_from_pmf(&pmf, w_obs as usize))
+    }
+}
+
+#[pymethods]
+impl LuckCalculator {
+    /// Python constructor of `LuckCalculator`.
+    #[new]
+    pub fn new_py() -> PyResult<Self> {
+        Ok(Self::new())
+    }
+
+    /// Python interface of `self.add_result`.
+    pub fn add_result_py(&mut self, equity: f64, did_win: bool) -> PyResult<()> {
+        match self.add_result(equity, did_win) {
+            Ok(()) => Ok(()),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    /// Python interface of `self.z_score`.
+    pub fn z_score_py(&self) -> PyResult<f64> {
+        match self.z_score() {
+            Some(z) => Ok(z),
+            None => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "No results added; Cannot calculate Z-score",
+            )),
+        }
+    }
+
+    /// Python interface of `self.tails`.
+    pub fn tails_py(&self) -> PyResult<(f64, f64, f64)> {
+        match self.tails() {
+            Some(tails) => Ok(tails),
+            None => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "No results added; Cannot calculate tail p-values",
+            )),
+        }
     }
 }
 
@@ -313,6 +458,41 @@ mod tests {
                 0.7032 + 0.0620 / 3.0,
             ],
         )?;
+        Ok(())
+    }
+
+    fn assert_almost_equal(actual: f64, expected: f64) {
+        assert!(
+            (actual - expected).abs() < 1e-6,
+            "Expected {} but got {}",
+            expected,
+            actual
+        );
+    }
+
+    #[test]
+    fn test_luck_score() -> Result<(), PokercraftLocalError> {
+        let mut luck = LuckCalculator::new();
+        luck.add_result(0.3, true)?;
+        let (upper, lower, _) = luck.tails().unwrap();
+        assert_almost_equal(upper, 0.3);
+        assert_almost_equal(lower, 1.0);
+
+        let mut luck = LuckCalculator::new();
+        luck.add_result(0.2, true)?;
+        luck.add_result(0.5, false)?;
+        let (upper, lower, _) = luck.tails().unwrap();
+        assert_almost_equal(upper, 0.6);
+        assert_almost_equal(lower, 0.9);
+
+        let mut luck = LuckCalculator::new();
+        luck.add_result(0.2, true)?;
+        luck.add_result(0.5, false)?;
+        luck.add_result(0.8, true)?;
+        let (upper, lower, _) = luck.tails().unwrap();
+        assert_almost_equal(upper, 0.5);
+        assert_almost_equal(lower, 0.92);
+
         Ok(())
     }
 }
