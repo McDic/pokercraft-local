@@ -608,25 +608,26 @@ impl EquityResult {
             .combinations(5 - cards_community.len())
             .par_bridge()
             .map(|remaining_communities| {
-                // Create full community cards
-                let mut full_communities = cards_community.clone();
-                full_communities.extend(remaining_communities.iter());
+                let mut card7: [Card; 7] = [Card::default(); 7];
+                for (i, card) in cards_community
+                    .iter()
+                    .chain(remaining_communities.iter())
+                    .enumerate()
+                {
+                    card7[i] = *card;
+                }
 
                 // Get best hand ranks for each person
                 let mut best_ranks_people = vec![];
                 for (c1, c2) in cards_people.iter() {
-                    let this_cards: Vec<Card> = full_communities
-                        .iter()
-                        .chain([*c1, *c2].iter())
-                        .map(|&c| c)
-                        .collect();
-                    if let Ok((_, best_rank_this_person)) = HandRank::find_best5(this_cards.clone())
-                    {
+                    card7[5] = *c1;
+                    card7[6] = *c2;
+                    if let Ok((_, best_rank_this_person)) = HandRank::find_best5(card7) {
                         best_ranks_people.push(best_rank_this_person);
                     } else {
                         return Err(PokercraftLocalError::GeneralError(format!(
                             "Failed to evaluate hand rank: {:?}",
-                            this_cards
+                            card7
                         )));
                     }
                 }
