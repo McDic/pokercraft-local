@@ -188,6 +188,80 @@ impl EquityResult {
     }
 }
 
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct LuckCalculator {
+    /// Winning history with equity values.
+    wins: Vec<f64>,
+    /// Losing history with equity values.
+    loses: Vec<f64>,
+}
+
+impl LuckCalculator {
+    /// Create a new empty `LuckCalculator`.
+    pub fn new() -> Self {
+        LuckCalculator {
+            wins: vec![],
+            loses: vec![],
+        }
+    }
+
+    /// Add a new result to the calculator.
+    pub fn add_result(&mut self, equity: f64, did_win: bool) -> Result<(), PokercraftLocalError> {
+        if equity < 0.0 || equity > 1.0 {
+            return Err(PokercraftLocalError::GeneralError(
+                "Equity must be between 0.0 and 1.0".to_string(),
+            ));
+        } else if equity == 0.0 && did_win {
+            return Err(PokercraftLocalError::GeneralError(
+                "Cannot win with 0% equity".to_string(),
+            ));
+        } else if equity == 1.0 && !did_win {
+            return Err(PokercraftLocalError::GeneralError(
+                "Cannot lose with 100% equity".to_string(),
+            ));
+        } else if did_win {
+            self.wins.push(equity);
+        } else {
+            self.loses.push(equity);
+        }
+        Ok(())
+    }
+
+    /// Get an iterator over all equity values on both winning and losing.
+    fn get_all_equity_iter<'a>(&'a self) -> impl Iterator<Item = &'a f64> {
+        self.wins.iter().chain(self.loses.iter())
+    }
+
+    /// Number of expected wincount based on equity values.
+    fn expected_wincount(&self) -> f64 {
+        self.get_all_equity_iter().sum::<f64>()
+    }
+
+    /// Get the variance of the results.
+    fn variance(&self) -> f64 {
+        self.get_all_equity_iter()
+            .map(|e| e * (1.0 - e))
+            .sum::<f64>()
+    }
+
+    /// Number of actual wincount.
+    fn actual_wincount(&self) -> i64 {
+        self.wins.len() as i64
+    }
+
+    /// Calculate the Z-score of the results.
+    pub fn z_score(&self) -> Option<f64> {
+        let n = self.wins.len() + self.loses.len();
+        if n == 0 {
+            return None;
+        }
+        let numerator = self.actual_wincount() as f64 - self.expected_wincount();
+        let denominator = self.variance().sqrt();
+        Some(numerator / denominator)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
