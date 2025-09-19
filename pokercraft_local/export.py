@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Iterable
 
 from .data_structures import CurrencyRateConverter, TournamentSummary
-from .parser import PokercraftParser
+from .parser import PokercraftSummaryParser
 from .translate import Language
 from .visualize import plot_total
 
@@ -40,7 +40,7 @@ def export(
 
     summaries = sorted(
         set(
-            PokercraftParser.crawl_files(
+            PokercraftSummaryParser.crawl_files(
                 [main_path],
                 follow_symlink=True,
                 allow_freerolls=allow_freerolls,

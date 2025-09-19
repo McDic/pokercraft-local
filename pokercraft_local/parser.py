@@ -58,7 +58,7 @@ def take_first_int(s: str) -> int:
         return int(i.group())
 
 
-class PokercraftParser:
+class PokercraftSummaryParser:
     """
     This class parses summary files from Pokercraft.
     """
