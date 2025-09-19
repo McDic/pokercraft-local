@@ -1,3 +1,5 @@
+//! Definition of custom error types.
+
 use pyo3::exceptions as py_exceptions;
 use thiserror::Error;
 

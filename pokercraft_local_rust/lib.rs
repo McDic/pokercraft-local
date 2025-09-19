@@ -2,6 +2,7 @@ use pyo3::prelude::*;
 
 mod bankroll;
 mod card;
+mod equity;
 mod errors;
 
 /// A Python module implemented in Rust.
@@ -10,6 +11,7 @@ mod errors;
 fn main_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_submodule(&bankroll_submodule(m)?)?;
     m.add_submodule(&card_submodule(m)?)?;
+    m.add_submodule(&equity_submodule(m)?)?;
     Ok(())
 }
 
@@ -20,7 +22,13 @@ fn card_submodule<'a>(parent: &Bound<'a, PyModule>) -> PyResult<Bound<'a, PyModu
     m.add_class::<card::CardNumber>()?;
     m.add_class::<card::CardShape>()?;
     m.add_class::<card::HandRank>()?;
-    m.add_class::<card::EquityResult>()?;
+    Ok(m)
+}
+
+/// Add the `equity` submodule to the parent module.
+fn equity_submodule<'a>(parent: &Bound<'a, PyModule>) -> PyResult<Bound<'a, PyModule>> {
+    let m = PyModule::new(parent.py(), "equity")?;
+    m.add_class::<equity::EquityResult>()?;
     Ok(m)
 }
 
