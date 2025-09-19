@@ -1,5 +1,3 @@
-import math
-
 from .data_structures import TournamentSummary
 from .rust import bankroll
 
