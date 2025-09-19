@@ -1035,13 +1035,8 @@ mod tests {
         expected_equities: Vec<f64>,
     ) -> Result<(), PokercraftLocalError> {
         let equity = EquityResult::new(cards_people, cards_community)?;
-        println!("Got equity result: {:?}", equity);
         for (i, &expected) in expected_equities.iter().enumerate() {
             let actual = equity.get_equity(i)?;
-            println!(
-                "Player {}: actual equity = {}, expected equity = {}",
-                i, actual, expected
-            );
             assert!((actual - expected).abs() < 1e-4);
         }
         Ok(())
@@ -1056,6 +1051,29 @@ mod tests {
             ],
             vec![],
             vec![0.8236 + 0.0054 / 2.0, 0.1709 + 0.0054 / 2.0],
+        )?;
+
+        assert_equity(
+            vec![
+                ("Ac".try_into()?, "Kc".try_into()?),
+                ("6h".try_into()?, "7h".try_into()?),
+            ],
+            vec!["9d".try_into()?, "Td".try_into()?, "Jd".try_into()?],
+            vec![0.6495 + 0.0566 / 2.0, 0.2939 + 0.0566 / 2.0],
+        )?;
+
+        assert_equity(
+            vec![
+                ("Ac".try_into()?, "Kc".try_into()?),
+                ("6h".try_into()?, "7h".try_into()?),
+                ("Ts".try_into()?, "Th".try_into()?),
+            ],
+            vec!["9d".try_into()?, "Td".try_into()?, "Jd".try_into()?],
+            vec![
+                0.1318 + 0.0620 / 3.0,
+                0.1030 + 0.0620 / 3.0,
+                0.7032 + 0.0620 / 3.0,
+            ],
         )?;
         Ok(())
     }
