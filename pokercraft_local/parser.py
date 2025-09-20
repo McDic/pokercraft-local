@@ -84,7 +84,7 @@ class AbstractParser(ABC, typing.Generic[T]):
         raise NotImplementedError
 
     @abstractmethod
-    def parse(self, instream: TextIOWrapper) -> T:
+    def parse(self, instream: TextIOWrapper) -> typing.Iterator[T]:
         """
         Parse given stream into object of type `T`.
         """
@@ -130,17 +130,15 @@ class AbstractParser(ABC, typing.Generic[T]):
         """
         for path, stream in self.yield_streams(paths, follow_symlink=follow_symlink):
             try:
-                parsed = self.parse(stream)
-                if self.should_skip(parsed):
-                    pass
-                else:
-                    yield parsed
-            except (ValueError, UnboundLocalError, StopIteration) as err:
+                for parsed in self.parse(stream):
+                    if not self.should_skip(parsed):
+                        yield parsed
+            except (ValueError, StopIteration) as err:
                 logger.warning(
-                    "Failed to parse file %s, skipping. " "(Reason: %s (%s))",
+                    "Failed to parse file %s, skipping. (%s: %s)",
                     path,
-                    err,
                     type(err).__name__,
+                    err,
                 )
                 pass
             except Exception:
@@ -178,7 +176,7 @@ class PokercraftSummaryParser(AbstractParser[TournamentSummary]):
         self.rate_converter = rate_converter
         self.allow_freerolls = allow_freerolls
 
-    def parse(self, instream: TextIOWrapper) -> TournamentSummary:
+    def parse(self, instream: TextIOWrapper) -> typing.Iterator[TournamentSummary]:
         t_id: int
         t_name: str
         t_buy_in_pure: float
@@ -265,18 +263,21 @@ class PokercraftSummaryParser(AbstractParser[TournamentSummary]):
                 if self.LINE8_REENTRIES.fullmatch(line):
                     t_my_entries += take_first_int(line)
 
-        return TournamentSummary(
-            id=t_id,
-            name=t_name,
-            buy_in_pure=t_buy_in_pure,
-            rake=t_rake,
-            total_prize_pool=t_total_prize_pool,
-            start_time=t_start_time,
-            my_rank=t_my_rank,
-            total_players=t_total_players,
-            my_prize=t_my_prize,
-            my_entries=t_my_entries,
-        )
+        try:
+            yield TournamentSummary(
+                id=t_id,
+                name=t_name,
+                buy_in_pure=t_buy_in_pure,
+                rake=t_rake,
+                total_prize_pool=t_total_prize_pool,
+                start_time=t_start_time,
+                my_rank=t_my_rank,
+                total_players=t_total_players,
+                my_prize=t_my_prize,
+                my_entries=t_my_entries,
+            )
+        except UnboundLocalError as err:
+            raise ValueError("Incomplete data, failed to parse summary.") from err
 
     @staticmethod
     def is_target_txt(name: Path | str) -> bool:
