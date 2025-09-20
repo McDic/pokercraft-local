@@ -1,3 +1,7 @@
+"""
+Functionalities for equity calculation and luck score.
+"""
+
 from .card import Card
 
 class EquityResult:

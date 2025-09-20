@@ -1,3 +1,7 @@
+"""
+Contains data structures related to cards, poker hands and ranks.
+"""
+
 from enum import Enum
 from enum import auto as enumauto
 

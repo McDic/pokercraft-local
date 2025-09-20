@@ -1,3 +1,7 @@
+"""
+A module for bankroll analysis and simulation functionalities.
+"""
+
 class BankruptcyMetric:
     """
     Represents a bankruptcy metric.

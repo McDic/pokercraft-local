@@ -1,12 +1,13 @@
 """
 Rust extensions for Pokercraft Local.
-When you use these module in Python, you should import them as
+When you want to use the submodules in Python,
+you should import them as
 
 ```python
 from pokercraft_local.rust import ...
 ```
 
-and use classes and functions inside that module.
+because these modules are not qualified as packages.
 """
 
 from . import bankroll, card, equity
