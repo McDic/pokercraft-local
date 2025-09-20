@@ -11,7 +11,7 @@ from markdown import markdown
 from plotly.subplots import make_subplots
 
 from .bankroll import analyze_bankroll
-from .constants import BASE_HTML_FRAME, DEFAULT_WINDOW_SIZES
+from .constants import BASE_HTML_FRAME, DEFAULT_WINDOW_SIZES, HORIZONTAL_PLOT_DIVIDER
 from .data_structures import TournamentSummary
 from .translate import (
     BANKROLL_PLOT_SUBTITLE,
@@ -27,7 +27,7 @@ from .translate import (
     Language,
     format_dollar,
     format_percent,
-    generate_summary_html,
+    generate_summary_md,
     get_html_title,
     get_software_credits,
     get_translated_column_moving_average,
@@ -788,10 +788,10 @@ def plot_total(
     return BASE_HTML_FRAME.format(
         title=get_html_title(nickname, lang),
         summary=markdown(
-            generate_summary_html(lang, *get_summaries(tournaments)),
+            generate_summary_md(lang, *get_summaries(tournaments)),
             extensions=["tables"],
         ),
-        plots="<br><hr><br>".join(  # type: ignore[var-annotated]
+        plots=HORIZONTAL_PLOT_DIVIDER.join(  # type: ignore[var-annotated]
             fig.to_html(include_plotlyjs=("cdn" if i == 0 else False), full_html=False)
             + markdown(doc_dict[lang])
             for i, (doc_dict, fig) in enumerate(

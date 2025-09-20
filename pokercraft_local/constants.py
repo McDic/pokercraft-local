@@ -8,6 +8,8 @@ POKERCRAFT_AHREF: typing.Final[str] = (
     "Pokercraft Local v{version}</a>"
 ).format(version=VERSION)
 
+HORIZONTAL_PLOT_DIVIDER: typing.Final[str] = "<br><hr><br>"
+
 # fmt: off
 BASE_HTML_FRAME: typing.Final[
     str

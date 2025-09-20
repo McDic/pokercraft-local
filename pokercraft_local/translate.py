@@ -22,9 +22,9 @@ class Language(Enum):
             raise TypeError("Only str is allowed for translation.")
 
 
-def generate_summary_html(lang: Language, *kvs: tuple[str, typing.Any]) -> str:
+def generate_summary_md(lang: Language, *kvs: tuple[str, typing.Any]) -> str:
     """
-    Generate summary HTML.
+    Generate summary in the markdown.
     """
     head = f"| {lang << 'Category'} | {lang << 'Value'} |"
     hr = "| --- | --- |"
