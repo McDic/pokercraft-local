@@ -24,7 +24,8 @@ jobs:
           cache-dependency-path: |
             "requirements.txt"
             "requirements-dev.txt"
-      - run: |
+      - name: Install Python dependencies
+        run: |
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
       - name: Set up Rust
@@ -34,9 +35,11 @@ jobs:
           components: rustfmt
       - name: Run Rust tests
         run: cargo test --release --verbose
-      - name: Build rust module
-        run: |
-          maturin develop --release
+      - name: Build Rust side modules
+        uses: PyO3/maturin-action@v1
+        with:
+          command: develop
+          args: --release
       - name: Run Python tests
         run: |
           python -m unittest discover -s python_tests
