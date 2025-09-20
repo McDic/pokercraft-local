@@ -45,4 +45,6 @@ jobs:
           pip install wheels/*.whl
       - name: Run Python tests
         run: |
-          python -m unittest discover -s python_tests
+          cd python_tests
+          python -m unittest discover -s .
+          cd ..
