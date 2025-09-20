@@ -1,6 +1,7 @@
-pre-commit
-black
-flake8
-mypy
-isort
-maturin
+# Dependencies for development and distribution.
+# This is also used in CI, so the versions are strictly specified.
+pre-commit == 4.0.*
+maturin == 1.9.*
+pyinstaller == 6.11.*
+twine == 5.1.*
+build == 1.2.*
