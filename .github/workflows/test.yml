@@ -1,4 +1,4 @@
-name: Linting with pre-commit
+name: Testing
 
 on:
   push:
@@ -9,13 +9,14 @@ on:
   pull_request:
     branches:
       - "**"
+  workflow_dispatch:
 
 jobs:
-  pre-commit:
+  python-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -26,5 +27,17 @@ jobs:
       - run: |
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
-      - name: Execute pre-commit
-        uses: pre-commit/action@v3.0.1
+      - name: Run tests
+        run: |
+          python -m unittest discover -s python_tests
+  rust-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt
+      - name: Run tests
+        run: cargo test --release --verbose
