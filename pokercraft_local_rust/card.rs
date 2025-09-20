@@ -30,6 +30,25 @@ impl CardShape {
     }
 }
 
+#[pymethods]
+impl CardShape {
+    fn __str__(&self) -> PyResult<String> {
+        Ok(format!("{}", self))
+    }
+}
+
+impl std::fmt::Display for CardShape {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let repr = match self {
+            CardShape::Spade => "Spade",
+            CardShape::Heart => "Heart",
+            CardShape::Diamond => "Diamond",
+            CardShape::Club => "Club",
+        };
+        write!(f, "{}", repr)
+    }
+}
+
 impl Default for CardShape {
     fn default() -> Self {
         CardShape::Spade
@@ -132,6 +151,19 @@ impl CardNumber {
         } else {
             return (*self as u8) == (*previous as u8) + 1;
         }
+    }
+}
+
+#[pymethods]
+impl CardNumber {
+    fn __str__(&self) -> PyResult<String> {
+        Ok(format!("{}", self))
+    }
+}
+
+impl std::fmt::Display for CardNumber {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", Into::<char>::into(*self))
     }
 }
 
@@ -243,6 +275,10 @@ impl Card {
     #[getter]
     fn get_shape(&self) -> PyResult<CardShape> {
         Ok(self.shape)
+    }
+
+    fn __str__(&self) -> PyResult<String> {
+        Ok(format!("{}", self))
     }
 }
 
