@@ -39,7 +39,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           command: develop
-          args: --release
+          args: --release --find-interpreter
       - name: Run Python tests
         run: |
           python -m unittest discover -s python_tests
