@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  python-tests:
+  tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -27,17 +27,16 @@ jobs:
       - run: |
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
-      - name: Run tests
-        run: |
-          python -m unittest discover -s python_tests
-  rust-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           components: rustfmt
-      - name: Run tests
+      - name: Run Rust tests
         run: cargo test --release --verbose
+      - name: Build rust module
+        run: |
+          maturin develop --release
+      - name: Run Python tests
+        run: |
+          python -m unittest discover -s python_tests
