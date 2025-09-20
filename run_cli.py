@@ -1,10 +1,12 @@
+import logging
 from argparse import ArgumentParser
 from pathlib import Path
 
 from pokercraft_local.export import export
 from pokercraft_local.translate import Language
 
-if __name__ == "__main__":
+
+def get_argparser() -> ArgumentParser:
     parser = ArgumentParser()
     parser.add_argument(
         "-d",
@@ -52,7 +54,13 @@ if __name__ == "__main__":
         required=False,
         help="Fetch currency rate from the Forex if this flag is provided",
     )
+    return parser
 
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
+    parser = get_argparser()
     namespace = parser.parse_args()
     print(namespace.export_csv)
 
