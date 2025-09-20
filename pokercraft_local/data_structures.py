@@ -2,7 +2,7 @@ import logging
 import math
 import typing
 import warnings
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 
@@ -15,7 +15,7 @@ Card = card.Card
 logger = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, kw_only=True, slots=True)
 class TournamentSummary:
     """
     Represents a tournament result summary.
@@ -131,43 +131,58 @@ class TournamentSummary:
         )
 
 
-@dataclass
+@dataclass(frozen=True, kw_only=True, slots=True)
 class BetAction:
     """
     Represents a betting action.
+
+    About `amount` field:
+    - If the action is "fold" or "check", this is `0`.
+    - If the action is "call", this is the amount called.
+    - If the action is "bet", this is the amount bet.
+    - If the action is "raise", this is the total amount put in
+      the pot by this action (not the delta amount raised).
+    - If the action is "ante" or "blind", this is the amount posted.
     """
 
     player_id: str  # Player ID or Hero
-    action: typing.Literal["fold", "check", "call", "bet", "raise", "ante"]
-    amount: int  # Amount of chips additionally put in this action
+    action: typing.Literal["fold", "check", "call", "bet", "raise", "ante", "blind"]
+    amount: int
     is_all_in: bool
 
 
-@dataclass
+@dataclass(kw_only=True, slots=True)  # Frozen removed for convenience
 class HandHistory:
     """
     Represents a hand history.
     """
 
-    id: str
+    id: str  # "TM000000"
+    tournament_id: int | None
     tournament_name: str | None
     level: int
     sb: int
     bb: int
     dt: datetime  # timezone is local
+    button_seat: int
+    max_seats: int
 
-    seats: dict[
-        int, tuple[str, int]
-    ]  # Seat number -> Player ID or Hero & initial chips
-    known_cards: dict[str, tuple[Card, Card]]  # Player ID or Hero -> hole cards
-    wons: dict[str, int]  # Player ID or Hero -> amount won in this hand
+    seats: dict[int, tuple[str, int]] = field(
+        default_factory=dict
+    )  # Seat number -> Player ID or Hero & initial chips
+    known_cards: dict[str, tuple[Card, Card]] = field(
+        default_factory=dict
+    )  # Player ID or Hero -> hole cards
+    wons: dict[str, int] = field(
+        default_factory=dict
+    )  # Player ID or Hero -> amount won in this hand
 
-    community_cards: list[Card]
-    actions_preflop: list[BetAction]
-    actions_flop: list[BetAction]
-    actions_turn: list[BetAction]
-    actions_river: list[BetAction]
-    uncalled_returned: tuple[str, int] | None  # (Player ID or Hero, amount)
+    community_cards: list[Card] = field(default_factory=list)
+    actions_preflop: list[BetAction] = field(default_factory=list)
+    actions_flop: list[BetAction] = field(default_factory=list)
+    actions_turn: list[BetAction] = field(default_factory=list)
+    actions_river: list[BetAction] = field(default_factory=list)
+    uncalled_returned: tuple[str, int] | None = None  # (Player ID or Hero, amount)
 
     def how_much_won(self, player_id: str) -> int:
         """
@@ -227,7 +242,7 @@ def get_exchange_rate_raw(
     """
     try:
         logger.info("Getting exchange rate: %s -> %s" % (from_currency, to_currency))
-        return CurrencyRates().get_rate(from_currency, to_currency)
+        return float(CurrencyRates().get_rate(from_currency, to_currency))
     except Exception as err:
         warnings.warn(
             "Failed to fetch exchange rate(%s -> %s) with reason: [%s] %s"

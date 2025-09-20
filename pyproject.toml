@@ -43,3 +43,7 @@ ignore_missing_imports = true
 bindings = "pyo3"
 features = ["pyo3/extension-module"]
 module-name = "pokercraft_local.rust"
+
+[tool.pyright]
+typeCheckingMode = "basic"
+reportMissingModuleSource = false
