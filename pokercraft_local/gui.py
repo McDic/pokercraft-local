@@ -1,14 +1,15 @@
+import logging
 import tkinter as tk
-import typing
 from pathlib import Path
 from tkinter import filedialog
-from tkinter.font import Font
 from tkinter.messagebox import showinfo, showwarning
 
 from .constants import VERSION
 from .export import export as export_main
 from .pypi_query import VERSION_EXTRACTED, get_library_versions
 from .translate import GUI_EXPORTED_SUCCESS, Language
+
+logger = logging.getLogger(__name__)
 
 
 class PokerCraftLocalGUI:
@@ -223,11 +224,10 @@ class PokerCraftLocalGUI:
             )
             return
 
-        print("\n" + "=" * 60)
         if self._boolvar_allow_freerolls.get():
-            print("Allowing freerolls on the graph.")
+            logging.info("Allowing freerolls on the graph.")
         else:
-            print("Disallowing freerolls on the graph.")
+            logging.info("Disallowing freerolls on the graph.")
 
         csv_path, plot_path = export_main(
             main_path=self._data_directory,
