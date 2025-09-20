@@ -766,7 +766,7 @@ def plot_total(
     bankroll_min_simulation_iterations: int = 40_000,
 ) -> str:
     """
-    Plots the total prize pool of tournaments.
+    Generate all charts and return a complete HTML string.
     """
     tournaments = sorted(tournaments, key=sort_key)
     figures: list[plgo.Figure | None] = [
