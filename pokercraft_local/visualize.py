@@ -530,14 +530,18 @@ def get_profit_pies(
     )
 
     df_weekday = df_base.copy(deep=True)
-    for weekday_idx, weekday_str in enumerate(weekday_strs):
-        df_weekday.loc[-1] = {
-            "ID": weekday_str,
-            "Tournament Name": f"{weekday_str}",
-            "Prize": df_weekday[df_weekday["Weekday"] == weekday_str]["Prize"].sum(),
-            "Weekday": weekday_str,
-        }
-        df_weekday.index = df_weekday.index + 1
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+        for weekday_idx, weekday_str in enumerate(weekday_strs):
+            df_weekday.loc[-1] = {
+                "ID": weekday_str,
+                "Tournament Name": f"{weekday_str}",
+                "Prize": df_weekday[df_weekday["Weekday"] == weekday_str][
+                    "Prize"
+                ].sum(),
+                "Weekday": weekday_str,
+            }
+            df_weekday.index = df_weekday.index + 1
     df_weekday = df_weekday.sort_index()
     df_weekday["Parent"] = df_weekday.apply(
         (lambda r: r["Weekday"] if r["ID"] != r["Weekday"] else ""),
