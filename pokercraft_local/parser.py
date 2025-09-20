@@ -75,13 +75,27 @@ class AbstractParser(ABC, typing.Generic[T]):
     An abstract parser class.
     """
 
-    @staticmethod
-    @abstractmethod
-    def is_target_txt(name: Path | str) -> bool:
+    TARGET_FILENAME_PREFIX_PATTERN: typing.ClassVar[STR_PATTERN]
+
+    @classmethod
+    def is_target_txt(cls, name: Path | str) -> bool:
         """
         Check if the given file is a valid target file.
         """
-        raise NotImplementedError
+        if isinstance(name, Path):
+            return (
+                name.is_file()
+                and name.suffix == ".txt"
+                and cls.TARGET_FILENAME_PREFIX_PATTERN.match(name.name) is not None
+            )
+        elif isinstance(name, str):
+            name = name.split("/")[-1]
+            return (
+                name.endswith(".txt")
+                and cls.TARGET_FILENAME_PREFIX_PATTERN.match(name) is not None
+            )
+        else:  # Should not reach here
+            raise TypeError
 
     @abstractmethod
     def parse(self, instream: TextIOWrapper) -> typing.Iterator[T]:
@@ -150,6 +164,10 @@ class PokercraftSummaryParser(AbstractParser[TournamentSummary]):
     """
     This class parses summary files from Pokercraft.
     """
+
+    TARGET_FILENAME_PREFIX_PATTERN: typing.ClassVar[STR_PATTERN] = regex.compile(
+        r"GG\d{8} - Tournament #\d+ - "
+    )
 
     LINE1_ID_NAME: STR_PATTERN = regex.compile(r"Tournament #[0-9]+, .+, .+")
     LINE2_BUYIN: STR_PATTERN = regex.compile(r"Buy-in: .+")
@@ -279,18 +297,6 @@ class PokercraftSummaryParser(AbstractParser[TournamentSummary]):
         except UnboundLocalError as err:
             raise ValueError("Incomplete data, failed to parse summary.") from err
 
-    @staticmethod
-    def is_target_txt(name: Path | str) -> bool:
-        if isinstance(name, Path):
-            return (
-                name.is_file() and name.suffix == ".txt" and name.stem.startswith("GG")
-            )
-        elif isinstance(name, str):
-            name = name.split("/")[-1]
-            return name.endswith(".txt") and name.startswith("GG")
-        else:
-            return False
-
     def should_skip(self, parsed: TournamentSummary) -> bool:
         # Warnings
         if parsed.total_prize_pool <= 0:
@@ -310,6 +316,10 @@ class PokercraftHandHistoryParser(AbstractParser[HandHistory]):
     """
     This class parses hand history files from Pokercraft.
     """
+
+    TARGET_FILENAME_PREFIX_PATTERN: typing.ClassVar[STR_PATTERN] = regex.compile(
+        r"GG\d{8}-\d{4} - "
+    )
 
     LINE1_INTRO: STR_PATTERN = regex.compile(
         r"Poker Hand #TM(\d+)\: Tournament #(\d+)\, (.+) \- Level(\d+)"
