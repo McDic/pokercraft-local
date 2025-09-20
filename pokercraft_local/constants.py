@@ -38,3 +38,5 @@ DEFAULT_WINDOW_SIZES: tuple[int, ...] = (50, 100, 200, 400, 800)
 STR_PATTERN = re.Pattern[str]
 ANY_INT: STR_PATTERN = re.compile(r"\d+")
 ANY_MONEY: STR_PATTERN = re.compile(r"[\$¥฿₫₱₩]\d(\d|(,\d))*(\.[\d,]+)?")
+
+HAND_STAGE_TYPE: typing.TypeAlias = typing.Literal["preflop", "flop", "turn", "river"]

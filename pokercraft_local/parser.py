@@ -618,6 +618,12 @@ class PokercraftHandHistoryParser(AbstractParser[HandHistory]):
                     else:
                         raise ValueError(f"Unknown action {g2}")
 
+                    if this_action.is_all_in:
+                        if player_id in this_hand_history.all_ined:
+                            raise ValueError(f"Player {player_id} is already all-in.")
+                        assert current_stage != "showdown"
+                        this_hand_history.all_ined[player_id] = current_stage
+
                     if current_stage == "preflop":
                         this_hand_history.actions_preflop.append(this_action)
                     elif current_stage == "flop":

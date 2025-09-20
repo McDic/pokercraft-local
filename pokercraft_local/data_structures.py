@@ -1,3 +1,4 @@
+import functools
 import logging
 import math
 import typing
@@ -8,6 +9,7 @@ from enum import Enum
 
 from forex_python.converter import CurrencyRates
 
+from .constants import HAND_STAGE_TYPE
 from .rust import card, equity
 
 Card = card.Card
@@ -183,6 +185,15 @@ class HandHistory:
     actions_turn: list[BetAction] = field(default_factory=list)
     actions_river: list[BetAction] = field(default_factory=list)
     uncalled_returned: tuple[str, int] | None = None  # (Player ID or Hero, amount)
+    all_ined: dict[str, typing.Literal["preflop", "flop", "turn", "river"]] = field(
+        default_factory=dict
+    )  # Player ID or Hero -> street
+
+    def sorting_key(self) -> tuple[int, datetime]:
+        """
+        Returns the sorting key.
+        """
+        return (self.tournament_id or 0, self.dt)
 
     def how_much_won(self, player_id: str) -> int:
         """
@@ -190,17 +201,45 @@ class HandHistory:
         """
         return self.wons.get(player_id, 0)
 
+    def all_ined_street(
+        self, player_id: str
+    ) -> typing.Literal["preflop", "flop", "turn", "river", None]:
+        """
+        Returns the street where the player went all-in, or None if not all-in.
+        """
+        return self.all_ined.get(player_id)
+
+    @functools.cache
+    def showdown_players(self) -> set[str]:
+        """
+        Returns the list of players who reached showdown.
+        This function is cached, so be careful.
+        """
+        players = set(player_id for player_id, _chips in self.seats.values())
+        for action in (
+            self.actions_preflop
+            + self.actions_flop
+            + self.actions_turn
+            + self.actions_river
+        ):
+            if action.action == "fold" and action.player_id in players:
+                players.discard(action.player_id)
+        return players
+
+    @functools.cache
     def total_pot(self) -> int:
         """
         Returns the total pot size of this hand.
+        This function is cached, so be careful.
         """
         return sum(self.wons.values())
 
     def calculate_equity_arbitrary(
         self, *player_ids: str
-    ) -> dict[typing.Literal["preflop", "flop", "turn", "river"], dict[str, float]]:
+    ) -> dict[HAND_STAGE_TYPE, dict[str, tuple[float, bool]]]:
         """
         Calculate equity for each player who has known cards.
+        Returned value: `{stage: {player_id: (equity, never_lost)}}`
         """
         if not player_ids:
             raise ValueError("At least one player ID must be given")
@@ -211,18 +250,19 @@ class HandHistory:
             (player_id, self.known_cards[player_id]) for player_id in player_ids
         ]
 
-        def get_equities(community: list[Card]) -> dict[str, float]:
+        def get_equities(community: list[Card]) -> dict[str, tuple[float, bool]]:
             """
             Local helper function to get equities with given community cards.
             """
             equity_result = equity.EquityResult([p[1] for p in cards_people], community)
             return {
-                p[0]: equity_result.get_equity_py(i) for i, p in enumerate(cards_people)
+                p[0]: (equity_result.get_equity_py(i), equity_result.never_lost(i))
+                for i, p in enumerate(cards_people)
             }
 
-        result: dict[
-            typing.Literal["preflop", "flop", "turn", "river"], dict[str, float]
-        ] = {"preflop": get_equities([])}
+        result: dict[HAND_STAGE_TYPE, dict[str, tuple[float, bool]]] = {
+            "preflop": get_equities([])
+        }
         if len(self.community_cards) >= 3:
             result["flop"] = get_equities(self.community_cards[:3])
         if len(self.community_cards) >= 4:
