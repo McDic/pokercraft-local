@@ -16,6 +16,7 @@ dist/
 *.egg-info/
 build/
 run_gui.spec
+wheels/
 
 # IDE
 .vscode/

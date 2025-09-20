@@ -38,8 +38,11 @@ jobs:
       - name: Build Rust side modules
         uses: PyO3/maturin-action@v1
         with:
-          command: develop
-          args: --release --pip-path=$(which pip)
+          command: build
+          args: --release --out wheels/
+      - name: Install the built wheels
+        run: |
+          pip install wheels/*.whl
       - name: Run Python tests
         run: |
           python -m unittest discover -s python_tests
