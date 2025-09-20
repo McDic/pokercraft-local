@@ -38,17 +38,15 @@ def export(
     elif not output_path.is_dir():
         raise NotADirectoryError(f"{output_path} is not a directory")
 
-    summaries = sorted(
-        set(
-            PokercraftSummaryParser.crawl_files(
-                [main_path],
-                follow_symlink=True,
-                allow_freerolls=allow_freerolls,
-                rate_converter=CurrencyRateConverter(
-                    update_from_forex=use_realtime_currency_rate
-                ),
-            )
+    # Parse summaries
+    summary_parser = PokercraftSummaryParser(
+        rate_converter=CurrencyRateConverter(
+            update_from_forex=use_realtime_currency_rate
         ),
+        allow_freerolls=allow_freerolls,
+    )
+    summaries = sorted(
+        set(summary_parser.crawl_files([main_path], follow_symlink=True)),
         key=lambda t: t.sorting_key(),
     )
     current_time_strf = datetime.now().strftime("%Y%m%d_%H%M%S.%f")

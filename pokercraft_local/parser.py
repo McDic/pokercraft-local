@@ -1,13 +1,22 @@
+import logging
 import re as regex
 import typing
 import warnings
+from abc import ABC, abstractmethod
 from datetime import datetime
 from io import TextIOWrapper
 from pathlib import Path
 from zipfile import ZipFile
 
 from .constants import ANY_INT, ANY_MONEY, STR_PATTERN
-from .data_structures import Currency, CurrencyRateConverter, TournamentSummary
+from .data_structures import (
+    Currency,
+    CurrencyRateConverter,
+    HandHistory,
+    TournamentSummary,
+)
+
+logger = logging.getLogger(__name__)
 
 
 def convert_money_to_float(
@@ -58,7 +67,88 @@ def take_first_int(s: str) -> int:
         return int(i.group())
 
 
-class PokercraftSummaryParser:
+T = typing.TypeVar("T")
+
+
+class AbstractParser(ABC, typing.Generic[T]):
+    """
+    An abstract parser class.
+    """
+
+    @staticmethod
+    @abstractmethod
+    def is_target_txt(name: Path | str) -> bool:
+        """
+        Check if the given file is a valid target file.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def parse(self, instream: TextIOWrapper) -> T:
+        """
+        Parse given stream into object of type `T`.
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def yield_streams(
+        cls, paths: typing.Iterable[Path], follow_symlink: bool = True
+    ) -> typing.Generator[tuple[Path, TextIOWrapper], None, None]:
+        """
+        Yield streams of files, recursively.
+        """
+        for path in paths:
+            if path.is_dir() and (not path.is_symlink() or follow_symlink):
+                yield from cls.yield_streams(
+                    path.iterdir(), follow_symlink=follow_symlink
+                )
+            elif cls.is_target_txt(path):
+                with path.open("r", encoding="utf-8") as file:
+                    yield path, file
+            elif path.is_file() and path.suffix == ".zip":
+                with ZipFile(path, "r") as zipfile:
+                    for name in zipfile.namelist():
+                        if cls.is_target_txt(name):
+                            with zipfile.open(name, "r") as file:
+                                yield path / name, TextIOWrapper(file, encoding="utf-8")
+
+    def should_skip(self, parsed: T) -> bool:
+        """
+        Check if the parsed object should be skipped.
+        You can also raise an warning here.
+        By default, no object is skipped.
+        Override this method to implement custom skip behavior.
+        """
+        return False
+
+    def crawl_files(
+        self, paths: typing.Iterable[Path], follow_symlink: bool = True
+    ) -> typing.Generator[T, None, None]:
+        """
+        Crawl files and parse them, recursively.
+        Be careful of infinite recursion when `follow_symlink` is True.
+        """
+        for path, stream in self.yield_streams(paths, follow_symlink=follow_symlink):
+            try:
+                parsed = self.parse(stream)
+                if self.should_skip(parsed):
+                    pass
+                else:
+                    yield parsed
+            except (ValueError, UnboundLocalError, StopIteration) as err:
+                logger.warning(
+                    "Failed to parse file %s, skipping. " "(Reason: %s (%s))",
+                    path,
+                    err,
+                    type(err).__name__,
+                )
+                pass
+            except Exception:
+                logger.error("Failed to parse file %s with fatal error.", path)
+                raise
+
+
+class PokercraftSummaryParser(AbstractParser[TournamentSummary]):
     """
     This class parses summary files from Pokercraft.
     """
@@ -80,15 +170,15 @@ class PokercraftSummaryParser:
     LINE8_REENTRIES: STR_PATTERN = regex.compile(r"You made \d+( re)?-entries .+")
     LINE8_ADVANCED_DAY1: STR_PATTERN = regex.compile(r"You have advanced to .+")
 
-    @classmethod
-    def parse(
-        cls,
-        instream: TextIOWrapper,
+    def __init__(
+        self,
         rate_converter: CurrencyRateConverter,
-    ) -> TournamentSummary:
-        """
-        Parse given file into `TournamentSummary` object.
-        """
+        allow_freerolls: bool,
+    ) -> None:
+        self.rate_converter = rate_converter
+        self.allow_freerolls = allow_freerolls
+
+    def parse(self, instream: TextIOWrapper) -> TournamentSummary:
         t_id: int
         t_name: str
         t_buy_in_pure: float
@@ -108,7 +198,7 @@ class PokercraftSummaryParser:
                 continue
 
             if (
-                not cls.LINE1_ID_NAME.fullmatch(line)
+                not self.LINE1_ID_NAME.fullmatch(line)
                 and first_detected_currency is None
             ):
                 for cur in Currency:
@@ -116,18 +206,18 @@ class PokercraftSummaryParser:
                         first_detected_currency = cur
                         break
 
-            if cls.LINE1_ID_NAME.fullmatch(line):
+            if self.LINE1_ID_NAME.fullmatch(line):
                 stripped = [s.strip() for s in line.split(",")]
                 id_str_searched = ANY_INT.search(stripped[0])
                 assert id_str_searched is not None
                 t_id = int(id_str_searched.group())
                 t_name = ",".join(stripped[1:-1])
 
-            elif cls.LINE2_BUYIN.fullmatch(line):
+            elif self.LINE2_BUYIN.fullmatch(line):
                 buy_ins: list[float] = sorted(
                     take_all_money(
                         line,
-                        rate_converter,
+                        self.rate_converter,
                         supposed_currency=first_detected_currency,
                     )
                 )
@@ -139,31 +229,31 @@ class PokercraftSummaryParser:
                     t_buy_in_pure += t_rake
                     t_rake = 0.0
 
-            elif cls.LINE3_ENTRIES.fullmatch(line):
+            elif self.LINE3_ENTRIES.fullmatch(line):
                 t_total_players = take_first_int(line)
 
-            elif cls.LINE4_PRIZEPOOL.fullmatch(line):
+            elif self.LINE4_PRIZEPOOL.fullmatch(line):
                 t_total_prize_pool = next(
                     take_all_money(
                         line,
-                        rate_converter,
+                        self.rate_converter,
                         supposed_currency=first_detected_currency,
                     )
                 )
 
-            elif cls.LINE5_START_TIME.fullmatch(line):
+            elif self.LINE5_START_TIME.fullmatch(line):
                 splitted = line.split(" ")
                 t_start_time = datetime.strptime(
                     splitted[-2] + " " + splitted[-1], "%Y/%m/%d %H:%M:%S"
                 )
                 # Pokercraft timezone data is set to local system time
 
-            elif cls.LINE6_MY_RANK_AND_PRIZE.fullmatch(line):
+            elif self.LINE6_MY_RANK_AND_PRIZE.fullmatch(line):
                 t_my_rank = take_first_int(line)
                 t_my_prize = sum(
                     take_all_money(
                         line,
-                        rate_converter,
+                        self.rate_converter,
                         supposed_currency=first_detected_currency,
                     )
                 )
@@ -171,8 +261,8 @@ class PokercraftSummaryParser:
                 if t_my_prize <= 0.0 and "$0 Entry" in line:
                     t_my_prize = t_buy_in_pure + t_rake
 
-            elif cls.LINE8_MY_PRIZE.fullmatch(line):
-                if cls.LINE8_REENTRIES.fullmatch(line):
+            elif self.LINE8_MY_PRIZE.fullmatch(line):
+                if self.LINE8_REENTRIES.fullmatch(line):
                     t_my_entries += take_first_int(line)
 
         return TournamentSummary(
@@ -189,10 +279,7 @@ class PokercraftSummaryParser:
         )
 
     @staticmethod
-    def is_ggtxt(name: Path | str) -> bool:
-        """
-        Check if the given file is a valid GG summary file.
-        """
+    def is_target_txt(name: Path | str) -> bool:
         if isinstance(name, Path):
             return (
                 name.is_file() and name.suffix == ".txt" and name.stem.startswith("GG")
@@ -203,65 +290,22 @@ class PokercraftSummaryParser:
         else:
             return False
 
-    @classmethod
-    def yield_streams(
-        cls, paths: typing.Iterable[Path], follow_symlink: bool = True
-    ) -> typing.Generator[tuple[Path, TextIOWrapper], None, None]:
-        """
-        Yield streams of files, recursively.
-        """
-        for path in paths:
-            if path.is_dir() and (not path.is_symlink() or follow_symlink):
-                yield from cls.yield_streams(
-                    path.iterdir(), follow_symlink=follow_symlink
-                )
-            elif cls.is_ggtxt(path):
-                with path.open("r", encoding="utf-8") as file:
-                    yield path, file
-            elif path.is_file() and path.suffix == ".zip":
-                with ZipFile(path, "r") as zipfile:
-                    for name in zipfile.namelist():
-                        if cls.is_ggtxt(name):
-                            with zipfile.open(name, "r") as file:
-                                yield path / name, TextIOWrapper(file, encoding="utf-8")
+    def should_skip(self, parsed: TournamentSummary) -> bool:
+        # Warnings
+        if parsed.total_prize_pool <= 0:
+            warnings.warn(f"Detected zero prize pool for {parsed.name}")
+            return True
 
-    @classmethod
-    def crawl_files(
-        cls,
-        paths: typing.Iterable[Path],
-        rate_converter: CurrencyRateConverter,
-        follow_symlink: bool = True,
-        allow_freerolls: bool = False,
-    ) -> typing.Generator[TournamentSummary, None, None]:
-        """
-        Crawl files and parse them, recursively.
-        Be careful of infinite recursion when `follow_symlink` is True.
-        """
-        for path, stream in cls.yield_streams(paths, follow_symlink=follow_symlink):
-            try:
-                summary = cls.parse(stream, rate_converter)
+        # Yielding parsed summaries
+        if parsed.buy_in == 0 and not self.allow_freerolls:
+            logger.debug(f"Detected freeroll {parsed.name}, skipping.")
+            return True
 
-                # Warnings
-                if summary.total_prize_pool <= 0:
-                    warnings.warn(f"Detected zero prize pool for {summary.name}")
-
-                # Yielding parsed summaries
-                if summary.buy_in == 0 and not allow_freerolls:
-                    print(f"Detected freeroll {summary.name}, skipping.")
-                else:
-                    yield summary
-            except (ValueError, UnboundLocalError, StopIteration) as err:
-                print(
-                    f"Failed to parse file {path}, skipping. "
-                    f"(Reason: {err} ({type(err).__name__}))"
-                )
-                pass
-            except Exception:
-                print(f"Failed to parse file {path} with fatal error.")
-                raise
+        else:
+            return False
 
 
-class PokercraftHandHistoryParser:
+class PokercraftHandHistoryParser(AbstractParser[HandHistory]):
     """
     This class parses hand history files from Pokercraft.
     """
@@ -283,13 +327,14 @@ class PokercraftHandHistoryParser:
     LINE5_DEALT_TO: STR_PATTERN = regex.compile(
         r"Dealt to ([0-9a-f]+|Hero)( \[[2-9AKQJT][sdch] [2-9AKQJT][sdch]\])?"
     )
-    LINE6_FLOP: STR_PATTERN = regex.compile(
+
+    LINE6_HEADER_FLOP: STR_PATTERN = regex.compile(
         r"\*\*\* FLOP \*\*\* \[((?:[2-9AKQJT][sdch] ?){3})\]"
     )
-    LINE6_TURN: STR_PATTERN = regex.compile(
+    LINE6_HEADER_TURN: STR_PATTERN = regex.compile(
         r"\*\*\* TURN \*\*\* \[((?:[2-9AKQJT][sdch] ?){3})\] \[([2-9AKQJT][sdch])\]"
     )
-    LINE6_RIVER: STR_PATTERN = regex.compile(
+    LINE6_HEADER_RIVER: STR_PATTERN = regex.compile(
         r"\*\*\* RIVER \*\*\* \[((?:[2-9AKQJT][sdch] ?){4})\] \[([2-9AKQJT][sdch])\]"
     )
     LINE6_BETTING_ACTION: STR_PATTERN = regex.compile(
@@ -298,4 +343,12 @@ class PokercraftHandHistoryParser:
     )
     LINE6_RETURNED_UNCALLED_BET: STR_PATTERN = regex.compile(
         r"Uncalled bet \(([\d\,]+)\) returned to ([0-9a-f]+|Hero)"
+    )
+    LINE6_SHOWS: STR_PATTERN = regex.compile(
+        r"([0-9a-f]+|Hero)\: shows \[([2-9AKQJT][sdch] [2-9AKQJT][sdch])\]"
+    )
+
+    LINE7_HEADER_SHOWDOWN: typing.Final[str] = "*** SHOWDOWN ***"
+    LINE7_COLLECTED: STR_PATTERN = regex.compile(
+        r"([0-9a-f]+|Hero) collected ([\d\,]+) from pot"
     )

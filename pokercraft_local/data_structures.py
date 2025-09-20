@@ -1,12 +1,18 @@
+import logging
 import math
 import typing
 import warnings
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum
-from enum import auto as enumauto
 
 from forex_python.converter import CurrencyRates
+
+from .rust import card, equity
+
+Card = card.Card
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,6 +131,92 @@ class TournamentSummary:
         )
 
 
+@dataclass
+class BetAction:
+    """
+    Represents a betting action.
+    """
+
+    player_id: str  # Player ID or Hero
+    action: typing.Literal["fold", "check", "call", "bet", "raise", "ante"]
+    amount: int  # Amount of chips additionally put in this action
+    is_all_in: bool
+
+
+@dataclass
+class HandHistory:
+    """
+    Represents a hand history.
+    """
+
+    id: str
+    tournament_name: str | None
+    level: int
+    sb: int
+    bb: int
+    dt: datetime  # timezone is local
+
+    seats: dict[
+        int, tuple[str, int]
+    ]  # Seat number -> Player ID or Hero & initial chips
+    known_cards: dict[str, tuple[Card, Card]]  # Player ID or Hero -> hole cards
+    wons: dict[str, int]  # Player ID or Hero -> amount won in this hand
+
+    community_cards: list[Card]
+    actions_preflop: list[BetAction]
+    actions_flop: list[BetAction]
+    actions_turn: list[BetAction]
+    actions_river: list[BetAction]
+    uncalled_returned: tuple[str, int] | None  # (Player ID or Hero, amount)
+
+    def how_much_won(self, player_id: str) -> int:
+        """
+        Returns how much the given player won in this hand.
+        """
+        return self.wons.get(player_id, 0)
+
+    def total_pot(self) -> int:
+        """
+        Returns the total pot size of this hand.
+        """
+        return sum(self.wons.values())
+
+    def calculate_equity_arbitrary(
+        self, *player_ids: str
+    ) -> dict[typing.Literal["preflop", "flop", "turn", "river"], dict[str, float]]:
+        """
+        Calculate equity for each player who has known cards.
+        """
+        if not player_ids:
+            raise ValueError("At least one player ID must be given")
+        for player_id in player_ids:
+            if player_id not in self.known_cards:
+                raise ValueError("Player %s does not have known cards" % player_id)
+        cards_people: list[tuple[str, tuple[Card, Card]]] = [
+            (player_id, self.known_cards[player_id]) for player_id in player_ids
+        ]
+
+        def get_equities(community: list[Card]) -> dict[str, float]:
+            """
+            Local helper function to get equities with given community cards.
+            """
+            equity_result = equity.EquityResult([p[1] for p in cards_people], community)
+            return {
+                p[0]: equity_result.get_equity_py(i) for i, p in enumerate(cards_people)
+            }
+
+        result: dict[
+            typing.Literal["preflop", "flop", "turn", "river"], dict[str, float]
+        ] = {"preflop": get_equities([])}
+        if len(self.community_cards) >= 3:
+            result["flop"] = get_equities(self.community_cards[:3])
+        if len(self.community_cards) >= 4:
+            result["turn"] = get_equities(self.community_cards[:4])
+        if len(self.community_cards) >= 5:
+            result["river"] = get_equities(self.community_cards[:5])
+        return result
+
+
 def get_exchange_rate_raw(
     to_currency: str,
     default: float,
@@ -134,7 +226,7 @@ def get_exchange_rate_raw(
     Get exchange rate from `from_currency` to `to_currency`.
     """
     try:
-        print("Getting exchange rate: %s -> %s" % (from_currency, to_currency))
+        logger.info("Getting exchange rate: %s -> %s" % (from_currency, to_currency))
         return CurrencyRates().get_rate(from_currency, to_currency)
     except Exception as err:
         warnings.warn(
