@@ -259,3 +259,43 @@ class PokercraftSummaryParser:
             except Exception:
                 print(f"Failed to parse file {path} with fatal error.")
                 raise
+
+
+class PokercraftHandHistoryParser:
+    """
+    This class parses hand history files from Pokercraft.
+    """
+
+    LINE1_INTRO: STR_PATTERN = regex.compile(
+        r"Poker Hand #TM(\d+)\: Tournament #(\d+)\, (.+) \- Level(\d+)"
+        r"\(([\d\,]+)\/([\d\,]+)\) \- (\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2})"
+    )
+    LINE2_TABLE_NUM: STR_PATTERN = regex.compile(
+        r"Table '(\d+)' (\d+)-max Seat #(\d+) is the button"
+    )
+    LINE3_SEAT_INFO: STR_PATTERN = regex.compile(
+        r"Seat (\d+): ([0-9a-f]+|Hero) \(([\d\,]+) in chips\)"
+    )
+    LINE4_POSTS_DEAD_MONEY: STR_PATTERN = regex.compile(
+        r"([0-9a-f]+|Hero)\: posts (?:the )?(ante|big blind|small blind) ([\d\,]+)"
+    )
+    LINE5_HOLE_CARDS: typing.Final[str] = "*** HOLE CARDS ***"
+    LINE5_DEALT_TO: STR_PATTERN = regex.compile(
+        r"Dealt to ([0-9a-f]+|Hero)( \[[2-9AKQJT][sdch] [2-9AKQJT][sdch]\])?"
+    )
+    LINE6_FLOP: STR_PATTERN = regex.compile(
+        r"\*\*\* FLOP \*\*\* \[((?:[2-9AKQJT][sdch] ?){3})\]"
+    )
+    LINE6_TURN: STR_PATTERN = regex.compile(
+        r"\*\*\* TURN \*\*\* \[((?:[2-9AKQJT][sdch] ?){3})\] \[([2-9AKQJT][sdch])\]"
+    )
+    LINE6_RIVER: STR_PATTERN = regex.compile(
+        r"\*\*\* RIVER \*\*\* \[((?:[2-9AKQJT][sdch] ?){4})\] \[([2-9AKQJT][sdch])\]"
+    )
+    LINE6_BETTING_ACTION: STR_PATTERN = regex.compile(
+        r"([0-9a-f]+|Hero)\: (folds|checks|calls ([\d\,]+)"
+        r"|raises ([\d\,]+) to ([\d\,]+)|bets ([\d\,]+))( and is all-in)?"
+    )
+    LINE6_RETURNED_UNCALLED_BET: STR_PATTERN = regex.compile(
+        r"Uncalled bet \(([\d\,]+)\) returned to ([0-9a-f]+|Hero)"
+    )
