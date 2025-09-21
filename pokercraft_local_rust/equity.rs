@@ -191,49 +191,44 @@ impl EquityResult {
 }
 
 /// Luck calculator using equity values and results.
+/// Results have two `f64` values: equity (0.0 ~ 1.0) and win/lose (0.0 ~ 1.0).
+/// Win/lose is represented as `1.0` for win and `0.0` for lose.
+/// If there are ties, use fractional values (e.g., `0.5` for a two-way tie).
 #[pyclass]
 #[derive(Debug, Clone)]
 pub struct LuckCalculator {
-    /// Winning history with equity values.
-    wins: Vec<f64>,
-    /// Losing history with equity values.
-    loses: Vec<f64>,
+    results: Vec<(f64, f64)>, // (equity, winlose: 0.0 ~ 1.0)
 }
 
 impl LuckCalculator {
     /// Create a new empty `LuckCalculator`.
     pub fn new() -> Self {
-        LuckCalculator {
-            wins: vec![],
-            loses: vec![],
-        }
+        LuckCalculator { results: vec![] }
     }
 
     /// Add a new result to the calculator.
-    pub fn add_result(&mut self, equity: f64, did_win: bool) -> Result<(), PokercraftLocalError> {
+    pub fn add_result(&mut self, equity: f64, actual: f64) -> Result<(), PokercraftLocalError> {
         if equity < 0.0 || equity > 1.0 {
             return Err(PokercraftLocalError::GeneralError(
                 "Equity must be between 0.0 and 1.0".to_string(),
             ));
-        } else if equity == 0.0 && did_win {
+        } else if equity == 0.0 && actual > 0.0 {
             return Err(PokercraftLocalError::GeneralError(
                 "Cannot win with 0% equity".to_string(),
             ));
-        } else if equity == 1.0 && !did_win {
+        } else if equity == 1.0 && actual < 1.0 {
             return Err(PokercraftLocalError::GeneralError(
                 "Cannot lose with 100% equity".to_string(),
             ));
-        } else if did_win {
-            self.wins.push(equity);
         } else {
-            self.loses.push(equity);
+            self.results.push((equity, actual));
         }
         Ok(())
     }
 
     /// Get an iterator over all equity values on both winning and losing.
     fn get_all_equity_iter<'a>(&'a self) -> impl Iterator<Item = &'a f64> {
-        self.wins.iter().chain(self.loses.iter())
+        self.results.iter().map(|(equity, _actual)| equity)
     }
 
     /// Number of expected wincount based on equity values.
@@ -249,17 +244,20 @@ impl LuckCalculator {
     }
 
     /// Number of actual wincount.
-    fn actual_wincount(&self) -> u64 {
-        self.wins.len() as u64
+    fn actual_wincount(&self) -> f64 {
+        self.results
+            .iter()
+            .map(|(_equity, actual)| actual)
+            .sum::<f64>()
     }
 
     /// Calculate the Z-score of the results.
     pub fn z_score(&self) -> Option<f64> {
-        let n = self.wins.len() + self.loses.len();
+        let n = self.results.len();
         if n == 0 {
             return None;
         }
-        let numerator = self.actual_wincount() as f64 - self.expected_wincount();
+        let numerator = self.actual_wincount() - self.expected_wincount();
         let denominator = self.variance().sqrt();
         Some(numerator / denominator)
     }
@@ -381,8 +379,8 @@ impl LuckCalculator {
     }
 
     /// Python interface of `self.add_result`.
-    pub fn add_result_py(&mut self, equity: f64, did_win: bool) -> PyResult<()> {
-        match self.add_result(equity, did_win) {
+    pub fn add_result_py(&mut self, equity: f64, actual: f64) -> PyResult<()> {
+        match self.add_result(equity, actual) {
             Ok(()) => Ok(()),
             Err(e) => Err(e.into()),
         }
@@ -475,22 +473,22 @@ mod tests {
     #[test]
     fn test_luck_score() -> Result<(), PokercraftLocalError> {
         let mut luck = LuckCalculator::new();
-        luck.add_result(0.3, true)?;
+        luck.add_result(0.3, 1.0)?;
         let (upper, lower, _) = luck.tails().unwrap();
         assert_almost_equal(upper, 0.3);
         assert_almost_equal(lower, 1.0);
 
         let mut luck = LuckCalculator::new();
-        luck.add_result(0.2, true)?;
-        luck.add_result(0.5, false)?;
+        luck.add_result(0.2, 1.0)?;
+        luck.add_result(0.5, 0.0)?;
         let (upper, lower, _) = luck.tails().unwrap();
         assert_almost_equal(upper, 0.6);
         assert_almost_equal(lower, 0.9);
 
         let mut luck = LuckCalculator::new();
-        luck.add_result(0.2, true)?;
-        luck.add_result(0.5, false)?;
-        luck.add_result(0.8, true)?;
+        luck.add_result(0.2, 1.0)?;
+        luck.add_result(0.5, 0.0)?;
+        luck.add_result(0.8, 1.0)?;
         let (upper, lower, _) = luck.tails().unwrap();
         assert_almost_equal(upper, 0.5);
         assert_almost_equal(lower, 0.92);
