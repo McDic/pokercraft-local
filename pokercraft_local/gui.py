@@ -13,7 +13,7 @@ from .translate import (
     Language,
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("pokercraft_local.gui")
 
 
 class PokerCraftLocalGUI:

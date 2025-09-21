@@ -12,11 +12,12 @@ from forex_python.converter import CurrencyRates
 
 from .constants import HAND_STAGE_TYPE
 from .rust import card, equity
+from .utils import evaluate_execution_speed
 
 Card = card.Card
 HandRank = card.HandRank
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("pokercraft_local.data_structures")
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
@@ -191,6 +192,9 @@ class HandHistory:
         default_factory=dict
     )  # Player ID or Hero -> street
 
+    def __hash__(self) -> int:
+        return hash(self.id)
+
     def sorting_key(self) -> tuple[int, datetime]:
         """
         Returns the sorting key.
@@ -278,7 +282,9 @@ class HandHistory:
             return tie_count
 
     def calculate_equity_arbitrary(
-        self, *player_ids: str
+        self,
+        *player_ids: str,
+        stages: typing.Iterable[HAND_STAGE_TYPE] = ("preflop", "flop", "turn", "river"),
     ) -> dict[HAND_STAGE_TYPE, dict[str, tuple[float, bool]]]:
         """
         Calculate equity for each player who has known cards.
@@ -293,6 +299,7 @@ class HandHistory:
             (player_id, self.known_cards[player_id]) for player_id in player_ids
         ]
 
+        @evaluate_execution_speed
         def get_equities(community: list[Card]) -> dict[str, tuple[float, bool]]:
             """
             Local helper function to get equities with given community cards.
@@ -303,15 +310,24 @@ class HandHistory:
                 for i, p in enumerate(cards_people)
             }
 
-        result: dict[HAND_STAGE_TYPE, dict[str, tuple[float, bool]]] = {
-            "preflop": get_equities([])
-        }
-        if len(self.community_cards) >= 3:
-            result["flop"] = get_equities(self.community_cards[:3])
-        if len(self.community_cards) >= 4:
-            result["turn"] = get_equities(self.community_cards[:4])
-        if len(self.community_cards) >= 5:
-            result["river"] = get_equities(self.community_cards[:5])
+        result: dict[HAND_STAGE_TYPE, dict[str, tuple[float, bool]]] = {}
+        if "preflop" in stages:
+            result["preflop"] = get_equities([])
+        if "flop" in stages:
+            if len(self.community_cards) >= 3:
+                result["flop"] = get_equities(self.community_cards[:3])
+            else:
+                raise ValueError("Not enough community cards(Flop cards are unknown)")
+        if "turn" in stages:
+            if len(self.community_cards) >= 4:
+                result["turn"] = get_equities(self.community_cards[:4])
+            else:
+                raise ValueError("Not enough community cards(Turn card is unknown)")
+        if "river" in stages:
+            if len(self.community_cards) >= 5:
+                result["river"] = get_equities(self.community_cards[:5])
+            else:
+                raise ValueError("Not enough community cards(River card is unknown)")
         return result
 
 

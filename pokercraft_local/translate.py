@@ -66,6 +66,9 @@ RR_RANK_CHART_HOVERTEMPLATE: typing.Final[str] = (
     "Exact rank: #%{customdata[2]} of %{customdata[1]} entries<br>"
     "..from <i>%{customdata[0]}</i>"
 )
+LUCKSCORE_SUBTITLE: typing.Final[
+    str
+] = "Your luck score(Z) is {z_score:.3f} (Top {upper_tail:.3f}%)"
 
 # fmt: off
 TRANSLATION: typing.Final[dict[Language, dict[str, str]]] = {
@@ -174,11 +177,22 @@ TRANSLATION: typing.Final[dict[Language, dict[str, str]]] = {
         "Rank Percentile": "순위 백분위",
         "Rough ITM Cut (1/8)": "대략적인 ITM 컷 (8분의 1)",
         "RR Trendline": "RR 추세선",
+        # Hand History Analysis
+        HAND_HISTORY_TITLE_FRAME: "%s님의 GGNetwork 핸드 히스토리 분석",
+        # Hand History - All-in Equity Analysis
+        LUCKSCORE_SUBTITLE: "당신의 행운 지수(Z)는 {z_score:.3f}입니다. (상위 {upper_tail:.3f}%)",
+        "Hero Equity": "히어로의 에퀴티",
+        "All-in Equity Result Distribution": "올인 에퀴티 분석 그래프",
+        "Hero's Equity at All-in": "히어로의 올인 시점 에퀴티",
+        "Number of Hands": "핸드 수",
+        "Hero Won": "히어로 승리",
+        "Hero Lost": "히어로 패배",
+        "Chopped": "무승부",
     },
 }
 # fmt: on
 
-PLOT_DOCUMENTATIONS: typing.Final[list[dict[Language, str]]] = [
+TOURNEY_SUMMARY_PLOT_DOCUMENTATIONS: typing.Final[list[dict[Language, str]]] = [
     # Historical Performances
     {
         Language.ENGLISH: """

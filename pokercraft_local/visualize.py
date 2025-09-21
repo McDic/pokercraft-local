@@ -1,3 +1,4 @@
+import logging
 import math
 import typing
 import warnings
@@ -11,13 +12,19 @@ from markdown import markdown
 from plotly.subplots import make_subplots
 
 from .bankroll import analyze_bankroll
-from .constants import BASE_HTML_FRAME, DEFAULT_WINDOW_SIZES, HORIZONTAL_PLOT_DIVIDER
+from .constants import (
+    BASE_HTML_FRAME,
+    DEFAULT_WINDOW_SIZES,
+    HAND_STAGE_TYPE,
+    HORIZONTAL_PLOT_DIVIDER,
+)
 from .data_structures import HandHistory, TournamentSummary
+from .rust import equity as rust_equity
 from .translate import (
     BANKROLL_PLOT_SUBTITLE,
     BANKROLL_PLOT_TITLE,
     HAND_HISTORY_TITLE_FRAME,
-    PLOT_DOCUMENTATIONS,
+    LUCKSCORE_SUBTITLE,
     PRIZE_PIE_CHART_SUBTITLE,
     PRIZE_PIE_CHART_TITLE,
     RR_RANK_CHART_HOVERTEMPLATE,
@@ -25,6 +32,7 @@ from .translate import (
     RR_RANK_CHART_TITLE,
     RRE_PLOT_SUBTITLE,
     RRE_PLOT_TITLE,
+    TOURNEY_SUMMARY_PLOT_DOCUMENTATIONS,
     TOURNEY_SUMMARY_TITLE_FRAME,
     Language,
     format_dollar,
@@ -33,6 +41,8 @@ from .translate import (
     get_software_credits,
     get_translated_column_moving_average,
 )
+
+logger = logging.getLogger("pokercraft_local.visualize")
 
 
 def log2_or_nan(x: float | typing.Any) -> float:
@@ -801,7 +811,7 @@ def plot_tournament_summaries(
             fig.to_html(include_plotlyjs=("cdn" if i == 0 else False), full_html=False)
             + markdown(doc_dict[lang])
             for i, (doc_dict, fig) in enumerate(
-                zip(PLOT_DOCUMENTATIONS, figures, strict=True)
+                zip(TOURNEY_SUMMARY_PLOT_DOCUMENTATIONS, figures, strict=True)
             )
             if fig is not None
         ),
@@ -809,8 +819,11 @@ def plot_tournament_summaries(
     )
 
 
-def allin_winlose_histogram(
+def get_all_in_equity_histogram(
     hand_histories: list[HandHistory],
+    lang: Language,
+    *,
+    max_length: int = -1,
 ) -> plgo.Figure:
     """
     Get all-in win/lose histogram.
@@ -818,37 +831,130 @@ def allin_winlose_histogram(
     all_in_hand_histories = list(
         filter(
             lambda h: (
-                h.all_ined_street("Hero") in ("preflop", "flop", "turn")
+                (h.all_ined_street("Hero") in ("preflop", "flop", "turn"))
                 and len(h.showdown_players()) >= 2
             ),
             hand_histories,
         )
     )
+    if max_length > 0:
+        all_in_hand_histories = all_in_hand_histories[
+            : min(max_length, len(all_in_hand_histories))
+        ]
+
     all_in_streets: list[typing.Literal["preflop", "flop", "turn"]] = typing.cast(
         list[typing.Literal["preflop", "flop", "turn"]],
         [h.all_ined_street("Hero") for h in all_in_hand_histories],
     )
-    equities_by_streets = [
-        h.calculate_equity_arbitrary(
+    logger.info(
+        "Total %d all-in hands found. "
+        "Preflop all-in = %d hands, preflop heads-up all-in = %d hands",
+        len(all_in_hand_histories),
+        all_in_streets.count("preflop"),
+        sum(
+            1
+            for hh, street in zip(all_in_hand_histories, all_in_streets)
+            if street == "preflop" and len(hh.showdown_players()) == 2
+        ),
+    )
+
+    equities_by_streets: list[dict[HAND_STAGE_TYPE, dict[str, tuple[float, bool]]]] = []
+    for i, h in enumerate(all_in_hand_histories):
+        eqd = h.calculate_equity_arbitrary(
             "Hero",
             *(player_id for player_id in h.showdown_players() if player_id != "Hero"),
+            stages=(all_in_streets[i],),
         )
-        for h in all_in_hand_histories
-    ]
-    was_best_hands = [h.was_best_hand("Hero") for h in all_in_hand_histories]
+        equities_by_streets.append(eqd)
+        if (i + 1) % 10 == 0:
+            logger.info("Calculated equity for %d all-in hands", i + 1)
 
+    was_best_hands = [h.was_best_hand("Hero") for h in all_in_hand_histories]
+    main_column_name = lang << "Hero Equity"
     df_base = pd.DataFrame(
         {
             "Hand ID": [h.id for h in all_in_hand_histories],
             "Tournament ID": [h.tournament_id or 0 for h in all_in_hand_histories],
-            "Hero Equity": [
-                eqd[street] for street, eqd in zip(all_in_streets, equities_by_streets)
+            main_column_name: [
+                eqd[street]["Hero"][0]
+                for street, eqd in zip(all_in_streets, equities_by_streets)
             ],
             "Actual Got": [0 if wbh < 0 else 1.0 / (wbh + 1) for wbh in was_best_hands],
         }
     )
-    print(df_base)
-    raise NotImplementedError
+
+    UPPER_LIMIT = 0.99
+    LOWER_LIMIT = 1 - UPPER_LIMIT
+    df_winning = df_base[df_base["Actual Got"] > UPPER_LIMIT]
+    df_chopped = df_base[
+        (UPPER_LIMIT >= df_base["Actual Got"]) & (df_base["Actual Got"] > LOWER_LIMIT)
+    ]
+    df_losing = df_base[df_base["Actual Got"] <= LOWER_LIMIT]
+
+    luckscore_calculator = rust_equity.LuckCalculator()
+    for row in df_base.itertuples(index=False):
+        equity = row[2]
+        actual = row[3]
+        luckscore_calculator.add_result_py(equity, actual)
+    z_score = luckscore_calculator.z_score_py()
+    upper_tail, lower_tail, twosided = luckscore_calculator.tails_py()
+    logger.info(
+        "All-in luck score Z = %.3f, upper tail = %.6f, "
+        "lower tail = %.6f, two-sided = %.6f",
+        z_score,
+        upper_tail,
+        lower_tail,
+        twosided,
+    )
+
+    common_options = {
+        "autobinx": False,
+        "xbins": {"start": 0.0, "end": 1.0, "size": 0.05},
+    }
+    OPACITY_GREEN = "rgba(52,203,59,0.8)"
+    OPACITY_YELLOW = "rgba(204,198,53,0.8)"
+    OPACITY_RED = "rgba(206,37,37,0.8)"
+
+    figure = plgo.Figure()
+    figure.add_trace(
+        plgo.Histogram(
+            x=df_winning[main_column_name],
+            name=lang << "Hero Won",
+            marker_color=OPACITY_GREEN,
+            **common_options,
+        )
+    )  # Add winning histogram
+    figure.add_trace(
+        plgo.Histogram(
+            x=df_chopped[main_column_name],
+            name=lang << "Chopped",
+            marker_color=OPACITY_YELLOW,
+            **common_options,
+        )
+    )  # Add chopped histogram
+    figure.add_trace(
+        plgo.Histogram(
+            x=df_losing[main_column_name],
+            name=lang << "Hero Lost",
+            marker_color=OPACITY_RED,
+            **common_options,
+        )
+    )  # Add losing histogram
+    figure.update_layout(
+        barmode="stack",
+        title={
+            "text": lang << "All-in Equity Result Distribution",
+            "subtitle": {
+                "text": LUCKSCORE_SUBTITLE.format(
+                    z_score=z_score, upper_tail=100 * upper_tail
+                ),
+                "font": {"style": "italic", "color": "gray"},
+            },
+        },
+        xaxis={"title": {"text": lang << "Hero's Equity at All-in"}},
+        yaxis={"title": {"text": lang << "Number of Hands"}},
+    )
+    return figure
 
 
 def plot_hand_histories(
@@ -862,9 +968,16 @@ def plot_hand_histories(
     Generate hand history analysis HTML report.
     """
     hand_histories = sorted(hand_histories, key=sort_key)
+    figures: list[plgo.Figure] = [
+        get_all_in_equity_histogram(hand_histories, lang, max_length=10)
+    ]
+
     return BASE_HTML_FRAME.format(
         title=(lang << HAND_HISTORY_TITLE_FRAME) % (nickname,),
         summary=markdown("No summary yet.."),
-        plots=markdown("No plots yet.."),
+        plots=HORIZONTAL_PLOT_DIVIDER.join(
+            fig.to_html(include_plotlyjs=("cdn" if i == 0 else False), full_html=False)
+            for i, fig in enumerate(figures)
+        ),
         software_credits=get_software_credits(lang),
     )

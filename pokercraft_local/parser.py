@@ -20,7 +20,7 @@ from .rust import card
 
 Card = card.Card
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("pokercraft_local.parser")
 
 
 def convert_money_to_float(
@@ -334,7 +334,7 @@ class PokercraftHandHistoryParser(AbstractParser[HandHistory]):
     """
 
     TARGET_FILENAME_PREFIX_PATTERN: typing.ClassVar[STR_PATTERN] = regex.compile(
-        r"GG\d{8}-\d{4} - "
+        r"GG\d{8}-\d{4} - ((?!(Short Deck|Omaha)).)*\.txt$"
     )
 
     LINE1_INTRO: STR_PATTERN = regex.compile(
@@ -372,7 +372,7 @@ class PokercraftHandHistoryParser(AbstractParser[HandHistory]):
         r"Uncalled bet \(([\d\,]+)\) returned to ([0-9a-f]+|Hero)"
     )
     LINE6_SHOWS: STR_PATTERN = regex.compile(
-        r"([0-9a-f]+|Hero)\: shows \[([2-9AKQJT][sdch] [2-9AKQJT][sdch])\]"
+        r"([0-9a-f]+|Hero)\: shows \[([2-9AKQJT][sdch]( [2-9AKQJT][sdch])?)\]"
     )
 
     LINE7_HEADER_SHOWDOWN: typing.Final[str] = "*** SHOWDOWN ***"
@@ -391,8 +391,9 @@ class PokercraftHandHistoryParser(AbstractParser[HandHistory]):
         r"Seat (\d+): ([0-9a-f]+|Hero) "
         r"(?:\((button|big blind|small blind)?\) )?"
         r"(folded (?:before|on the) (Flop|Turn|River)|"
-        r"showed \[([2-9AKQJT][sdch] [2-9AKQJT][sdch])\] "
-        r"and (?:won \([\d\,]+\)|lost with))"
+        r"showed \[([2-9AKQJT][sdch]( [2-9AKQJT][sdch])?)\] "
+        r"and (?:(?:won|collected) \([\d\,]+\)|lost with)|"
+        r"(?:won|collected) \(([\d\,]+)\))"
     )
 
     def parse(self, instream: typing.TextIO) -> typing.Iterator[HandHistory]:
@@ -423,6 +424,7 @@ class PokercraftHandHistoryParser(AbstractParser[HandHistory]):
                     continuous_newline_count += 1
                     if continuous_newline_count >= 3:
                         break
+                    continue
                 continuous_newline_count = 0
 
                 if match := self.LINE1_INTRO.match(line):
@@ -654,14 +656,18 @@ class PokercraftHandHistoryParser(AbstractParser[HandHistory]):
                         ["preflop", "flop", "turn", "river"],
                         "LINE6_SHOWS",
                     )
-                    player_id, cards_str = match.groups()
+                    player_id = match.group(1)
+                    cards_str = match.group(2)
                     if player_id is None:
                         raise ValueError("No player ID detected.")
                     elif cards_str is None:
                         raise ValueError("No cards detected.")
                     cards_str = cards_str.strip()
                     player_cards = [Card(card_str) for card_str in cards_str.split(" ")]
-                    if len(player_cards) != 2:
+                    if len(player_cards) == 1:
+                        logger.debug("Single card shown, skipping.")
+                        continue
+                    elif len(player_cards) != 2:
                         raise ValueError(f"Expected 2 hole cards, got {player_cards}")
                     if player_id not in this_hand_history.known_cards:
                         this_hand_history.known_cards[player_id] = (
@@ -692,9 +698,8 @@ class PokercraftHandHistoryParser(AbstractParser[HandHistory]):
                         raise ValueError("No amount detected.")
                     amount = int(amount_str.replace(",", ""))
                     if player_id not in this_hand_history.wons:
-                        this_hand_history.wons[player_id] = amount
-                    else:
-                        raise ValueError(f"Duplicated collection for {player_id}")
+                        this_hand_history.wons[player_id] = 0
+                    this_hand_history.wons[player_id] += amount
 
                 elif line == self.LINE8_HEADER_SUMMARY:
                     raise_if_not_in_stage("showdown", "LINE8_HEADER_SUMMARY")
@@ -714,7 +719,7 @@ class PokercraftHandHistoryParser(AbstractParser[HandHistory]):
                     pass  # Ignored for now
 
                 else:
-                    raise ValueError(f"Unrecognized line: {line}")
+                    raise ValueError(f"Unrecognized line: <{line}>")
 
         except ValueError as err:
             if "lineno" in locals():
