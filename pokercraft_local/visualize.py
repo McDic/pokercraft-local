@@ -945,7 +945,7 @@ def get_all_in_equity_histogram(
         title={
             "text": lang << "All-in Equity Result Distribution",
             "subtitle": {
-                "text": LUCKSCORE_SUBTITLE.format(
+                "text": (lang << LUCKSCORE_SUBTITLE).format(
                     z_score=z_score, upper_tail=100 * upper_tail
                 ),
                 "font": {"style": "italic", "color": "gray"},
@@ -969,7 +969,7 @@ def plot_hand_histories(
     """
     hand_histories = sorted(hand_histories, key=sort_key)
     figures: list[plgo.Figure] = [
-        get_all_in_equity_histogram(hand_histories, lang, max_length=10)
+        get_all_in_equity_histogram(hand_histories, lang, max_length=100)
     ]
 
     return BASE_HTML_FRAME.format(
