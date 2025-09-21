@@ -29,6 +29,7 @@ fn card_submodule<'a>(parent: &Bound<'a, PyModule>) -> PyResult<Bound<'a, PyModu
 fn equity_submodule<'a>(parent: &Bound<'a, PyModule>) -> PyResult<Bound<'a, PyModule>> {
     let m = PyModule::new(parent.py(), "equity")?;
     m.add_class::<equity::EquityResult>()?;
+    m.add_class::<equity::LuckCalculator>()?;
     Ok(m)
 }
 

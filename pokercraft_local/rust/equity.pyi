@@ -29,7 +29,7 @@ class LuckCalculator:
     """
 
     def __init__(self) -> None: ...
-    def add_result_py(self, equity: float, did_win: bool) -> None:
+    def add_result_py(self, equity: float, actual: float) -> None:
         """
         Add a result with given equity and whether the player won.
         """
