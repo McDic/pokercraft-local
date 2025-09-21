@@ -2,7 +2,7 @@ import logging
 from argparse import ArgumentParser
 from pathlib import Path
 
-from pokercraft_local.export import export
+from pokercraft_local.export import export_hand_history_analysis, export_tourney_summary
 from pokercraft_local.translate import Language
 
 
@@ -54,6 +54,13 @@ def get_argparser() -> ArgumentParser:
         required=False,
         help="Fetch currency rate from the Forex if this flag is provided",
     )
+
+    parser.add_argument(
+        "--plot-type",
+        choices=["tourney", "handhistory"],
+        required=True,
+        help="Which plot type to export",
+    )
     return parser
 
 
@@ -62,17 +69,31 @@ if __name__ == "__main__":
 
     parser = get_argparser()
     namespace = parser.parse_args()
-    print(namespace.export_csv)
 
-    csv_path, plot_path = export(
-        main_path=namespace.data,
-        output_path=namespace.output,
-        nickname=namespace.nickname,
-        allow_freerolls=namespace.include_freerolls,
-        lang=namespace.lang,
-        exclude_csv=(not namespace.export_csv),
-        use_realtime_currency_rate=namespace.use_forex,
-    )
+    match namespace.plot_type:
+        case "tourney":
+            csv_path, plot_path = export_tourney_summary(
+                main_path=namespace.data,
+                output_path=namespace.output,
+                nickname=namespace.nickname,
+                allow_freerolls=namespace.include_freerolls,
+                lang=namespace.lang,
+                exclude_csv=(not namespace.export_csv),
+                use_realtime_currency_rate=namespace.use_forex,
+            )
+        case "handhistory":
+            if namespace.export_csv:
+                raise ValueError(
+                    "CSV export is not supported for hand history analysis"
+                )
+            plot_path = export_hand_history_analysis(
+                main_path=namespace.data,
+                output_path=namespace.output,
+                nickname=namespace.nickname,
+                lang=namespace.lang,
+            )
+        case _:
+            raise ValueError(f"Unknown plot type: {namespace.plot_type}")
 
     if namespace.export_csv:
         print(f"Exported CSV at {csv_path} and Plot at {plot_path}")

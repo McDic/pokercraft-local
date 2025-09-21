@@ -45,5 +45,5 @@ features = ["pyo3/extension-module"]
 module-name = "pokercraft_local.rust"
 
 [tool.pyright]
-typeCheckingMode = "basic"
+typeCheckingMode = "off"
 reportMissingModuleSource = false

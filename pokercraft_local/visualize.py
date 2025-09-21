@@ -12,10 +12,11 @@ from plotly.subplots import make_subplots
 
 from .bankroll import analyze_bankroll
 from .constants import BASE_HTML_FRAME, DEFAULT_WINDOW_SIZES, HORIZONTAL_PLOT_DIVIDER
-from .data_structures import TournamentSummary
+from .data_structures import HandHistory, TournamentSummary
 from .translate import (
     BANKROLL_PLOT_SUBTITLE,
     BANKROLL_PLOT_TITLE,
+    HAND_HISTORY_TITLE_FRAME,
     PLOT_DOCUMENTATIONS,
     PRIZE_PIE_CHART_SUBTITLE,
     PRIZE_PIE_CHART_TITLE,
@@ -24,11 +25,11 @@ from .translate import (
     RR_RANK_CHART_TITLE,
     RRE_PLOT_SUBTITLE,
     RRE_PLOT_TITLE,
+    TOURNEY_SUMMARY_TITLE_FRAME,
     Language,
     format_dollar,
     format_percent,
     generate_summary_md,
-    get_html_title,
     get_software_credits,
     get_translated_column_moving_average,
 )
@@ -757,7 +758,7 @@ def get_summaries(tournaments: list[TournamentSummary]) -> list[tuple[str, typin
     ]
 
 
-def plot_total(
+def plot_tournament_summaries(
     nickname: str,
     tournaments: typing.Iterable[TournamentSummary],
     lang: Language = Language.ENGLISH,
@@ -770,7 +771,8 @@ def plot_total(
     bankroll_min_simulation_iterations: int = 40_000,
 ) -> str:
     """
-    Generate all charts and return a complete HTML string.
+    Generate all chart reports from tournament summaries
+    and return a complete HTML string.
     """
     tournaments = sorted(tournaments, key=sort_key)
     figures: list[plgo.Figure | None] = [
@@ -790,7 +792,7 @@ def plot_total(
         get_rr_by_rank_chart(tournaments, lang),
     ]
     return BASE_HTML_FRAME.format(
-        title=get_html_title(nickname, lang),
+        title=(lang << TOURNEY_SUMMARY_TITLE_FRAME) % (nickname,),
         summary=markdown(
             generate_summary_md(lang, *get_summaries(tournaments)),
             extensions=["tables"],
@@ -803,5 +805,66 @@ def plot_total(
             )
             if fig is not None
         ),
+        software_credits=get_software_credits(lang),
+    )
+
+
+def allin_winlose_histogram(
+    hand_histories: list[HandHistory],
+) -> plgo.Figure:
+    """
+    Get all-in win/lose histogram.
+    """
+    all_in_hand_histories = list(
+        filter(
+            lambda h: (
+                h.all_ined_street("Hero") in ("preflop", "flop", "turn")
+                and len(h.showdown_players()) >= 2
+            ),
+            hand_histories,
+        )
+    )
+    all_in_streets: list[typing.Literal["preflop", "flop", "turn"]] = typing.cast(
+        list[typing.Literal["preflop", "flop", "turn"]],
+        [h.all_ined_street("Hero") for h in all_in_hand_histories],
+    )
+    equities_by_streets = [
+        h.calculate_equity_arbitrary(
+            "Hero",
+            *(player_id for player_id in h.showdown_players() if player_id != "Hero"),
+        )
+        for h in all_in_hand_histories
+    ]
+    was_best_hands = [h.was_best_hand("Hero") for h in all_in_hand_histories]
+
+    df_base = pd.DataFrame(
+        {
+            "Hand ID": [h.id for h in all_in_hand_histories],
+            "Tournament ID": [h.tournament_id or 0 for h in all_in_hand_histories],
+            "Hero Equity": [
+                eqd[street] for street, eqd in zip(all_in_streets, equities_by_streets)
+            ],
+            "Actual Got": [0 if wbh < 0 else 1.0 / (wbh + 1) for wbh in was_best_hands],
+        }
+    )
+    print(df_base)
+    raise NotImplementedError
+
+
+def plot_hand_histories(
+    nickname: str,
+    hand_histories: typing.Iterable[HandHistory],
+    lang: Language = Language.ENGLISH,
+    *,
+    sort_key: typing.Callable[[HandHistory], typing.Any] = (lambda h: h.sorting_key()),
+) -> str:
+    """
+    Generate hand history analysis HTML report.
+    """
+    hand_histories = sorted(hand_histories, key=sort_key)
+    return BASE_HTML_FRAME.format(
+        title=(lang << HAND_HISTORY_TITLE_FRAME) % (nickname,),
+        summary=markdown("No summary yet.."),
+        plots=markdown("No plots yet.."),
         software_credits=get_software_credits(lang),
     )

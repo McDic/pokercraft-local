@@ -5,9 +5,13 @@ from tkinter import filedialog
 from tkinter.messagebox import showinfo, showwarning
 
 from .constants import VERSION
-from .export import export as export_main
+from .export import export_hand_history_analysis, export_tourney_summary
 from .pypi_query import VERSION_EXTRACTED, get_library_versions
-from .translate import GUI_EXPORTED_SUCCESS, Language
+from .translate import (
+    GUI_EXPORTED_SUCCESS_HAND_HISTORY,
+    GUI_EXPORTED_SUCCESS_TOURNEY_SUMMARY,
+    Language,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -199,9 +203,9 @@ class PokerCraftLocalGUI:
         """
         return "Info!"
 
-    def export_chart(self) -> None:
+    def get_important_inputs(self) -> tuple[str, Path, Path] | None:
         """
-        Export the visualization charts.
+        Get input values - nickname, data directory, output directory.
         """
         THIS_LANG = self.get_lang()
         nickname = self._input_nickname.get().strip()
@@ -210,28 +214,39 @@ class PokerCraftLocalGUI:
                 self.get_warning_popup_title(),
                 THIS_LANG << "Nickname is not given.",
             )
-            return
+            return None
         elif not self._data_directory or not self._data_directory.is_dir():
             showwarning(
                 self.get_warning_popup_title(),
                 THIS_LANG << "Data directory is not selected or invalid.",
             )
-            return
+            return None
         elif not self._output_directory or not self._output_directory.is_dir():
             showwarning(
                 self.get_warning_popup_title(),
                 THIS_LANG << "Output directory is not selected or invalid.",
             )
-            return
+            return None
+        return nickname, self._data_directory, self._output_directory
+
+    def export_chart(self) -> None:
+        """
+        Export the visualization charts.
+        """
+        THIS_LANG = self.get_lang()
+        if (res := self.get_important_inputs()) is not None:
+            nickname, data_directory, output_directory = res
+        else:
+            return None
 
         if self._boolvar_allow_freerolls.get():
             logging.info("Allowing freerolls on the graph.")
         else:
             logging.info("Disallowing freerolls on the graph.")
 
-        csv_path, plot_path = export_main(
-            main_path=self._data_directory,
-            output_path=self._output_directory,
+        csv_path, plot_path = export_tourney_summary(
+            main_path=data_directory,
+            output_path=output_directory,
             nickname=nickname,
             allow_freerolls=self._boolvar_allow_freerolls.get(),
             lang=THIS_LANG,
@@ -240,7 +255,7 @@ class PokerCraftLocalGUI:
         )
         showinfo(
             self.get_info_popup_title(),
-            (THIS_LANG << GUI_EXPORTED_SUCCESS).format(
+            (THIS_LANG << GUI_EXPORTED_SUCCESS_TOURNEY_SUMMARY).format(
                 output_dir=self._output_directory,
                 csv_path=csv_path.name,
                 plot_path=plot_path.name,
@@ -252,9 +267,23 @@ class PokerCraftLocalGUI:
         Analyze hand history files.
         """
         THIS_LANG = self.get_lang()
+        if (res := self.get_important_inputs()) is not None:
+            nickname, data_directory, output_directory = res
+        else:
+            return None
+
+        plot_path = export_hand_history_analysis(
+            main_path=data_directory,
+            output_path=output_directory,
+            nickname=nickname,
+            lang=THIS_LANG,
+        )
         showinfo(
             self.get_info_popup_title(),
-            THIS_LANG << "This feature is coming soon!",
+            (THIS_LANG << GUI_EXPORTED_SUCCESS_HAND_HISTORY).format(
+                output_dir=output_directory,
+                plot_path=plot_path.name,
+            ),
         )
 
     def run_gui(self) -> None:

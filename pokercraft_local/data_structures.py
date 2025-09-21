@@ -1,4 +1,5 @@
 import functools
+import itertools
 import logging
 import math
 import typing
@@ -13,6 +14,7 @@ from .constants import HAND_STAGE_TYPE
 from .rust import card, equity
 
 Card = card.Card
+HandRank = card.HandRank
 
 logger = logging.getLogger(__name__)
 
@@ -210,21 +212,21 @@ class HandHistory:
         return self.all_ined.get(player_id)
 
     @functools.cache
-    def showdown_players(self) -> set[str]:
+    def showdown_players(self) -> frozenset[str]:
         """
         Returns the list of players who reached showdown.
-        This function is cached, so be careful.
+        Because this function is cached, the returned value is immutable.
         """
         players = set(player_id for player_id, _chips in self.seats.values())
-        for action in (
-            self.actions_preflop
-            + self.actions_flop
-            + self.actions_turn
-            + self.actions_river
+        for action in itertools.chain(
+            self.actions_preflop,
+            self.actions_flop,
+            self.actions_turn,
+            self.actions_river,
         ):
             if action.action == "fold" and action.player_id in players:
                 players.discard(action.player_id)
-        return players
+        return frozenset(players)
 
     @functools.cache
     def total_pot(self) -> int:
@@ -233,6 +235,47 @@ class HandHistory:
         This function is cached, so be careful.
         """
         return sum(self.wons.values())
+
+    @functools.cache
+    def was_best_hand(self, main_player_id: str) -> int:
+        """
+        Check if the given player had the best hand against all players
+        reaching showdown, assuming this player reached the showdown.
+
+        If the river card or this player's card is unknown, this raises an error.
+        Otherwise, this returns:
+        - `x >= 0`: The given player had the best hand with `x` other players tied.
+        - `-1`: The given player did not have the best hand.
+        """
+        if main_player_id not in (pid for pid, _chips in self.seats.values()):
+            raise ValueError("Player %s is not in this hand" % main_player_id)
+
+        this_player_hand = self.known_cards.get(main_player_id)
+        if this_player_hand is None:
+            raise ValueError("Unknown cards for player %s" % main_player_id)
+        elif len(self.community_cards) < 5:
+            raise ValueError("Not enough community cards(River card is unknown)")
+        this_player_handrank: HandRank = HandRank.find_best5_py(
+            [*self.community_cards, *this_player_hand]
+        )[1]
+
+        better_count: int = 0
+        tie_count: int = 0
+        for pid in self.showdown_players():
+            if pid == main_player_id:
+                continue
+            opponent_handrank = HandRank.find_best5_py(
+                [*self.community_cards, *self.known_cards[pid]]
+            )[1]
+            if opponent_handrank > this_player_handrank:
+                better_count += 1
+            elif opponent_handrank == this_player_handrank:
+                tie_count += 1
+
+        if better_count > 0:
+            return -1
+        else:
+            return tie_count
 
     def calculate_equity_arbitrary(
         self, *player_ids: str
