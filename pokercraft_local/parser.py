@@ -292,18 +292,18 @@ class PokercraftSummaryParser(AbstractParser[TournamentSummary]):
                     if self.LINE8_REENTRIES.fullmatch(line):
                         t_my_entries += take_first_int(line)
 
-                yield TournamentSummary(
-                    id=t_id,
-                    name=t_name,
-                    buy_in_pure=t_buy_in_pure,
-                    rake=t_rake,
-                    total_prize_pool=t_total_prize_pool,
-                    start_time=t_start_time,
-                    my_rank=t_my_rank,
-                    total_players=t_total_players,
-                    my_prize=t_my_prize,
-                    my_entries=t_my_entries,
-                )
+            yield TournamentSummary(
+                id=t_id,
+                name=t_name,
+                buy_in_pure=t_buy_in_pure,
+                rake=t_rake,
+                total_prize_pool=t_total_prize_pool,
+                start_time=t_start_time,
+                my_rank=t_my_rank,
+                total_players=t_total_players,
+                my_prize=t_my_prize,
+                my_entries=t_my_entries,
+            )
 
         except (StopIteration, UnboundLocalError) as err:
             raise ValueError("Incomplete data, failed to parse summary.") from err

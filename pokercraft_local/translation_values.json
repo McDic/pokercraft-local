@@ -267,8 +267,8 @@
             "ko": "누적 RRE"
           },
           "got_x_profit": {
-            "en": "Got %.3fx profit in this region",
-            "ko": "이 구간에서 %.3f배 수익을 냄"
+            "en": "Got %sx profit in this region",
+            "ko": "이 구간에서 %s배 수익을 냄"
           },
           "formula": {
             "rre": {

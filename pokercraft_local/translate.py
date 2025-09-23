@@ -6,9 +6,11 @@ from pathlib import Path
 from .constants import POKERCRAFT_AHREF
 
 RAW_TRANSLATION_MAPTYPE: typing.TypeAlias = dict["Language", str]
-NESTED_MAPPING: typing.TypeAlias = dict[str, RAW_TRANSLATION_MAPTYPE | "NESTED_MAPPING"]
+NESTED_MAPPING: typing.TypeAlias = dict[
+    str, typing.Union[RAW_TRANSLATION_MAPTYPE, "NESTED_MAPPING"]
+]
 
-DEFAULT_TRANSLATION_JSON_PATH = Path(__file__).parent / "translation.json"
+DEFAULT_TRANSLATION_JSON_PATH = Path(__file__).parent / "translation_values.json"
 
 
 def load_language_json(
@@ -52,7 +54,10 @@ def generate_summary_table_md(lang: Language, *kvs: tuple[str, typing.Any]) -> s
     """
     Generate summary in the markdown.
     """
-    head = f"| {lang << 'Category'} | {lang << 'Value'} |"
+    head = (
+        f"| {lang << 'plot.tourney_summary.head_summaries.category'}"
+        f" | {lang << 'plot.tourney_summary.head_summaries.value'} |"
+    )
     hr = "| --- | --- |"
     rows = "\n".join(f"| {lang << k} | {v} |" for k, v in kvs)
     return "\n".join((head, hr, rows))

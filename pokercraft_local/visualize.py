@@ -357,7 +357,7 @@ def get_profit_heatmap_charts(
             hovertemplate="Log2(RRE) = [%{y}]<br>Log2("
             + (lang << f"{TRKEY_PREFIX}.cell_overlay.formula.buy_in")
             + ") = [%{x}]<br>"
-            + (GOT_X_PROFIT % ("%{z:.2f}",)),
+            + (GOT_X_PROFIT % ("%{z:.3f}",)),
             **fig1_common_options,
         ),
         row=1,
@@ -370,7 +370,7 @@ def get_profit_heatmap_charts(
             hovertemplate="Log2(RRE) = [%{y}]<br>Log2("
             + (lang << f"{TRKEY_PREFIX}.cell_overlay.formula.total_entries")
             + ") = [%{x}]<br>"
-            + (GOT_X_PROFIT % ("%{z:.2f}",)),
+            + (GOT_X_PROFIT % ("%{z:.3f}",)),
             xbins={"start": 1.0, "size": 1.0},
             **fig1_common_options,
         ),
@@ -384,7 +384,7 @@ def get_profit_heatmap_charts(
             hovertemplate="Log2(RRE) = [%{y}]<br>"
             + (lang << f"{TRKEY_PREFIX}.cell_overlay.formula.time_of_day")
             + " = [%{x}] mins<br>"
-            + (GOT_X_PROFIT % ("%{z:.2f}",)),
+            + (GOT_X_PROFIT % ("%{z:.3f}",)),
             xbins={"start": 0.0, "size": 60.0 * 2, "end": 60.0 * 24},
             **fig1_common_options,
         ),
@@ -401,7 +401,7 @@ def get_profit_heatmap_charts(
             histfunc=fig1_common_options["histfunc"],
             orientation="h",
             ybins=fig1_common_options["ybins"],
-            hovertemplate="Log2(RRE) = [%{y}]<br>" + (GOT_X_PROFIT % ("%{x:.2f}",)),
+            hovertemplate="Log2(RRE) = [%{y}]<br>" + (GOT_X_PROFIT % ("%{x:.3f}",)),
             marker={"color": "rgba(70,70,70,0.35)"},
         ),
         row=1,
