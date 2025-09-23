@@ -21,25 +21,12 @@ from .constants import (
 from .data_structures import HandHistory, TournamentSummary
 from .rust import equity as rust_equity
 from .translate import (
-    BANKROLL_PLOT_SUBTITLE,
-    BANKROLL_PLOT_TITLE,
-    HAND_HISTORY_TITLE_FRAME,
-    LUCKSCORE_SUBTITLE,
-    PRIZE_PIE_CHART_SUBTITLE,
-    PRIZE_PIE_CHART_TITLE,
-    RR_RANK_CHART_HOVERTEMPLATE,
-    RR_RANK_CHART_SUBTITLE,
-    RR_RANK_CHART_TITLE,
-    RRE_PLOT_SUBTITLE,
-    RRE_PLOT_TITLE,
     TOURNEY_SUMMARY_PLOT_DOCUMENTATIONS,
-    TOURNEY_SUMMARY_TITLE_FRAME,
     Language,
     format_dollar,
     format_percent,
-    generate_summary_md,
+    generate_summary_table_md,
     get_software_credits,
-    get_translated_column_moving_average,
 )
 
 logger = logging.getLogger("pokercraft_local.visualize")
@@ -58,6 +45,8 @@ def get_historical_charts(
     """
     Get historical charts.
     """
+    TRKEY_PREFIX: typing.Final[str] = "plot.tourney_summary.historical_performance"
+
     df_base = pd.DataFrame(
         {
             "Tournament Name": [t.name for t in tournaments],
@@ -70,7 +59,7 @@ def get_historical_charts(
     )
     df_base["Net Profit"] = df_base["Profit"].cumsum()
     df_base["Net Rake"] = df_base["Rake"].cumsum()
-    df_base["Ideal Profit w.o. Rake"] = df_base["Net Profit"] + df_base["Net Rake"]
+    df_base["Ideal Profit"] = df_base["Net Profit"] + df_base["Net Rake"]
     df_base["Max Profit"] = df_base["Net Profit"].cummax()
     df_base["Drawdown"] = df_base["Net Profit"] - df_base["Max Profit"]
     df_base["Max Drawdown"] = df_base["Drawdown"].cummin()
@@ -107,26 +96,44 @@ def get_historical_charts(
         cols=1,
         shared_xaxes=True,
         row_titles=[
-            lang << t
-            for t in ["Net Profit & Rake", "Profitable Ratio", "Average Buy In"]
+            lang << f"{TRKEY_PREFIX}.y_axes.net_profit_and_rake",
+            lang << f"{TRKEY_PREFIX}.y_axes.profitable_ratio",
+            lang << f"{TRKEY_PREFIX}.y_axes.average_buy_in",
         ],
         vertical_spacing=0.01,
     )
     common_options = {"x": df_base.index, "mode": "lines"}
 
-    for col in ("Net Profit", "Net Rake", "Ideal Profit w.o. Rake", "Max Drawdown"):
+    for col, trkey_suffix in (
+        ("Net Profit", "legends.net_profit"),
+        ("Net Rake", "legends.net_rake"),
+        ("Ideal Profit", "legends.ideal_profit"),
+        ("Max Drawdown", "legends.max_drawdown"),
+    ):
         figure.add_trace(
             plgo.Scatter(
                 y=df_base[col],
                 legendgroup="Profit",
-                legendgrouptitle_text=lang << "Profits & Rakes",
-                name=lang << col,
+                legendgrouptitle_text=lang
+                << f"{TRKEY_PREFIX}.legends.profits_and_rakes",
+                name=lang << f"{TRKEY_PREFIX}.{trkey_suffix}",
                 hovertemplate="%{y:$,.2f}",
                 **common_options,
             ),
             row=1,
             col=1,
         )
+
+    def get_translated_column_moving_average(lang: Language, window_size: int) -> str:
+        """
+        Get translated column name for moving average.
+        """
+        if window_size == 0:
+            return lang << "plot.tourney_summary.historical_performance.legends.since_0"
+        else:
+            return (
+                lang << "plot.tourney_summary.historical_performance.legends.recent"
+            ) % (window_size,)
 
     for window_size in (0,) + window_sizes:
         pr_col = (
@@ -139,7 +146,8 @@ def get_historical_charts(
                 y=df_base[pr_col],
                 meta=[y * 100 for y in df_base[pr_col]],
                 legendgroup="Profitable Ratio",
-                legendgrouptitle_text=lang << "Profitable Ratio",
+                legendgrouptitle_text=lang
+                << f"{TRKEY_PREFIX}.legends.profitable_ratio",
                 name=get_translated_column_moving_average(lang, window_size),
                 hovertemplate="%{meta:.2f}%",
                 **common_options,
@@ -153,7 +161,7 @@ def get_historical_charts(
             plgo.Scatter(
                 y=df_base[avb_col],
                 legendgroup="Avg Buy In",
-                legendgrouptitle_text=lang << "Average Buy In",
+                legendgrouptitle_text=lang << f"{TRKEY_PREFIX}.legends.average_buy_in",
                 name=get_translated_column_moving_average(lang, window_size),
                 hovertemplate="%{y:$,.2f}",
                 **common_options,
@@ -164,7 +172,7 @@ def get_historical_charts(
 
     # Update layouts and axes
     figure.update_layout(
-        title=lang << "Historical Performance",
+        title=lang << f"{TRKEY_PREFIX}.title",
         hovermode="x unified",
         yaxis1={"tickformat": "$"},
         yaxis2={"tickformat": ".2%"},
@@ -172,7 +180,8 @@ def get_historical_charts(
         xaxis={
             "rangeslider": {"visible": True, "autorange": True},
             "labelalias": {
-                i: (lang << "Tourney #%d") % (i,) for i in range(1, len(df_base) + 1)
+                i: (lang << f"{TRKEY_PREFIX}.etc.tourney_number") % (i,)
+                for i in range(1, len(df_base) + 1)
             },
         },
         legend_groupclick="toggleitem",
@@ -181,7 +190,11 @@ def get_historical_charts(
         visible="legendonly",
         selector=(
             lambda barline: (
-                barline.name in [any_lang << "Net Rake" for any_lang in Language]
+                barline.name
+                in (
+                    any_lang << f"{TRKEY_PREFIX}.legends.net_rake"
+                    for any_lang in Language
+                )
             )
             or any(str(num) in barline.name for num in (100, 400, 800))
         ),
@@ -226,7 +239,7 @@ def get_historical_charts(
         row=1,
         col=1,
         label={
-            "text": lang << "Break-even",
+            "text": lang << f"{TRKEY_PREFIX}.horizontal_lines.break_even",
             "textposition": "end",
             "font": {"color": OPACITY_RED, "weight": 1000, "size": 18},
             "yanchor": "top",
@@ -240,7 +253,7 @@ def get_historical_charts(
         row=1,
         col=1,
         label={
-            "text": lang << "Current Net Profit",
+            "text": lang << f"{TRKEY_PREFIX}.horizontal_lines.current_net_profit",
             "textposition": "start",
             "font": {"color": OPACITY_BLUE, "weight": 1000, "size": 18},
             "yanchor": "bottom",
@@ -253,16 +266,16 @@ def get_historical_charts(
         row=1,
         col=1,
         label={
-            "text": lang << "Max Drawdown",
+            "text": lang << f"{TRKEY_PREFIX}.horizontal_lines.max_drawdown",
             "textposition": "start",
             "font": {"color": OPACITY_PURPLE, "weight": 1000, "size": 18},
             "yanchor": "bottom",
         },
     )
-    for threshold, text in [
-        (5.0, "Micro / Low"),
-        (20.0, "Low / Mid"),
-        (100.0, "Mid / High"),
+    for threshold, trkey_suffix in [
+        (5.0, "micro_low"),
+        (20.0, "low_mid"),
+        (100.0, "mid_high"),
     ]:
         figure.add_hline(
             y=threshold,
@@ -271,7 +284,7 @@ def get_historical_charts(
             row=3,
             col=1,
             label={
-                "text": lang << text,
+                "text": lang << f"{TRKEY_PREFIX}.horizontal_lines.{trkey_suffix}",
                 "textposition": "start",
                 "font": {"color": OPACITY_BLACK, "weight": 1000, "size": 18},
                 "yanchor": "top",
@@ -290,6 +303,8 @@ def get_profit_heatmap_charts(
     """
     Get profit scatter charts.
     """
+    TRKEY_PREFIX: typing.Final[str] = "plot.tourney_summary.rre"
+
     df_base = pd.DataFrame(
         {
             "Tournament Name": [t.name for t in tournaments],
@@ -310,19 +325,21 @@ def get_profit_heatmap_charts(
         [0, "rgba(255, 255, 255, 0.6)"],
         [1, "rgba(0, 0, 0, 0.6)"],
     ]
-    GOT_X_PROFIT: typing.Final[str] = lang << "Got %sx profit in this region"
+    GOT_X_PROFIT: typing.Final[str] = (
+        lang << f"{TRKEY_PREFIX}.cell_overlay.got_x_profit"
+    )
 
     figure = make_subplots(
         1,
         4,
         shared_yaxes=True,
         column_titles=[
-            lang << "By Buy In Amount",
-            lang << "By Total Entries",
-            lang << "By Time of Day",
-            lang << "Marginal RRE Distribution",
+            lang << f"{TRKEY_PREFIX}.x_axes.by_buy_in",
+            lang << f"{TRKEY_PREFIX}.x_axes.by_total_entries",
+            lang << f"{TRKEY_PREFIX}.x_axes.by_time_of_day",
+            lang << f"{TRKEY_PREFIX}.x_axes.marginal",
         ],
-        y_title=lang << "RRE",
+        y_title=lang << f"{TRKEY_PREFIX}.y_axis",
         horizontal_spacing=0.01,
         column_widths=[0.2, 0.2, 0.2, 0.1],
     )
@@ -336,9 +353,9 @@ def get_profit_heatmap_charts(
     figure.add_trace(
         plgo.Histogram2d(
             x=df_base["Buy In"].apply(log2_or_nan),
-            name=lang << "RRE by Buy In",
+            name=lang << f"{TRKEY_PREFIX}.cell_overlay.rre_by_buy_in",
             hovertemplate="Log2(RRE) = [%{y}]<br>Log2("
-            + (lang << "Buy In")
+            + (lang << f"{TRKEY_PREFIX}.cell_overlay.formula.buy_in")
             + ") = [%{x}]<br>"
             + (GOT_X_PROFIT % ("%{z:.2f}",)),
             **fig1_common_options,
@@ -349,9 +366,9 @@ def get_profit_heatmap_charts(
     figure.add_trace(
         plgo.Histogram2d(
             x=df_base["Total Entries"].apply(log2_or_nan),
-            name=lang << "RRE by Entries",
+            name=lang << f"{TRKEY_PREFIX}.cell_overlay.rre_by_entries",
             hovertemplate="Log2(RRE) = [%{y}]<br>Log2("
-            + (lang << "Total Entries")
+            + (lang << f"{TRKEY_PREFIX}.cell_overlay.formula.total_entries")
             + ") = [%{x}]<br>"
             + (GOT_X_PROFIT % ("%{z:.2f}",)),
             xbins={"start": 1.0, "size": 1.0},
@@ -363,9 +380,9 @@ def get_profit_heatmap_charts(
     figure.add_trace(
         plgo.Histogram2d(
             x=df_base["TimeOfDay"],
-            name=lang << "RRE by Time of Day",
+            name=lang << f"{TRKEY_PREFIX}.cell_overlay.rre_by_time_of_day",
             hovertemplate="Log2(RRE) = [%{y}]<br>"
-            + (lang << "Time of Day")
+            + (lang << f"{TRKEY_PREFIX}.cell_overlay.formula.time_of_day")
             + " = [%{x}] mins<br>"
             + (GOT_X_PROFIT % ("%{z:.2f}",)),
             xbins={"start": 0.0, "size": 60.0 * 2, "end": 60.0 * 24},
@@ -380,7 +397,7 @@ def get_profit_heatmap_charts(
         plgo.Histogram(
             x=df_base["RRE"],
             y=fig1_common_options["y"],
-            name=lang << "Marginal RRE",
+            name=lang << f"{TRKEY_PREFIX}.cell_overlay.marginal_rre",
             histfunc=fig1_common_options["histfunc"],
             orientation="h",
             ybins=fig1_common_options["ybins"],
@@ -392,16 +409,16 @@ def get_profit_heatmap_charts(
     )
 
     figure.update_layout(
-        title=lang << RRE_PLOT_TITLE,
-        title_subtitle_text=lang << RRE_PLOT_SUBTITLE,
+        title=lang << f"{TRKEY_PREFIX}.title",
+        title_subtitle_text=lang << f"{TRKEY_PREFIX}.subtitle",
         title_subtitle_font_style="italic",
     )
     figure.update_coloraxes(colorscale=BLACK_WHITE_COLORSCALE)
 
-    for y, color, hline_label in [
-        (0.0, "rgb(140, 140, 140)", "Break-even: 1x Profit"),
-        (2.0, "rgb(90, 90, 90)", "Good run: 4x Profit"),
-        (5.0, "rgb(40, 40, 40)", "Deep run: 32x Profit"),
+    for y, color, trkey_suffix in [
+        (0.0, "rgb(140, 140, 140)", "horizontal_lines.break_even"),
+        (2.0, "rgb(90, 90, 90)", "horizontal_lines.good_run"),
+        (5.0, "rgb(40, 40, 40)", "horizontal_lines.deep_run"),
     ]:
         for col in range(1, 4):
             figure.add_hline(
@@ -411,7 +428,7 @@ def get_profit_heatmap_charts(
                 row=1,
                 col=col,
                 label={
-                    "text": lang << hline_label,
+                    "text": lang << f"{TRKEY_PREFIX}.{trkey_suffix}",
                     "textposition": "start",
                     "font": {"color": color, "weight": 1000, "size": 16},
                     "yanchor": "bottom",
@@ -434,9 +451,12 @@ def get_bankroll_charts(
     """
     Get bankroll charts.
     """
-    INITIAL_CAPITAL: typing.Final[str] = lang << "Initial Capital"
-    BANKRUPTCY_RATE: typing.Final[str] = lang << "Bankruptcy Rate"
-    SURVIVAL_RATE: typing.Final[str] = lang << "Survival Rate"
+    TRKEY_PREFIX: typing.Final[str] = "plot.tourney_summary.bankroll"
+    INITIAL_CAPITAL: typing.Final[str] = lang << f"{TRKEY_PREFIX}.x_axis"
+    BANKRUPTCY_RATE: typing.Final[str] = (
+        lang << f"{TRKEY_PREFIX}.legends.bankruptcy_rate"
+    )
+    SURVIVAL_RATE: typing.Final[str] = lang << f"{TRKEY_PREFIX}.legends.survival_rate"
 
     try:
         analyzed = analyze_bankroll(
@@ -458,7 +478,7 @@ def get_bankroll_charts(
         df_base = pd.DataFrame(
             {
                 INITIAL_CAPITAL: [
-                    lang << "%.1f Buy-ins" % (k,) for k in analyzed.keys()
+                    (lang << f"{TRKEY_PREFIX}.x_labels") % (k,) for k in analyzed.keys()
                 ],
                 BANKRUPTCY_RATE: [v.get_bankruptcy_rate() for v in analyzed.values()],
                 SURVIVAL_RATE: [v.get_survival_rate() for v in analyzed.values()],
@@ -469,13 +489,9 @@ def get_bankroll_charts(
         df_base,
         x=INITIAL_CAPITAL,
         y=[BANKRUPTCY_RATE, SURVIVAL_RATE],
-        title=lang << BANKROLL_PLOT_TITLE,
+        title=lang << f"{TRKEY_PREFIX}.title",
         color_discrete_sequence=["rgb(242, 111, 111)", "rgb(113, 222, 139)"],
         text_auto=True,
-    )
-    figure.update_layout(
-        legend_title_text=lang << "Metric",
-        yaxis_title=None,
     )
     figure.update_traces(hovertemplate="%{x}: %{y:.2%}")
     figure.update_xaxes(fixedrange=True)
@@ -487,7 +503,9 @@ def get_bankroll_charts(
     )
     figure.update_layout(
         modebar_remove=["select2d", "lasso2d"],
-        title_subtitle_text=lang << BANKROLL_PLOT_SUBTITLE,
+        legend_title_text=lang << f"{TRKEY_PREFIX}.legends.title",
+        yaxis_title=None,
+        title_subtitle_text=lang << f"{TRKEY_PREFIX}.subtitle",
         title_subtitle_font_style="italic",
     )
     return figure
@@ -501,8 +519,12 @@ def get_profit_pies(
     Get pie charts of absolute profits
     from past tournament summaries.
     """
-    weekday_strs = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-    weekday_strs = [lang << s for s in weekday_strs]
+    TRKEY_PREFIX: typing.Final[str] = "plot.tourney_summary.prize_pie"
+
+    weekday_strs = [
+        lang << f"{TRKEY_PREFIX}.cell_overlay.{s.lower()}"
+        for s in ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+    ]
     df_base = pd.DataFrame(
         {
             "ID": [t.id for t in tournaments],
@@ -534,7 +556,7 @@ def get_profit_pies(
         plgo.Pie(
             labels=df_main["Tournament Name"],
             values=df_main["Prize"],
-            name=lang << "Individual Prizes",
+            name=lang << f"{TRKEY_PREFIX}.cell_overlay.individual_prizes",
         ),
         row=1,
         col=1,
@@ -565,7 +587,7 @@ def get_profit_pies(
             parents=df_weekday["Parent"],
             values=df_weekday["Prize"],
             maxdepth=2,
-            name=lang << "Prizes by Weekday",
+            name=lang << f"{TRKEY_PREFIX}.cell_overlay.prizes_by_weekday",
         ),
         row=2,
         col=1,
@@ -579,8 +601,8 @@ def get_profit_pies(
     )
     figure.update_traces(hovertemplate="%{label}: %{value:$,.2f}")
     figure.update_layout(
-        title=lang << PRIZE_PIE_CHART_TITLE,
-        title_subtitle_text=lang << PRIZE_PIE_CHART_SUBTITLE,
+        title=lang << f"{TRKEY_PREFIX}.title",
+        title_subtitle_text=lang << f"{TRKEY_PREFIX}.subtitle",
         title_subtitle_font_style="italic",
     )
     return figure
@@ -592,6 +614,8 @@ def get_rr_by_rank_chart(
     """
     Get `RR by Rank Percentile` chart.
     """
+    TRKEY_PREFIX: typing.Final[str] = "plot.tourney_summary.rr_by_rank"
+
     df_base = pd.DataFrame(
         {
             "Rank": [t.my_rank for t in tournaments],
@@ -643,21 +667,21 @@ def get_rr_by_rank_chart(
         "x": df_base["Rank Percentile"],
         "mode": "markers",
         "customdata": COMMON_CUSTOM_DATA,
-        "hovertemplate": lang << RR_RANK_CHART_HOVERTEMPLATE,
+        "hovertemplate": lang << f"{TRKEY_PREFIX}.hovertemplate",
     }
 
     figure = make_subplots(specs=[[{"secondary_y": True}]])
     figure.add_trace(
         plgo.Scatter(
             y=df_base["RR"],
-            name=lang << "RR by Percentile",
+            name=lang << f"{TRKEY_PREFIX}.legends.rr_by_percentile",
             **COMMON_OPTIONS,
         )
     )
     figure.add_trace(
         plgo.Scatter(
             y=df_base["Percentile mul RR"],
-            name=lang << "PERR",
+            name=lang << f"{TRKEY_PREFIX}.legends.perr",
             visible="legendonly",
             marker_color="#BB75FF",
             **COMMON_OPTIONS,
@@ -668,7 +692,7 @@ def get_rr_by_rank_chart(
         plgo.Scatter(
             x=df_hhh_only["Rank Percentile"],
             y=df_hhh_only["Fitted"],
-            name=lang << "RR Trendline",
+            name=lang << f"{TRKEY_PREFIX}.legends.rr_trendline",
             showlegend=True,
             mode="lines",
             hoverinfo="skip",
@@ -676,10 +700,10 @@ def get_rr_by_rank_chart(
         )
     )
     figure.update_layout(
-        title=lang << RR_RANK_CHART_TITLE,
-        title_subtitle_text=lang << RR_RANK_CHART_SUBTITLE,
+        title=lang << f"{TRKEY_PREFIX}.title",
+        title_subtitle_text=lang << f"{TRKEY_PREFIX}.subtitle",
         title_subtitle_font_style="italic",
-        xaxis_title=lang << "Rank Percentile",
+        xaxis_title=lang << f"{TRKEY_PREFIX}.x_axis",
     )
     OPACITY_RED = "rgba(255,0,0,0.3)"
     OPACITY_GRAY = "rgb(180,180,180)"
@@ -690,7 +714,7 @@ def get_rr_by_rank_chart(
         line_dash="dash",
         line_color=OPACITY_GREEN,
         label={
-            "text": lang << "Rough ITM Cut (1/8)",
+            "text": lang << f"{TRKEY_PREFIX}.lines.rough_itm_cut",
             "font": {"size": 16, "color": OPACITY_GREEN, "weight": 1000},
             "textposition": "end",
             "xanchor": "right",
@@ -701,7 +725,7 @@ def get_rr_by_rank_chart(
         line_dash="dash",
         line_color=OPACITY_RED,
         label={
-            "text": lang << "Break-even",
+            "text": lang << f"{TRKEY_PREFIX}.lines.break_even",
             "font": {"size": 28, "color": OPACITY_RED, "weight": 1000},
             "textposition": "end",
             "yanchor": "top",
@@ -738,6 +762,8 @@ def get_summaries(tournaments: list[TournamentSummary]) -> list[tuple[str, typin
     """
     Get summaries from tournament results.
     """
+    TRKEY_PREFIX: typing.Final[str] = "plot.tourney_summary.head_summaries"
+
     df_base = pd.DataFrame(
         {
             "Time": [t.start_time for t in tournaments],
@@ -755,16 +781,16 @@ def get_summaries(tournaments: list[TournamentSummary]) -> list[tuple[str, typin
     total_buy_in = df_base["Buy In"].sum()
 
     return [
-        ("Net Profit", format_dollar(net_profit)),
-        ("ROI", format_percent(net_profit / total_buy_in)),
+        (f"{TRKEY_PREFIX}.net_profit", format_dollar(net_profit)),
+        (f"{TRKEY_PREFIX}.roi", format_percent(net_profit / total_buy_in)),
         (
-            "Profitable Ratio",
+            f"{TRKEY_PREFIX}.profitable_ratio",
             format_percent(df_base["Profitable"].sum() / len(df_base)),
         ),
-        ("Paid Rake", format_dollar(df_base["Rake"].sum())),
-        ("Total Entries", "#%d" % (df_base["Entries"].sum(),)),
-        ("Highest Buy In", format_dollar(df_base["Buy In"].max())),
-        ("Max Drawdown", format_dollar(df_base["Drawdown"].min())),
+        (f"{TRKEY_PREFIX}.paid_rake", format_dollar(df_base["Rake"].sum())),
+        (f"{TRKEY_PREFIX}.total_entries", "#%d" % (df_base["Entries"].sum(),)),
+        (f"{TRKEY_PREFIX}.highest_buy_in", format_dollar(df_base["Buy In"].max())),
+        (f"{TRKEY_PREFIX}.max_drawdown", format_dollar(df_base["Drawdown"].min())),
     ]
 
 
@@ -802,9 +828,9 @@ def plot_tournament_summaries(
         get_rr_by_rank_chart(tournaments, lang),
     ]
     return BASE_HTML_FRAME.format(
-        title=(lang << TOURNEY_SUMMARY_TITLE_FRAME) % (nickname,),
+        title=(lang << "plot.tourney_summary.title") % (nickname,),
         summary=markdown(
-            generate_summary_md(lang, *get_summaries(tournaments)),
+            generate_summary_table_md(lang, *get_summaries(tournaments)),
             extensions=["tables"],
         ),
         plots=HORIZONTAL_PLOT_DIVIDER.join(  # type: ignore[var-annotated]
@@ -828,6 +854,8 @@ def get_all_in_equity_histogram(
     """
     Get all-in win/lose histogram.
     """
+    TRKEY_PREFIX: typing.Final[str] = "plot.hand_history.all_in_equity"
+
     all_in_hand_histories = list(
         filter(
             lambda h: (
@@ -870,12 +898,12 @@ def get_all_in_equity_histogram(
             logger.info("Calculated equity for %d all-in hands", i + 1)
 
     was_best_hands = [h.was_best_hand("Hero") for h in all_in_hand_histories]
-    main_column_name = lang << "Hero Equity"
+    MAIN_COLUMN_NAME: typing.Final[str] = "Hero Equity"
     df_base = pd.DataFrame(
         {
             "Hand ID": [h.id for h in all_in_hand_histories],
             "Tournament ID": [h.tournament_id or 0 for h in all_in_hand_histories],
-            main_column_name: [
+            MAIN_COLUMN_NAME: [
                 eqd[street]["Hero"][0]
                 for street, eqd in zip(all_in_streets, equities_by_streets)
             ],
@@ -921,24 +949,24 @@ def get_all_in_equity_histogram(
     figure = plgo.Figure()
     figure.add_trace(
         plgo.Histogram(
-            x=df_winning[main_column_name],
-            name=lang << "Hero Won",
+            x=df_winning[MAIN_COLUMN_NAME],
+            name=lang << f"{TRKEY_PREFIX}.legends.hero_won",
             marker_color=OPACITY_GREEN,
             **common_options,
         )
     )  # Add winning histogram
     figure.add_trace(
         plgo.Histogram(
-            x=df_chopped[main_column_name],
-            name=lang << "Chopped",
+            x=df_chopped[MAIN_COLUMN_NAME],
+            name=lang << f"{TRKEY_PREFIX}.legends.chopped",
             marker_color=OPACITY_YELLOW,
             **common_options,
         )
     )  # Add chopped histogram
     figure.add_trace(
         plgo.Histogram(
-            x=df_losing[main_column_name],
-            name=lang << "Hero Lost",
+            x=df_losing[MAIN_COLUMN_NAME],
+            name=lang << f"{TRKEY_PREFIX}.legends.hero_lost",
             marker_color=OPACITY_RED,
             **common_options,
         )
@@ -946,17 +974,17 @@ def get_all_in_equity_histogram(
     figure.update_layout(
         barmode="stack",
         title={
-            "text": lang << "All-in Equity Result Distribution",
+            "text": lang << f"{TRKEY_PREFIX}.title",
             "subtitle": {
-                "text": (lang << LUCKSCORE_SUBTITLE).format(
+                "text": (lang << f"{TRKEY_PREFIX}.subtitle").format(
                     luck_score=luck_score,
                     tail=100 * (1 - lower_tail),
                 ),
                 "font": {"style": "italic"},
             },
         },
-        xaxis={"title": {"text": lang << "Hero's Equity at All-in"}},
-        yaxis={"title": {"text": lang << "Number of Hands"}},
+        xaxis={"title": {"text": lang << f"{TRKEY_PREFIX}.x_axis"}},
+        yaxis={"title": {"text": lang << f"{TRKEY_PREFIX}.y_axis"}},
     )
     return figure
 
@@ -977,7 +1005,7 @@ def plot_hand_histories(
     ]
 
     return BASE_HTML_FRAME.format(
-        title=(lang << HAND_HISTORY_TITLE_FRAME) % (nickname,),
+        title=(lang << "plot.hand_history.title") % (nickname,),
         summary=markdown("No summary yet.."),
         plots=HORIZONTAL_PLOT_DIVIDER.join(
             fig.to_html(include_plotlyjs=("cdn" if i == 0 else False), full_html=False)

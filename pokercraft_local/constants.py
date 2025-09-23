@@ -5,7 +5,7 @@ VERSION: typing.Final[str] = "1.8.1"
 
 POKERCRAFT_AHREF: typing.Final[str] = (
     '<a href="https://github.com/McDic/pokercraft-local/">'
-    "Pokercraft Local v{version}</a>"
+    "Pokercraft Local</a> v{version}"
 ).format(version=VERSION)
 
 HORIZONTAL_PLOT_DIVIDER: typing.Final[str] = "<br><hr><br>"

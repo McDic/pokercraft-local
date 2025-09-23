@@ -43,6 +43,7 @@ ignore_missing_imports = true
 bindings = "pyo3"
 features = ["pyo3/extension-module"]
 module-name = "pokercraft_local.rust"
+include = ["pokercraft_local/translation_values.json"]
 
 [tool.pyright]
 typeCheckingMode = "off"

@@ -7,11 +7,7 @@ from tkinter.messagebox import showinfo, showwarning
 from .constants import VERSION
 from .export import export_hand_history_analysis, export_tourney_summary
 from .pypi_query import VERSION_EXTRACTED, get_library_versions
-from .translate import (
-    GUI_EXPORTED_SUCCESS_HAND_HISTORY,
-    GUI_EXPORTED_SUCCESS_TOURNEY_SUMMARY,
-    Language,
-)
+from .translate import Language
 
 logger = logging.getLogger("pokercraft_local.gui")
 
@@ -21,9 +17,11 @@ class PokerCraftLocalGUI:
     Represents the GUI of Pokercraft Local.
     """
 
+    TRKEY_PREFIX = "gui"
+
     def __init__(self) -> None:
         self._window: tk.Tk = tk.Tk()
-        self._window.title(f"PokerCraft Local v{VERSION} - By McDic")
+        self._window.title(f"Pokercraft Local v{VERSION} - By McDic")
         self._window.geometry("400x310")
         self._window.resizable(False, False)
 
@@ -132,45 +130,64 @@ class PokerCraftLocalGUI:
         Reset display by changed language.
         """
         lang = Language(strvar if isinstance(strvar, str) else strvar.get())
-        self._label_language_selection.config(text=lang << "Select Language")
+        self._label_language_selection.config(
+            text=lang << f"{self.TRKEY_PREFIX}.select_language"
+        )
         self._label_data_directory.config(
-            text=(lang << "Data Directory: %s")
+            text=(lang << f"{self.TRKEY_PREFIX}.data_directory")
             % (
                 self.display_path(self._data_directory)
                 if self._data_directory and self._data_directory.is_dir()
                 else "-"
             ),
         )
-        self._button_data_directory.config(text=lang << "Choose Data Directory")
+        self._button_data_directory.config(
+            text=lang << f"{self.TRKEY_PREFIX}.choose_data_directory"
+        )
         self._label_output_directory.config(
-            text=(lang << "Output Directory: %s")
+            text=(lang << f"{self.TRKEY_PREFIX}.output_directory")
             % (
                 self.display_path(self._output_directory)
                 if self._output_directory and self._output_directory.is_dir()
                 else "-"
             ),
         )
-        self._button_output_directory.config(text=lang << "Choose Output Directory")
-        self._label_nickname.config(text=lang << "Your GG nickname")
-        self._checkbox_allow_freerolls.config(text=lang << "Include Freerolls")
-        self._checkbox_fetch_forex.config(
-            text=lang << "Fetch the latest forex rate (May fail)"
+        self._button_output_directory.config(
+            text=lang << f"{self.TRKEY_PREFIX}.choose_output_directory"
         )
-        self._button_export_chart.config(text=lang << "Export plot and CSV data")
-        self._button_analyze_hand_history.config(text=lang << "Analyze hand history")
+        self._label_nickname.config(
+            text=lang << f"{self.TRKEY_PREFIX}.your_gg_nickname"
+        )
+        self._checkbox_allow_freerolls.config(
+            text=lang << f"{self.TRKEY_PREFIX}.checkboxes.include_freerolls"
+        )
+        self._checkbox_fetch_forex.config(
+            text=lang << f"{self.TRKEY_PREFIX}.checkboxes.fetch_forex_rate"
+        )
+        self._button_export_chart.config(
+            text=lang << f"{self.TRKEY_PREFIX}.export_buttons.tourney_summary"
+        )
+        self._button_analyze_hand_history.config(
+            text=lang << f"{self.TRKEY_PREFIX}.export_buttons.hand_history"
+        )
 
     def choose_data_directory(self) -> None:
         """
         Choose a data source directory.
         """
+        THIS_LANG = self.get_lang()
         directory = Path(filedialog.askdirectory())
         if directory.is_dir() and directory.parent != directory:
             self._data_directory = directory
         else:
             self._data_directory = None
             showwarning(
-                "Warning from Pokercraft Local",
-                f'Given directory "{directory}" is invalid.',
+                self.get_warning_popup_title(),
+                (
+                    THIS_LANG
+                    << f"{self.TRKEY_PREFIX}.error_messages.invalid_given_directory"
+                )
+                % (directory,),
             )
         self.reset_display_by_language(self._strvar_language_selection)
 
@@ -178,14 +195,19 @@ class PokerCraftLocalGUI:
         """
         Choose a output directory.
         """
+        THIS_LANG = self.get_lang()
         directory = Path(filedialog.askdirectory())
         if directory.is_dir() and directory.parent != directory:
             self._output_directory = directory
         else:
             self._output_directory = None
             showwarning(
-                "Warning from Pokercraft Local",
-                f'Given directory "{directory}" is invalid.',
+                self.get_warning_popup_title(),
+                (
+                    THIS_LANG
+                    << f"{self.TRKEY_PREFIX}.error_messages.invalid_given_directory"
+                )
+                % (directory,),
             )
         self.reset_display_by_language(self._strvar_language_selection)
 
@@ -212,19 +234,21 @@ class PokerCraftLocalGUI:
         if not nickname:
             showwarning(
                 self.get_warning_popup_title(),
-                THIS_LANG << "Nickname is not given.",
+                THIS_LANG << f"{self.TRKEY_PREFIX}.error_messages.nickname_not_given",
             )
             return None
         elif not self._data_directory or not self._data_directory.is_dir():
             showwarning(
                 self.get_warning_popup_title(),
-                THIS_LANG << "Data directory is not selected or invalid.",
+                THIS_LANG
+                << f"{self.TRKEY_PREFIX}.error_messages.invalid_data_directory",
             )
             return None
         elif not self._output_directory or not self._output_directory.is_dir():
             showwarning(
                 self.get_warning_popup_title(),
-                THIS_LANG << "Output directory is not selected or invalid.",
+                THIS_LANG
+                << f"{self.TRKEY_PREFIX}.error_messages.invalid_output_directory",
             )
             return None
         return nickname, self._data_directory, self._output_directory
@@ -255,7 +279,7 @@ class PokerCraftLocalGUI:
         )
         showinfo(
             self.get_info_popup_title(),
-            (THIS_LANG << GUI_EXPORTED_SUCCESS_TOURNEY_SUMMARY).format(
+            (THIS_LANG << f"{self.TRKEY_PREFIX}.exported.tourney_summary").format(
                 output_dir=self._output_directory,
                 csv_path=csv_path.name,
                 plot_path=plot_path.name,
@@ -280,7 +304,7 @@ class PokerCraftLocalGUI:
         )
         showinfo(
             self.get_info_popup_title(),
-            (THIS_LANG << GUI_EXPORTED_SUCCESS_HAND_HISTORY).format(
+            (THIS_LANG << f"{self.TRKEY_PREFIX}.exported.hand_history").format(
                 output_dir=output_directory,
                 plot_path=plot_path.name,
             ),
@@ -294,13 +318,7 @@ class PokerCraftLocalGUI:
         if VERSION_EXTRACTED < (NEWEST_VERSION := max(get_library_versions())):
             showwarning(
                 self.get_warning_popup_title(),
-                (
-                    THIS_LANG
-                    << (
-                        "You are using an outdated version of Pokercraft Local. "
-                        "Please update to the latest version (%d.%d.%d -> %d.%d.%d)."
-                    )
-                )
+                (THIS_LANG << f"{self.TRKEY_PREFIX}.error_messages.outdated_version")
                 % (VERSION_EXTRACTED + NEWEST_VERSION),
             )
         self._window.mainloop()
