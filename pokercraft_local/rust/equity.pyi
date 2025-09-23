@@ -34,12 +34,12 @@ class LuckCalculator:
         Add a result with given equity and whether the player won.
         """
         ...
-    def z_score_py(self) -> float:
+    def luck_score_py(self) -> float | None:
         """
-        Get the Z-score of the results.
+        Get the Luck-score of the results.
         """
         ...
-    def tails_py(self) -> tuple[float, float, float]:
+    def tails_py(self) -> tuple[float, float, float] | None:
         """
         Get the tail p-values; Upper-tail, lower-tail, and two-sided p-values.
         """

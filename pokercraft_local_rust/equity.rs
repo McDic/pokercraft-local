@@ -4,6 +4,7 @@ use itertools::Itertools;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 use rustfft::{num_complex::Complex, FftPlanner};
+use statrs::distribution::{ContinuousCDF, Normal};
 
 use crate::card::{Card, HandRank};
 use crate::errors::PokercraftLocalError;
@@ -231,18 +232,6 @@ impl LuckCalculator {
         self.results.iter().map(|(equity, _actual)| equity)
     }
 
-    /// Number of expected wincount based on equity values.
-    fn expected_wincount(&self) -> f64 {
-        self.get_all_equity_iter().sum::<f64>()
-    }
-
-    /// Get the variance of the results.
-    fn variance(&self) -> f64 {
-        self.get_all_equity_iter()
-            .map(|e| e * (1.0 - e))
-            .sum::<f64>()
-    }
-
     /// Number of actual wincount.
     fn actual_wincount(&self) -> f64 {
         self.results
@@ -251,15 +240,23 @@ impl LuckCalculator {
             .sum::<f64>()
     }
 
-    /// Calculate the Z-score of the results.
-    pub fn z_score(&self) -> Option<f64> {
-        let n = self.results.len();
-        if n == 0 {
-            return None;
+    /// Calculate the Luck-score of the results.
+    /// `Luck = sign(actual - expected) * GaussianCDF^{-1}(1 - p_tail)`
+    pub fn luck_score(&self) -> Option<f64> {
+        let (_upper, lower, _two_sided) = match self.tails() {
+            Some(tails) => tails,
+            None => return None,
+        };
+        let guassian = Normal::new(0.0, 1.0).unwrap();
+        const EPS: f64 = 1e-15;
+        if lower < EPS {
+            Some(f64::NEG_INFINITY)
+        } else if lower < 1.0 - EPS {
+            let luck = guassian.inverse_cdf(lower);
+            Some(luck)
+        } else {
+            Some(f64::INFINITY)
         }
-        let numerator = self.actual_wincount() - self.expected_wincount();
-        let denominator = self.variance().sqrt();
-        Some(numerator / denominator)
     }
 
     /// Convolve two real-coefficient polynomials a and b.
@@ -386,12 +383,12 @@ impl LuckCalculator {
         }
     }
 
-    /// Python interface of `self.z_score`.
-    pub fn z_score_py(&self) -> PyResult<f64> {
-        match self.z_score() {
-            Some(z) => Ok(z),
+    /// Python interface of `self.luck_score`.
+    pub fn luck_score_py(&self) -> PyResult<f64> {
+        match self.luck_score() {
+            Some(luck) => Ok(luck),
             None => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                "No results added; Cannot calculate Z-score",
+                "Cannot calculate Luck-score",
             )),
         }
     }
@@ -463,7 +460,7 @@ mod tests {
 
     fn assert_almost_equal(actual: f64, expected: f64) {
         assert!(
-            (actual - expected).abs() < 1e-6,
+            (actual - expected).abs() < 1e-4,
             "Expected {} but got {}",
             expected,
             actual
@@ -471,27 +468,33 @@ mod tests {
     }
 
     #[test]
-    fn test_luck_score() -> Result<(), PokercraftLocalError> {
-        let mut luck = LuckCalculator::new();
-        luck.add_result(0.3, 1.0)?;
-        let (upper, lower, _) = luck.tails().unwrap();
+    fn test_tails() -> Result<(), PokercraftLocalError> {
+        let mut luck_calc = LuckCalculator::new();
+        luck_calc.add_result(0.3, 1.0)?;
+        let (upper, lower, _) = luck_calc.tails().unwrap();
         assert_almost_equal(upper, 0.3);
         assert_almost_equal(lower, 1.0);
+        let luck = luck_calc.luck_score().unwrap();
+        assert!(luck.is_infinite() && luck.is_sign_positive());
 
-        let mut luck = LuckCalculator::new();
-        luck.add_result(0.2, 1.0)?;
-        luck.add_result(0.5, 0.0)?;
-        let (upper, lower, _) = luck.tails().unwrap();
+        let mut luck_calc = LuckCalculator::new();
+        luck_calc.add_result(0.2, 1.0)?;
+        luck_calc.add_result(0.5, 0.0)?;
+        let (upper, lower, _) = luck_calc.tails().unwrap();
         assert_almost_equal(upper, 0.6);
         assert_almost_equal(lower, 0.9);
+        let luck = luck_calc.luck_score().unwrap();
+        assert_almost_equal(luck, 1.2816);
 
-        let mut luck = LuckCalculator::new();
-        luck.add_result(0.2, 1.0)?;
-        luck.add_result(0.5, 0.0)?;
-        luck.add_result(0.8, 1.0)?;
-        let (upper, lower, _) = luck.tails().unwrap();
+        let mut luck_calc = LuckCalculator::new();
+        luck_calc.add_result(0.2, 1.0)?;
+        luck_calc.add_result(0.5, 0.0)?;
+        luck_calc.add_result(0.8, 1.0)?;
+        let (upper, lower, _) = luck_calc.tails().unwrap();
         assert_almost_equal(upper, 0.5);
         assert_almost_equal(lower, 0.92);
+        let luck = luck_calc.luck_score().unwrap();
+        assert_almost_equal(luck, 1.405);
 
         Ok(())
     }

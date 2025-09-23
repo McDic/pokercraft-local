@@ -15,6 +15,7 @@ pyo3 = "0.26"
 rand = "0.8.5"
 rayon = "1.10"
 rustfft = "6"
+statrs = "0.18"
 thiserror = "2.0"
 
 [features]

@@ -896,12 +896,15 @@ def get_all_in_equity_histogram(
         equity = row[2]
         actual = row[3]
         luckscore_calculator.add_result_py(equity, actual)
-    z_score = luckscore_calculator.z_score_py()
-    upper_tail, lower_tail, twosided = luckscore_calculator.tails_py()
+    luck_score = luckscore_calculator.luck_score_py()
+    tails = luckscore_calculator.tails_py()
+    if luck_score is None or tails is None:
+        raise ValueError("Luck score calculation failed")
+    upper_tail, lower_tail, twosided = tails
     logger.info(
-        "All-in luck score Z = %.3f, upper tail = %.6f, "
+        "All-in luck score Z = %.6g, upper tail = %.6f, "
         "lower tail = %.6f, two-sided = %.6f",
-        z_score,
+        luck_score,
         upper_tail,
         lower_tail,
         twosided,
@@ -946,9 +949,10 @@ def get_all_in_equity_histogram(
             "text": lang << "All-in Equity Result Distribution",
             "subtitle": {
                 "text": (lang << LUCKSCORE_SUBTITLE).format(
-                    z_score=z_score, upper_tail=100 * upper_tail
+                    luck_score=luck_score,
+                    tail=100 * (1 - lower_tail),
                 ),
-                "font": {"style": "italic", "color": "gray"},
+                "font": {"style": "italic"},
             },
         },
         xaxis={"title": {"text": lang << "Hero's Equity at All-in"}},
@@ -969,7 +973,7 @@ def plot_hand_histories(
     """
     hand_histories = sorted(hand_histories, key=sort_key)
     figures: list[plgo.Figure] = [
-        get_all_in_equity_histogram(hand_histories, lang, max_length=100)
+        get_all_in_equity_histogram(hand_histories, lang, max_length=250)
     ]
 
     return BASE_HTML_FRAME.format(
