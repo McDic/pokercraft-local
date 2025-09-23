@@ -1,3 +1,4 @@
+import locale
 import logging
 import tkinter as tk
 from pathlib import Path
@@ -19,6 +20,19 @@ class PokerCraftLocalGUI:
 
     TRKEY_PREFIX = "gui"
 
+    @staticmethod
+    def get_default_language() -> Language:
+        """
+        Get default language by system locale.
+        """
+        sys_locale, _ = locale.getlocale()
+        if sys_locale is None:
+            return Language.ENGLISH
+        elif sys_locale.startswith("ko"):
+            return Language.KOREAN
+        else:
+            return Language.ENGLISH
+
     def __init__(self) -> None:
         self._window: tk.Tk = tk.Tk()
         self._window.title(f"Pokercraft Local v{VERSION} - By McDic")
@@ -30,7 +44,9 @@ class PokerCraftLocalGUI:
             self._window, text="label_language_selection"
         )
         self._label_language_selection.pack()
-        self._strvar_language_selection: tk.StringVar = tk.StringVar(value="en")
+        self._strvar_language_selection: tk.StringVar = tk.StringVar(
+            value=self.get_default_language().value
+        )
         self._menu_language_selection: tk.OptionMenu = tk.OptionMenu(
             self._window,
             self._strvar_language_selection,
