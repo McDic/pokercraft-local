@@ -1,5 +1,7 @@
 //! Basic functionalities for poker hands.
 
+use std::collections::HashMap;
+
 use itertools::Itertools;
 use pyo3::prelude::*;
 
@@ -10,7 +12,7 @@ pub const NUM_OF_NUMBERS: usize = 13;
 
 /// Card shapes (suits) in a standard deck of playing cards.
 #[pyclass(eq)]
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum CardShape {
     Spade,
     Heart,
@@ -84,7 +86,7 @@ impl TryFrom<char> for CardShape {
 
 /// Card numbers (ranks) in a standard deck of playing cards.
 #[pyclass(eq)]
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
 pub enum CardNumber {
     Two = 2,
     Three = 3,
@@ -225,7 +227,7 @@ impl TryFrom<char> for CardNumber {
 
 /// A playing card in a standard deck of 52 cards.
 #[pyclass(eq)]
-#[derive(PartialEq, Eq, Copy, Clone, Debug, Default)]
+#[derive(PartialEq, Eq, Copy, Clone, Hash, Debug, Default)]
 pub struct Card {
     pub shape: CardShape,
     pub number: CardNumber,
@@ -608,6 +610,40 @@ impl Ord for HandRank {
     }
 }
 
+/// Generate a canonical `CardShape` mapping from each card shape to another shape.
+fn generate_canonical_shape_mappings() -> impl Iterator<Item = HashMap<CardShape, CardShape>> {
+    let all_shapes = CardShape::all();
+    all_shapes.into_iter().permutations(4).map(move |permuted| {
+        let mut mapping = HashMap::new();
+        for (i, this_shape) in permuted.iter().enumerate() {
+            mapping.insert(all_shapes[i], *this_shape);
+        }
+        mapping
+    })
+}
+
+static CANONICAL_SHAPE_MAPPINGS: once_cell::sync::Lazy<Vec<HashMap<CardShape, CardShape>>> =
+    once_cell::sync::Lazy::new(|| generate_canonical_shape_mappings().collect());
+
+/// Public interface to get the canonical mappings.
+pub fn get_canonical_shape_mappings() -> &'static Vec<HashMap<CardShape, CardShape>> {
+    &CANONICAL_SHAPE_MAPPINGS
+}
+
+/// Generate all canonical `CardShape` symmetries of the given cards.
+pub fn all_canonical_symmetries<const N: usize>(cards: &[Card; N]) -> [[Card; N]; 1 * 2 * 3 * 4] {
+    let mut results = [[Card::default(); N]; 1 * 2 * 3 * 4];
+    for (row, mapping) in get_canonical_shape_mappings().iter().enumerate() {
+        cards.iter().enumerate().for_each(|(i, card)| {
+            results[row][i] = Card {
+                shape: *mapping.get(&card.shape).unwrap(),
+                number: card.number,
+            };
+        });
+    }
+    results
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -879,6 +915,44 @@ mod tests {
         for i in 0..ranks.len() {
             for j in (i + 1)..ranks.len() {
                 assert!(ranks[i] < ranks[j]);
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_canonical_shape_mappings() -> Result<(), PokercraftLocalError> {
+        let mappings = get_canonical_shape_mappings();
+        assert_eq!(mappings.len(), 24); // 4! = 24
+
+        let cards = ["As".try_into()?, "Ad".try_into()?];
+        let symmetries = all_canonical_symmetries(&cards);
+        for shape1 in CardShape::all() {
+            for shape2 in CardShape::all() {
+                let this_card1 = Card {
+                    shape: shape1,
+                    number: CardNumber::Ace,
+                };
+                let this_card2 = Card {
+                    shape: shape2,
+                    number: CardNumber::Ace,
+                };
+                let found = symmetries.iter().find(|&&x| x == [this_card1, this_card2]);
+                if shape1 == shape2 {
+                    assert!(
+                        found.is_none(),
+                        "Unexpected symmetry for {}{}",
+                        this_card1,
+                        this_card2
+                    )
+                } else {
+                    assert!(
+                        found.is_some(),
+                        "Missing symmetry for {}{}",
+                        this_card1,
+                        this_card2
+                    )
+                }
             }
         }
         Ok(())
