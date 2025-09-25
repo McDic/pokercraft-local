@@ -1,12 +1,14 @@
 //! Equity calculations and relative analysis.
 
+use std::collections::HashMap;
+
 use itertools::Itertools;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 use rustfft::{num_complex::Complex, FftPlanner};
 use statrs::distribution::{ContinuousCDF, Normal};
 
-use crate::card::{Card, HandRank};
+use crate::card::{Card, Hand, HandRank};
 use crate::errors::PokercraftLocalError;
 
 /// Result of single equity calculation.
@@ -188,6 +190,80 @@ impl EquityResult {
             ));
         }
         Ok(self.loses[player_index] == 0)
+    }
+}
+
+/// Preflop equity cache for heads-up situations.
+#[pyclass]
+pub struct HUPreflopEquityCache {
+    /// `{(card_a1, card_a2), (card_b1, card_b2)): (P1 win, P2 win, tie)}`
+    cache: HashMap<((Card, Card), (Card, Card)), (u64, u64, u64)>,
+}
+
+impl HUPreflopEquityCache {
+    /// Create a `HUPreflopEquityCache` from pre-computed cache file.
+    pub fn new(_path: &std::path::Path) -> Self {
+        todo!()
+    }
+
+    /// Possible Keys Layer 1: Get possible card pairs considering hand-swap in single player.
+    /// There are 2 scenarios `(AB, BA)`.
+    const fn possible_keys_l1(card1: Card, card2: Card) -> [Hand; 2] {
+        [(card1, card2), (card2, card1)]
+    }
+
+    /// Possible Keys Layer 2: Get possible hand pairs considering player-swap on top of Layer 1.
+    /// There are 2x2x2 = 8 scenarios `(AB, BA, A*B, BA*, AB*, B*A, A*B*, B*A*)`.
+    fn possible_keys_l2((card_a1, card_a2): Hand, (card_b1, card_b2): Hand) -> [(Hand, Hand); 8] {
+        let mut result: [(Hand, Hand); 8] = [Default::default(); 8];
+        let mut idx: usize = 0;
+        for hand_a in Self::possible_keys_l1(card_a1, card_a2) {
+            for hand_b in Self::possible_keys_l1(card_b1, card_b2) {
+                result[idx] = (hand_a, hand_b);
+                idx += 1;
+                result[idx] = (hand_b, hand_a);
+                idx += 1;
+            }
+        }
+        result
+    }
+
+    /// Possible Keys Layer 3: Get possible hand pairs considering suit symmetries on top of Layer 2.
+    /// There are 8x24 = 192 scenarios in total.
+    pub fn possible_keys_l3(
+        (card_a1, card_a2): Hand,
+        (card_b1, card_b2): Hand,
+    ) -> [(Hand, Hand); 8 * 24] {
+        let mut result: [(Hand, Hand); 8 * 24] = [Default::default(); 8 * 24];
+        let mut idx: usize = 0;
+        for [card_a1, card_a2, card_b1, card_b2] in
+            crate::card::all_canonical_symmetries(&[card_a1, card_a2, card_b1, card_b2])
+        {
+            for (sym_hand_a, sym_hand_b) in
+                Self::possible_keys_l2((card_a1, card_a2), (card_b1, card_b2))
+            {
+                result[idx] = (sym_hand_a, sym_hand_b);
+                idx += 1;
+            }
+        }
+        result
+    }
+
+    /// Get the equity from the cache.
+    pub fn get_winlose(
+        &self,
+        hand1: (Card, Card),
+        hand2: (Card, Card),
+    ) -> Result<(u64, u64, u64), PokercraftLocalError> {
+        for (possible_hand1, possible_hand2) in Self::possible_keys_l3(hand1, hand2) {
+            if let Some(&(win1, win2, tie)) = self.cache.get(&(possible_hand1, possible_hand2)) {
+                return Ok((win1, win2, tie));
+            }
+        }
+        Err(PokercraftLocalError::GeneralError(format!(
+            "No cache entry found for the given hands {}{} vs {}{}",
+            hand1.0, hand1.1, hand2.0, hand2.1
+        )))
     }
 }
 

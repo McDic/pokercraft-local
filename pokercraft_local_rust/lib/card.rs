@@ -1,7 +1,5 @@
 //! Basic functionalities for poker hands.
 
-use std::collections::HashMap;
-
 use itertools::Itertools;
 use pyo3::prelude::*;
 
@@ -252,6 +250,8 @@ impl Card {
         cards
     }
 }
+
+pub type Hand = (Card, Card);
 
 #[pymethods]
 impl Card {
@@ -610,35 +610,78 @@ impl Ord for HandRank {
     }
 }
 
+/// Represents a mapping from each card shape to another shape.
+/// This does not use `HashMap` because there are only 4 shapes in total.
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
+pub struct ShapeMapping {
+    mapping: [(CardShape, CardShape); NUM_OF_SHAPES],
+}
+
+impl ShapeMapping {
+    /// Create a `ShapeMapping` from a mapping array.
+    pub fn new(
+        mapping: [(CardShape, CardShape); NUM_OF_SHAPES],
+    ) -> Result<Self, PokercraftLocalError> {
+        if mapping.iter().unique().count() != NUM_OF_SHAPES
+            || mapping.iter().map(|(from, _)| *from).unique().count() != NUM_OF_SHAPES
+            || mapping.iter().map(|(_, to)| *to).unique().count() != NUM_OF_SHAPES
+        {
+            return Err(PokercraftLocalError::GeneralError(format!(
+                "Invalid shape mapping: {:?}",
+                mapping
+            )));
+        }
+        Ok(ShapeMapping { mapping })
+    }
+
+    /// Apply this shape mapping to the given card shape.
+    pub fn apply_shape(&self, shape: &CardShape) -> CardShape {
+        self.mapping
+            .iter()
+            .find(|(from, _)| from == shape)
+            .map(|(_, to)| *to)
+            .unwrap() // All shapes are covered, validated in `Self::new`
+    }
+
+    /// Apply this shape mapping to the given card.
+    pub fn apply_card(&self, card: &Card) -> Card {
+        Card {
+            shape: self.apply_shape(&card.shape),
+            number: card.number,
+        }
+    }
+}
+
 /// Generate a canonical `CardShape` mapping from each card shape to another shape.
-fn generate_canonical_shape_mappings() -> impl Iterator<Item = HashMap<CardShape, CardShape>> {
+fn generate_canonical_shape_mappings() -> impl Iterator<Item = ShapeMapping> {
     let all_shapes = CardShape::all();
     all_shapes.into_iter().permutations(4).map(move |permuted| {
-        let mut mapping = HashMap::new();
+        let mut mapping = [(CardShape::default(), CardShape::default()); NUM_OF_SHAPES];
         for (i, this_shape) in permuted.iter().enumerate() {
-            mapping.insert(all_shapes[i], *this_shape);
+            mapping[i] = (all_shapes[i], *this_shape);
         }
-        mapping
+        ShapeMapping::new(mapping).unwrap()
     })
 }
 
-static CANONICAL_SHAPE_MAPPINGS: once_cell::sync::Lazy<Vec<HashMap<CardShape, CardShape>>> =
-    once_cell::sync::Lazy::new(|| generate_canonical_shape_mappings().collect());
+static CANONICAL_SHAPE_MAPPINGS: once_cell::sync::Lazy<&'static [ShapeMapping]> =
+    once_cell::sync::Lazy::new(|| {
+        generate_canonical_shape_mappings()
+            .collect::<Vec<_>>()
+            .leak()
+    });
 
 /// Public interface to get the canonical mappings.
-pub fn get_canonical_shape_mappings() -> &'static Vec<HashMap<CardShape, CardShape>> {
+pub fn get_canonical_shape_mappings() -> &'static [ShapeMapping] {
     &CANONICAL_SHAPE_MAPPINGS
 }
 
-/// Generate all canonical `CardShape` symmetries of the given cards.
+/// Generate all canonical `CardShape` symmetries of the given cards. 24 symmetries in total.
 pub fn all_canonical_symmetries<const N: usize>(cards: &[Card; N]) -> [[Card; N]; 1 * 2 * 3 * 4] {
     let mut results = [[Card::default(); N]; 1 * 2 * 3 * 4];
     for (row, mapping) in get_canonical_shape_mappings().iter().enumerate() {
         cards.iter().enumerate().for_each(|(i, card)| {
-            results[row][i] = Card {
-                shape: *mapping.get(&card.shape).unwrap(),
-                number: card.number,
-            };
+            results[row][i] = mapping.apply_card(card);
         });
     }
     results
@@ -925,7 +968,7 @@ mod tests {
         let mappings = get_canonical_shape_mappings();
         assert_eq!(mappings.len(), 24); // 4! = 24
 
-        let cards = ["As".try_into()?, "Ad".try_into()?];
+        let cards = ["As".try_into()?, "Kd".try_into()?];
         let symmetries = all_canonical_symmetries(&cards);
         for shape1 in CardShape::all() {
             for shape2 in CardShape::all() {
@@ -935,7 +978,7 @@ mod tests {
                 };
                 let this_card2 = Card {
                     shape: shape2,
-                    number: CardNumber::Ace,
+                    number: CardNumber::King,
                 };
                 let found = symmetries.iter().find(|&&x| x == [this_card1, this_card2]);
                 if shape1 == shape2 {
