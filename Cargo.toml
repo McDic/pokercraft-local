@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 publish = false
 
-#[[bin]]
-#name = "generate_preflop_cache"
-#path = "pokercraft_local_rust/bin/generate_preflop_cache/main.rs"
+[[bin]]
+name = "generate_preflop_cache"
+path = "pokercraft_local_rust/bin/generate_preflop_cache/main.rs"
 
 [lib]
 name = "pokercraft_local_rust"
@@ -14,14 +14,16 @@ crate-type = ["cdylib", "lib"]
 path = "pokercraft_local_rust/lib/lib.rs"
 
 [dependencies]
-itertools = "0.14"
-once_cell = "1.21"
-pyo3 = "0.26"
-rand = "0.8.5"
-rayon = "1.10"
-rustfft = "6"
-statrs = "0.18"
-thiserror = "2.0"
+clap = { version = "4.5.48", features = ["derive"] } # Command arg parser
+clap_derive = "4.0.0-rc.1"                           # Derive macro for `clap`
+itertools = "0.14"                                   # Various iteration utils
+once_cell = "1.21"                                   # Static non-const global variables
+pyo3 = "0.26"                                        # Python bindings
+rand = "0.8.5"                                       # Random number generation
+rayon = "1.10"                                       # Data parallelism
+rustfft = "6"                                        # FFT
+statrs = "0.18"                                      # Statistics calculation
+thiserror = "2.0"                                    # Defining error types
 
 [features]
 extension-module = ["pyo3/extension-module"]

@@ -15,7 +15,10 @@ use crate::errors::PokercraftLocalError;
 #[pyclass]
 #[derive(Debug, Clone)]
 pub struct EquityResult {
+    /// `wins[i][c]` is number of `i`-th player wins
+    /// with `c` other players having the same rank.
     wins: Vec<Vec<u64>>,
+    /// `loses[i]` is number of `i`-th player loses.
     loses: Vec<u64>,
 }
 
@@ -23,7 +26,7 @@ impl EquityResult {
     /// Create a new `EquityResult` by calculating the win/loss
     /// counts for the given player and community cards.
     pub fn new(
-        cards_people: Vec<(Card, Card)>,
+        cards_people: Vec<Hand>,
         cards_community: Vec<Card>,
     ) -> Result<Self, PokercraftLocalError> {
         let remaining_cards = Card::all()
@@ -158,6 +161,22 @@ impl EquityResult {
                 })
                 / (total_games as f64))
         }
+    }
+
+    /// Get the (win/tie counts, lose count)
+    /// of the given player index (0-based).
+    /// The structure of return values are exactly same as
+    /// `self.wins[player_index]` and `self.loses[player_index]`.
+    pub fn get_winloses(
+        &self,
+        player_index: usize,
+    ) -> Result<(Vec<u64>, u64), PokercraftLocalError> {
+        if player_index >= self.wins.len() {
+            return Err(PokercraftLocalError::GeneralError(
+                "Player index out of range".to_string(),
+            ));
+        }
+        Ok((self.wins[player_index].clone(), self.loses[player_index]))
     }
 }
 
