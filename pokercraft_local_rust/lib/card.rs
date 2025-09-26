@@ -326,8 +326,11 @@ impl TryFrom<&str> for Card {
 
 /// Represents the rank of a poker hand.
 /// Due to the complex structure, this enum is not exported to Python.
+/// `Eq` and `Ord` are intentionally not implemented for this enum,
+/// and also `PartialEq` and `PartialOrd` are manually implemented
+/// because we do not differentiate between same rank with different suits.
 #[pyclass]
-#[derive(PartialEq, Eq, Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum HandRank {
     HighCard([Card; 5]),
     OnePair(CardNumber, [Card; 3]),
@@ -557,17 +560,17 @@ impl HandRank {
         let mut best_hand = [cards[0], cards[1], cards[2], cards[3], cards[4]];
         let mut best_rank = Self::evaluate(best_hand);
         for combination in cards.iter().combinations(5) {
-            let hand = [
+            let this_hand = [
                 *combination[0],
                 *combination[1],
                 *combination[2],
                 *combination[3],
                 *combination[4],
             ];
-            let rank = Self::evaluate(hand);
-            if rank > best_rank {
-                best_hand = hand;
-                best_rank = rank;
+            let this_rank = Self::evaluate(this_hand);
+            if this_rank > best_rank {
+                best_hand = this_hand;
+                best_rank = this_rank;
             }
         }
         Ok((best_hand, best_rank))
@@ -602,15 +605,65 @@ impl HandRank {
     }
 }
 
+impl std::fmt::Display for HandRank {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let repr = match self {
+            HandRank::HighCard(cards) => format!(
+                "HighCard({})",
+                cards
+                    .iter()
+                    .map(|c| format!("{}", c))
+                    .collect::<Vec<_>>()
+                    .join(" + ")
+            ),
+            HandRank::OnePair(number, cards) => format!(
+                "OnePair({}, Kickers: {})",
+                number,
+                cards
+                    .iter()
+                    .map(|c| format!("{}", c))
+                    .collect::<Vec<_>>()
+                    .join(" + ")
+            ),
+            HandRank::TwoPairs(high, low, kicker) => {
+                format!("TwoPairs({}, {}, Kicker: {})", high, low, kicker)
+            }
+            HandRank::Triple(number, cards) => format!(
+                "Triple({}, Kickers: {})",
+                number,
+                cards
+                    .iter()
+                    .map(|c| format!("{}", c))
+                    .collect::<Vec<_>>()
+                    .join(" + ")
+            ),
+            HandRank::Straight(high) => format!("Straight({}-high)", high),
+            HandRank::Flush(shape, numbers) => format!(
+                "Flush({}, {})",
+                numbers
+                    .iter()
+                    .map(|n| format!("{}", n))
+                    .collect::<Vec<_>>()
+                    .join(""),
+                shape
+            ),
+            HandRank::FullHouse(three, pair) => format!("FullHouse(3: {}, 2: {})", three, pair),
+            HandRank::Quads(number, card) => format!("Quads({}, Kicker: {})", number, card),
+            HandRank::StraightFlush(card) => format!("StraightFlush({}-high)", card),
+        };
+        write!(f, "{}", repr)
+    }
+}
+
 impl PartialOrd for HandRank {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.numerize().partial_cmp(&other.numerize())
     }
 }
 
-impl Ord for HandRank {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.numerize().cmp(&other.numerize())
+impl PartialEq for HandRank {
+    fn eq(&self, other: &Self) -> bool {
+        self.numerize() == other.numerize()
     }
 }
 
@@ -964,6 +1017,74 @@ mod tests {
                 assert!(ranks[i] < ranks[j]);
             }
         }
+        Ok(())
+    }
+
+    #[test]
+    fn test_rank_evaluation() -> Result<(), PokercraftLocalError> {
+        let hand_and_boards: Vec<(Hand, [Card; 5], HandRank)> = vec![
+            (
+                ("Ah".try_into()?, "8h".try_into()?),
+                create_cards_slice(["3d", "4d", "5d", "8d", "9d"])?,
+                HandRank::Flush(
+                    CardShape::Diamond,
+                    [
+                        CardNumber::Nine,
+                        CardNumber::Eight,
+                        CardNumber::Five,
+                        CardNumber::Four,
+                        CardNumber::Three,
+                    ],
+                ),
+            ),
+            (
+                ("3s".try_into()?, "As".try_into()?),
+                create_cards_slice(["3d", "4d", "5d", "8d", "9d"])?,
+                HandRank::Flush(
+                    CardShape::Diamond,
+                    [
+                        CardNumber::Nine,
+                        CardNumber::Eight,
+                        CardNumber::Five,
+                        CardNumber::Four,
+                        CardNumber::Three,
+                    ],
+                ),
+            ),
+            (
+                ("Ah".try_into()?, "8h".try_into()?),
+                create_cards_slice(["6h", "6d", "5s", "5c", "Kd"])?,
+                HandRank::TwoPairs(CardNumber::Six, CardNumber::Five, "Ah".try_into()?),
+            ),
+            (
+                ("3s".try_into()?, "As".try_into()?),
+                create_cards_slice(["6h", "6d", "5s", "5c", "Kd"])?,
+                HandRank::TwoPairs(CardNumber::Six, CardNumber::Five, "As".try_into()?),
+            ),
+        ];
+        for (hand, board, expected_rank) in hand_and_boards.into_iter() {
+            let all_cards = vec![
+                board[0], board[1], board[2], board[3], board[4], hand.0, hand.1,
+            ];
+            let (_best_hand, got_best_rank) = HandRank::find_best5(all_cards)?;
+            assert_eq!(
+                got_best_rank,
+                expected_rank,
+                "Rank mismatch for hand {}{} and board {} {} {} {} {} (Expected: {:?} ({:?}), Got: {:?} ({:?}))",
+                hand.0,
+                hand.1,
+                board[0],
+                board[1],
+                board[2],
+                board[3],
+                board[4],
+                expected_rank,
+                expected_rank.numerize(),
+                got_best_rank,
+                got_best_rank.numerize(),
+            );
+        }
+
         Ok(())
     }
 

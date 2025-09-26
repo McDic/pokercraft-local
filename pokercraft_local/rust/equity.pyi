@@ -24,6 +24,13 @@ class EquityResult:
         Return whether the player never lost in all possible outcomes.
         """
         ...
+    def get_winlosses_py(self, player_index: int) -> tuple[list[int], int]:
+        """
+        Get (wins, losses) of given player index.
+        - `wins[i]`: Number of times the player wins with `i`-way ties.
+        - `losses`: Number of times the player loses.
+        """
+        ...
 
 class LuckCalculator:
     """

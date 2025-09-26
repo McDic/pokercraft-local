@@ -43,6 +43,14 @@ impl EquityResult {
             return Err(PokercraftLocalError::GeneralError(
                 "Too many community cards; Should have at most 5 cards".to_string(),
             ));
+        } else if cards_people.is_empty() {
+            return Err(PokercraftLocalError::GeneralError(
+                "No player cards given".to_string(),
+            ));
+        } else if cards_people.len() > 23 {
+            return Err(PokercraftLocalError::GeneralError(
+                "Too many players; Should have at most 23 players".to_string(),
+            ));
         }
 
         // This is the result
@@ -169,7 +177,7 @@ impl EquityResult {
     /// of the given player index (0-based).
     /// The structure of return values are exactly same as
     /// `self.wins[player_index]` and `self.loses[player_index]`.
-    pub fn get_winloses(
+    pub fn get_winlosses(
         &self,
         player_index: usize,
     ) -> Result<(Vec<u64>, u64), PokercraftLocalError> {
@@ -189,18 +197,17 @@ impl EquityResult {
     /// the `i`-th player wins with `c` other players having the same rank.
     #[new]
     pub fn new_py(cards_people: Vec<(Card, Card)>, cards_community: Vec<Card>) -> PyResult<Self> {
-        match Self::new(cards_people, cards_community) {
-            Ok(result) => Ok(result),
-            Err(e) => Err(e.into()),
-        }
+        Self::new(cards_people, cards_community).map_err(|e| e.into())
     }
 
     /// Python-exported interface of `self.get_equity`.
     pub fn get_equity_py(&self, player_index: usize) -> PyResult<f64> {
-        match self.get_equity(player_index) {
-            Ok(equity) => Ok(equity),
-            Err(e) => Err(e.into()),
-        }
+        self.get_equity(player_index).map_err(|e| e.into())
+    }
+
+    /// Python-exported interface of `self.get_winloses`.
+    pub fn get_winlosses_py(&self, player_index: usize) -> PyResult<(Vec<u64>, u64)> {
+        self.get_winlosses(player_index).map_err(|e| e.into())
     }
 
     /// Check if the given player index (0-based) has never lost in all scenarios.
@@ -273,7 +280,7 @@ impl HUPreflopEquityCache {
                     Card::try_from(&parts[2][0..2])?,
                     Card::try_from(&parts[2][2..4])?,
                 );
-                for other_keys in Self::possible_keys_l3(hand1, hand2) {
+                for (other_keys, _is_swapped) in Self::possible_keys_l3(hand1, hand2) {
                     if cache.contains_key(&other_keys) {
                         return Err(PokercraftLocalError::GeneralError(format!(
                             "Duplicate entry in cache file line {}: {}",
@@ -294,7 +301,7 @@ impl HUPreflopEquityCache {
         Ok(Self { cache })
     }
 
-    /// Possible Keys Layer 1: Get possible card pairs considering hand-swap in single player.
+    /// Possible Keys Layer 1: Get possible card pairs considering card-swap.
     /// There are 2 scenarios `(AB, BA)`.
     const fn possible_keys_l1(card1: Card, card2: Card) -> [Hand; 2] {
         [(card1, card2), (card2, card1)]
@@ -302,14 +309,18 @@ impl HUPreflopEquityCache {
 
     /// Possible Keys Layer 2: Get possible hand pairs considering player-swap on top of Layer 1.
     /// There are 2x2x2 = 8 scenarios `(AB, BA, A*B, BA*, AB*, B*A, A*B*, B*A*)`.
-    fn possible_keys_l2((card_a1, card_a2): Hand, (card_b1, card_b2): Hand) -> [(Hand, Hand); 8] {
-        let mut result: [(Hand, Hand); 8] = [Default::default(); 8];
+    /// The last boolean value indicates whether the hands are swapped.
+    fn possible_keys_l2(
+        (card_a1, card_a2): Hand,
+        (card_b1, card_b2): Hand,
+    ) -> [((Hand, Hand), bool); 8] {
+        let mut result: [((Hand, Hand), bool); 8] = [Default::default(); 8];
         let mut idx: usize = 0;
         for hand_a in Self::possible_keys_l1(card_a1, card_a2) {
             for hand_b in Self::possible_keys_l1(card_b1, card_b2) {
-                result[idx] = (hand_a, hand_b);
+                result[idx] = ((hand_a, hand_b), false);
                 idx += 1;
-                result[idx] = (hand_b, hand_a);
+                result[idx] = ((hand_b, hand_a), true);
                 idx += 1;
             }
         }
@@ -318,19 +329,20 @@ impl HUPreflopEquityCache {
 
     /// Possible Keys Layer 3: Get possible hand pairs considering suit symmetries on top of Layer 2.
     /// There are 8x24 = 192 scenarios in total.
+    /// The last boolean value indicates whether the hands are swapped.
     pub fn possible_keys_l3(
         (card_a1, card_a2): Hand,
         (card_b1, card_b2): Hand,
-    ) -> [(Hand, Hand); 8 * 24] {
-        let mut result: [(Hand, Hand); 8 * 24] = [Default::default(); 8 * 24];
+    ) -> [((Hand, Hand), bool); 8 * 24] {
+        let mut result: [((Hand, Hand), bool); 8 * 24] = [Default::default(); 8 * 24];
         let mut idx: usize = 0;
         for [card_a1, card_a2, card_b1, card_b2] in
             crate::card::all_canonical_symmetries(&[card_a1, card_a2, card_b1, card_b2])
         {
-            for (sym_hand_a, sym_hand_b) in
+            for ((sym_hand_a, sym_hand_b), swapped) in
                 Self::possible_keys_l2((card_a1, card_a2), (card_b1, card_b2))
             {
-                result[idx] = (sym_hand_a, sym_hand_b);
+                result[idx] = ((sym_hand_a, sym_hand_b), swapped);
                 idx += 1;
             }
         }
@@ -343,9 +355,13 @@ impl HUPreflopEquityCache {
         hand1: (Card, Card),
         hand2: (Card, Card),
     ) -> Result<(u64, u64, u64), PokercraftLocalError> {
-        for (possible_hand1, possible_hand2) in Self::possible_keys_l3(hand1, hand2) {
+        for ((possible_hand1, possible_hand2), is_swapped) in Self::possible_keys_l3(hand1, hand2) {
             if let Some(&(win1, win2, tie)) = self.cache.get(&(possible_hand1, possible_hand2)) {
-                return Ok((win1, win2, tie));
+                return if is_swapped {
+                    Ok((win2, win1, tie))
+                } else {
+                    Ok((win1, win2, tie))
+                };
             }
         }
         Err(PokercraftLocalError::GeneralError(format!(

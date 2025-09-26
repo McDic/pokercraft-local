@@ -33,7 +33,7 @@ fn get_all_headsup_hands() -> Vec<(Hand, Hand)> {
             continue;
         }
         let possible_keys = plr::equity::HUPreflopEquityCache::possible_keys_l3(hand1, hand2);
-        for (cano_hand1, cano_hand2) in possible_keys {
+        for ((cano_hand1, cano_hand2), _is_swapped) in possible_keys {
             result.remove(&(cano_hand1, cano_hand2));
         }
         result.insert((hand1, hand2));
@@ -43,8 +43,8 @@ fn get_all_headsup_hands() -> Vec<(Hand, Hand)> {
 
 /// Get (P1 wins, P2 wins, ties) of two players.
 fn get_winloses_hu(equity_result: &EquityResult) -> (u64, u64, u64) {
-    let (wins_0, loses_0) = equity_result.get_winloses(0).unwrap();
-    let (wins_1, loses_1) = equity_result.get_winloses(1).unwrap();
+    let (wins_0, loses_0) = equity_result.get_winlosses(0).unwrap();
+    let (wins_1, loses_1) = equity_result.get_winlosses(1).unwrap();
     let ties = wins_0[1];
     assert!(ties == wins_1[1]);
     assert!(wins_0[0] == loses_1);
