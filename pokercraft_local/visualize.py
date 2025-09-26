@@ -925,10 +925,7 @@ def get_all_in_equity_histogram(
         actual = row[3]
         luckscore_calculator.add_result_py(equity, actual)
     luck_score = luckscore_calculator.luck_score_py()
-    tails = luckscore_calculator.tails_py()
-    if luck_score is None or tails is None:
-        raise ValueError("Luck score calculation failed")
-    upper_tail, lower_tail, twosided = tails
+    upper_tail, lower_tail, twosided = luckscore_calculator.tails_py()
     logger.info(
         "All-in luck score Z = %.6g, upper tail = %.6f, "
         "lower tail = %.6f, two-sided = %.6f",

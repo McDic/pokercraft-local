@@ -36,12 +36,12 @@ class LuckCalculator:
         Add a result with given equity and whether the player won.
         """
         ...
-    def luck_score_py(self) -> float | None:
+    def luck_score_py(self) -> float:
         """
         Get the Luck-score of the results.
         """
         ...
-    def tails_py(self) -> tuple[float, float, float] | None:
+    def tails_py(self) -> tuple[float, float, float]:
         """
         Get the tail p-values; Upper-tail, lower-tail, and two-sided p-values.
         """
@@ -55,7 +55,7 @@ class HUPreflopEquityCache:
     def __init__(self, path: Path) -> None: ...
     def get_winlose_py(
         self, hand1: tuple[Card, Card], hand2: tuple[Card, Card]
-    ) -> tuple[int, int, int] | None:
+    ) -> tuple[int, int, int]:
         """
         Get win/lose/tie counts of hand1 against hand2.
         Returns None if not found in cache.
