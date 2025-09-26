@@ -2,6 +2,8 @@
 Functionalities for equity calculation and luck score.
 """
 
+from pathlib import Path
+
 from .card import Card
 
 class EquityResult:
@@ -42,5 +44,20 @@ class LuckCalculator:
     def tails_py(self) -> tuple[float, float, float] | None:
         """
         Get the tail p-values; Upper-tail, lower-tail, and two-sided p-values.
+        """
+        ...
+
+class HUPreflopEquityCache:
+    """
+    Pre-flop equity cache for heads-up situations.
+    """
+
+    def __init__(self, path: Path) -> None: ...
+    def get_winlose_py(
+        self, hand1: tuple[Card, Card], hand2: tuple[Card, Card]
+    ) -> tuple[int, int, int] | None:
+        """
+        Get win/lose/tie counts of hand1 against hand2.
+        Returns None if not found in cache.
         """
         ...

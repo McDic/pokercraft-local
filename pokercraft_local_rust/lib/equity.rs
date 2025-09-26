@@ -1,7 +1,9 @@
 //! Equity calculations and relative analysis.
 
 use std::collections::HashMap;
+use std::io::BufRead;
 
+use flate2::read::GzDecoder;
 use itertools::Itertools;
 use pyo3::prelude::*;
 use rayon::prelude::*;
@@ -216,13 +218,80 @@ impl EquityResult {
 #[pyclass]
 pub struct HUPreflopEquityCache {
     /// `{(card_a1, card_a2), (card_b1, card_b2)): (P1 win, P2 win, tie)}`
-    cache: HashMap<((Card, Card), (Card, Card)), (u64, u64, u64)>,
+    cache: HashMap<(Hand, Hand), (u64, u64, u64)>,
 }
 
 impl HUPreflopEquityCache {
     /// Create a `HUPreflopEquityCache` from pre-computed cache file.
-    pub fn new(_path: &std::path::Path) -> Self {
-        todo!()
+    /// Followings are line examples:
+    /// - `TsQh vs QsTd = 1376857 31189 304258`
+    /// - `6sTh vs 9s8d = 940755 738123 33426`
+    pub fn new(path: &std::path::Path) -> Result<Self, PokercraftLocalError> {
+        let file = std::fs::OpenOptions::new().read(true).open(path)?;
+        let decoder = GzDecoder::new(file);
+        let reader = std::io::BufReader::new(decoder);
+        let mut cache: HashMap<(Hand, Hand), (u64, u64, u64)> = HashMap::new();
+        for (i, line) in reader.lines().enumerate() {
+            let line: String = line?;
+            let parts = line.trim().split_whitespace().collect::<Vec<_>>();
+            if parts.len() != 7 {
+                return Err(PokercraftLocalError::GeneralError(format!(
+                    "Invalid format in cache file line {}: {}",
+                    i + 1,
+                    line
+                )));
+            } else if parts[1] != "vs" {
+                return Err(PokercraftLocalError::GeneralError(format!(
+                    "Invalid format (\"vs\" not present) in cache file line {}: {}",
+                    i + 1,
+                    line
+                )));
+            } else if parts[3] != "=" {
+                return Err(PokercraftLocalError::GeneralError(format!(
+                    "Invalid format (\"=\" not present) in cache file line {}: {}",
+                    i + 1,
+                    line
+                )));
+            } else if parts[0].len() != 4 || parts[2].len() != 4 {
+                return Err(PokercraftLocalError::GeneralError(format!(
+                    "Invalid hand format in cache file line {}: {}",
+                    i + 1,
+                    line
+                )));
+            }
+
+            let hand1_win_res = parts[4].parse::<u64>();
+            let hand2_win_res = parts[5].parse::<u64>();
+            let tie_res = parts[6].parse::<u64>();
+            if let (Ok(hand1_win), Ok(hand2_win), Ok(tie)) = (hand1_win_res, hand2_win_res, tie_res)
+            {
+                let hand1 = (
+                    Card::try_from(&parts[0][0..2])?,
+                    Card::try_from(&parts[0][2..4])?,
+                );
+                let hand2 = (
+                    Card::try_from(&parts[2][0..2])?,
+                    Card::try_from(&parts[2][2..4])?,
+                );
+                for other_keys in Self::possible_keys_l3(hand1, hand2) {
+                    if cache.contains_key(&other_keys) {
+                        return Err(PokercraftLocalError::GeneralError(format!(
+                            "Duplicate entry in cache file line {}: {}",
+                            i + 1,
+                            line
+                        )));
+                    }
+                }
+                cache.insert((hand1, hand2), (hand1_win, hand2_win, tie));
+            } else {
+                return Err(PokercraftLocalError::GeneralError(format!(
+                    "Invalid win/tie counts in cache file line {}: {}",
+                    i + 1,
+                    line
+                )));
+            }
+        }
+        Ok(Self { cache })
     }
 
     /// Possible Keys Layer 1: Get possible card pairs considering hand-swap in single player.
@@ -283,6 +352,24 @@ impl HUPreflopEquityCache {
             "No cache entry found for the given hands {}{} vs {}{}",
             hand1.0, hand1.1, hand2.0, hand2.1
         )))
+    }
+}
+
+#[pymethods]
+impl HUPreflopEquityCache {
+    /// Create a `HUPreflopEquityCache` from pre-computed cache file.
+    #[new]
+    pub fn new_py(path: std::path::PathBuf) -> PyResult<Self> {
+        Self::new(&path).map_err(|e| e.into())
+    }
+
+    /// Get the P1 win, P2 win, and tie counts from the cache.
+    pub fn get_winlose_py(
+        &self,
+        hand1: (Card, Card),
+        hand2: (Card, Card),
+    ) -> PyResult<(u64, u64, u64)> {
+        self.get_winlose(hand1, hand2).map_err(|e| e.into())
     }
 }
 

@@ -30,6 +30,7 @@ fn equity_submodule<'a>(parent: &Bound<'a, PyModule>) -> PyResult<Bound<'a, PyMo
     let m = PyModule::new(parent.py(), "equity")?;
     m.add_class::<equity::EquityResult>()?;
     m.add_class::<equity::LuckCalculator>()?;
+    m.add_class::<equity::HUPreflopEquityCache>()?;
     Ok(m)
 }
 
