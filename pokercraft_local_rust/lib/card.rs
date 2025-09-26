@@ -282,6 +282,10 @@ impl Card {
     fn __str__(&self) -> PyResult<String> {
         Ok(format!("{}", self))
     }
+
+    fn __repr__(&self) -> PyResult<String> {
+        Ok(format!("Card(\"{}\")", self))
+    }
 }
 
 impl std::fmt::Display for Card {
