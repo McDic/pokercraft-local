@@ -1,5 +1,7 @@
 //! Basic functionalities for poker hands.
 
+use std::collections::HashMap;
+
 use itertools::Itertools;
 use pyo3::prelude::*;
 
@@ -10,12 +12,12 @@ pub const NUM_OF_NUMBERS: usize = 13;
 
 /// Card shapes (suits) in a standard deck of playing cards.
 #[pyclass(eq)]
-#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
 pub enum CardShape {
-    Spade,
-    Heart,
-    Diamond,
-    Club,
+    Spade = 0,
+    Heart = 1,
+    Diamond = 2,
+    Club = 3,
 }
 
 impl CardShape {
@@ -27,6 +29,11 @@ impl CardShape {
             CardShape::Diamond,
             CardShape::Club,
         ]
+    }
+
+    /// Get the canonical number of this shape.
+    pub const fn get_canonical_number(&self) -> u64 {
+        *self as u64
     }
 }
 
@@ -102,6 +109,11 @@ pub enum CardNumber {
 }
 
 impl CardNumber {
+    /// Get the canonical number of this card number.
+    pub const fn get_canonical_number(&self) -> u64 {
+        (*self as u64) - 2
+    }
+
     /// Return all card numbers.
     pub const fn all() -> [CardNumber; NUM_OF_NUMBERS] {
         [
@@ -225,13 +237,19 @@ impl TryFrom<char> for CardNumber {
 
 /// A playing card in a standard deck of 52 cards.
 #[pyclass(eq)]
-#[derive(PartialEq, Eq, Copy, Clone, Hash, Debug, Default)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash, Debug, Default)]
 pub struct Card {
     pub shape: CardShape,
     pub number: CardNumber,
 }
 
 impl Card {
+    /// Get the canonical number of this card.
+    pub const fn get_canonical_number(&self) -> u64 {
+        self.shape.get_canonical_number() * (NUM_OF_NUMBERS as u64)
+            + self.number.get_canonical_number()
+    }
+
     /// Return all 52 cards in a standard deck.
     pub const fn all() -> [Card; NUM_OF_NUMBERS * NUM_OF_SHAPES] {
         let mut cards = [Card {
@@ -707,6 +725,15 @@ impl ShapeMapping {
             number: card.number,
         }
     }
+
+    /// Slice version of `apply_card`.
+    pub fn apply_card_slices<const N: usize>(&self, cards: &[Card; N]) -> [Card; N] {
+        let mut result = [Card::default(); N];
+        for (i, card) in cards.iter().enumerate() {
+            result[i] = self.apply_card(card);
+        }
+        result
+    }
 }
 
 /// Generate a canonical `CardShape` mapping from each card shape to another shape.
@@ -742,6 +769,143 @@ pub fn all_canonical_symmetries<const N: usize>(cards: &[Card; N]) -> [[Card; N]
         });
     }
     results
+}
+
+const PREFLOP_CARD_LENGTH: usize = 5;
+
+/// Helper struct to yield community cards with some fixed cards.
+/// This is internally used for `EquityResult`.
+pub struct PreflopBoardYielder {
+    /// Excluded cards which will not appear on the board.
+    available_cards: Vec<Card>,
+    available_shape_mappings: Vec<ShapeMapping>,
+    /// Map of boards and counts (in canonical form).
+    cache: HashMap<u64, ([Card; PREFLOP_CARD_LENGTH], u64)>,
+}
+
+impl PreflopBoardYielder {
+    /// Helper function to perform func on
+    /// all combinations of 5 elements from the given slice.
+    fn for_each_5<T: Copy, F: FnMut([T; 5])>(values: &[T], mut f: F) {
+        let n = values.len();
+        for i0 in 0..n {
+            for i1 in (i0 + 1)..n {
+                for i2 in (i1 + 1)..n {
+                    for i3 in (i2 + 1)..n {
+                        for i4 in (i3 + 1)..n {
+                            f([values[i0], values[i1], values[i2], values[i3], values[i4]]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// This yielder will yield boards of `k` cards which are not in `cards_fixed`.
+    pub fn new(
+        cards_excluded: Vec<Card>,
+        pre_calculate: bool,
+    ) -> Result<Self, PokercraftLocalError> {
+        let nonfree_shapes = cards_excluded
+            .iter()
+            .map(|card| card.shape)
+            .unique()
+            .collect::<Vec<_>>();
+        let all_cards = Card::all();
+        let available_cards = all_cards
+            .iter()
+            .filter(|card| cards_excluded.iter().find(|&c| c == *card).is_none())
+            .copied()
+            .sorted()
+            .collect::<Vec<_>>();
+        let mut result = PreflopBoardYielder {
+            available_cards,
+            available_shape_mappings: get_canonical_shape_mappings()
+                .iter()
+                .filter_map(|mapping| {
+                    if nonfree_shapes
+                        .iter()
+                        .all(|shape| mapping.apply_shape(shape) == *shape)
+                    {
+                        Some(*mapping)
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>(),
+            cache: HashMap::new(),
+        };
+        if pre_calculate {
+            result.calculate();
+        }
+        Ok(result)
+    }
+
+    /// Get the canonical representation of `cards` literally.
+    #[inline(always)]
+    fn get_canonical_representation_raw(&self, cards: &[Card; PREFLOP_CARD_LENGTH]) -> u64 {
+        let mut result: u64 = 0;
+        for card in cards.iter() {
+            result *= (NUM_OF_NUMBERS * NUM_OF_SHAPES) as u64;
+            result += card.get_canonical_number();
+        }
+        result
+    }
+
+    /// Get the canonical representation of the given cards.
+    fn get_canonical_representation(
+        &self,
+        cards: [Card; PREFLOP_CARD_LENGTH],
+    ) -> ([Card; PREFLOP_CARD_LENGTH], u64) {
+        let mut min_symmetry: Option<([Card; PREFLOP_CARD_LENGTH], u64)> = None;
+        for mut symmetry in self
+            .available_shape_mappings
+            .iter()
+            .map(|mapping| mapping.apply_card_slices(&cards))
+        {
+            symmetry.sort_unstable_by_key(|card| card.get_canonical_number()); // No allocation, small-sized array
+            let repr = self.get_canonical_representation_raw(&symmetry);
+            if min_symmetry.is_none() {
+                min_symmetry = Some((symmetry, repr));
+            } else if let Some((_, current_repr)) = min_symmetry {
+                if repr < current_repr {
+                    min_symmetry = Some((symmetry, repr));
+                }
+            }
+        }
+        if let Some(inner) = min_symmetry {
+            inner
+        } else {
+            unreachable!("At least one symmetry should exist");
+        }
+    }
+
+    /// Calculate all combinations.
+    /// If cache is already calculated, this does nothing.
+    fn calculate(&mut self) -> () {
+        if self.cache.is_empty() {
+            let mut available_cards = self.available_cards.clone();
+            available_cards.sort();
+            Self::for_each_5(&available_cards, |board| {
+                let (canonical_board, repr) = self.get_canonical_representation(board);
+                if let Some((_, count)) = self.cache.get_mut(&repr) {
+                    *count += 1;
+                } else {
+                    self.cache.insert(repr, (canonical_board, 1));
+                }
+            });
+        }
+    }
+
+    /// Get an iterator of all boards and their counts (in canonical form).
+    /// If the cache is not calculated yet, return `None`.
+    pub fn get_boards<'s>(&'s self) -> Option<impl Iterator<Item = &'s ([Card; 5], u64)>> {
+        if self.cache.is_empty() {
+            None
+        } else {
+            Some(self.cache.iter().map(|(_canonical_key, v)| v))
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1123,6 +1287,24 @@ mod tests {
                 }
             }
         }
+        Ok(())
+    }
+
+    #[test]
+    fn test_board_yielder() -> Result<(), PokercraftLocalError> {
+        let yielder: PreflopBoardYielder = PreflopBoardYielder::new(vec![], true).unwrap();
+        assert!(yielder.get_boards().unwrap().enumerate().count() == 134459);
+        return Ok(());
+
+        let yielder = PreflopBoardYielder::new(vec!["As".try_into()?, "Ah".try_into()?], true)?;
+        yielder
+            .get_boards()
+            .unwrap()
+            .enumerate()
+            .for_each(|(i, board)| {
+                println!("Board #{}: {:?}", i + 1, board);
+            });
+
         Ok(())
     }
 }
