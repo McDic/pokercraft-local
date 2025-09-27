@@ -1,46 +1,56 @@
+import logging
 import random
 import unittest
 from math import comb
-from pathlib import Path
 
+from pokercraft_local.data_structures import get_global_preflop_hu_cache
 from pokercraft_local.rust import card, equity
 
 Card = card.Card
+HUPFCache = equity.HUPreflopEquityCache
+
+logger = logging.getLogger("pokercraft_local.test.hu_cache")
 
 
 class TestHuPreflopEquityCache(unittest.TestCase):
-    def setUp(self):
-        cache_path = (
-            Path(__file__).parent.parent
-            / "pokercraft_local"
-            / "hu_preflop_cache.txt.gz"
-        )
-        self.cache = equity.HUPreflopEquityCache(cache_path)
+    """
+    Testing the HU Preflop Equity Cache against direct equity calculations.
+    """
 
     @staticmethod
     def all_cards() -> list[Card]:
+        """
+        Generate a list of all 52 playing cards.
+        """
         return [Card(f"{rank}{suit}") for rank in "23456789TJQKA" for suit in "cdhs"]
 
     def test_hu_preflop_equity_cache(self) -> None:
+        """
+        Comparing the preflop equity cache results with direct equity calculations.
+        """
         TOTAL_ITERATIONS: int = 100
-        ALL_CARDS = self.all_cards()
+        all_cards = self.all_cards()
         NUMBER_OF_BOARDS = comb(48, 5)
 
+        cache = get_global_preflop_hu_cache()
+
         for it in range(TOTAL_ITERATIONS):
-            hand1: tuple[Card, Card] = tuple(
-                random.sample(ALL_CARDS, 2)
-            )  # type: ignore[assignment]
-            remaining_cards = [c for c in ALL_CARDS if c not in hand1]
-            hand2: tuple[Card, Card] = tuple(
-                random.sample(remaining_cards, 2)
-            )  # type: ignore[assignment]
+            random.shuffle(all_cards)
+            hand1 = all_cards[0], all_cards[1]
+            hand2 = all_cards[2], all_cards[3]
+            win1, lose1, tie1 = cache.get_winlose_py(hand1, hand2)
+            win2, lose2, tie2 = cache.get_winlose_py(hand2, hand1)
 
-            win1, lose1, tie1 = self.cache.get_winlose_py(hand1, hand2)
-            win2, lose2, tie2 = self.cache.get_winlose_py(hand2, hand1)
-
-            print(
-                "#%d Hands: %s%s vs %s%s => %d %d %d"
-                % (it + 1, hand1[0], hand1[1], hand2[0], hand2[1], win1, lose1, tie1)
+            logger.debug(
+                "#%d: %s%s vs %s%s => %d %d %d",
+                it + 1,
+                hand1[0],
+                hand1[1],
+                hand2[0],
+                hand2[1],
+                win1,
+                lose1,
+                tie1,
             )
 
             self.assertEqual(win1 + lose1 + tie1, win2 + lose2 + tie2)
@@ -54,7 +64,6 @@ class TestHuPreflopEquityCache(unittest.TestCase):
                 real_equity.get_winlosses_py(0),
                 real_equity.get_winlosses_py(1),
             ]
-            print("\tRaw result:", raw_result[0], raw_result[1])
             self.assertEqual(raw_result[0][0][0], win1)
             self.assertEqual(raw_result[0][1], lose1)
             self.assertEqual(raw_result[1][0][0], win2)

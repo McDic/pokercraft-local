@@ -7,6 +7,7 @@ import warnings
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
 
 from forex_python.converter import CurrencyRates
 
@@ -396,3 +397,22 @@ class CurrencyRateConverter:
         Convert given amount from `from_currency` to `to_currency`.
         """
         return amount * self._usd_rates[from_currency] / self._usd_rates[to_currency]
+
+
+GLOBAL_PREFLOP_HU_CACHE: equity.HUPreflopEquityCache | None = None
+
+
+def get_global_preflop_hu_cache(
+    *,
+    default_path: Path | None = None,
+) -> equity.HUPreflopEquityCache:
+    """
+    Get the global preflop HU equity cache.
+    If not loaded, load it from the default file.
+    """
+    global GLOBAL_PREFLOP_HU_CACHE
+    if GLOBAL_PREFLOP_HU_CACHE is None:
+        GLOBAL_PREFLOP_HU_CACHE = equity.HUPreflopEquityCache(
+            default_path or Path(__file__).parent / "hu_preflop_cache.txt.gz"
+        )
+    return GLOBAL_PREFLOP_HU_CACHE
