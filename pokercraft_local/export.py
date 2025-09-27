@@ -70,6 +70,7 @@ def export_hand_history_analysis(
     output_path: Path,
     nickname: str,
     lang: Language,
+    max_sampling: int | None = None,
 ) -> Path:
     """
     Export data from given info and return `plot_file_path`.
@@ -90,5 +91,12 @@ def export_hand_history_analysis(
     # Export HTML
     plot_path = output_path / f"analysis_hand_histories_{current_time_strf}.html"
     with open(plot_path, "w", encoding="utf-8") as html_file:
-        html_file.write(plot_hand_histories(nickname, hand_histories, lang=lang))
+        html_file.write(
+            plot_hand_histories(
+                nickname,
+                hand_histories,
+                lang=lang,
+                max_sampling=max_sampling,
+            )
+        )
     return plot_path

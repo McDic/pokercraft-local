@@ -894,7 +894,7 @@ def get_all_in_equity_histogram(
             stages=(all_in_streets[i],),
         )
         equities_by_streets.append(eqd)
-        if (i + 1) % 10 == 0:
+        if (i + 1) % 50 == 0:
             logger.info("Calculated equity for %d all-in hands", i + 1)
 
     was_best_hands = [h.was_best_hand("Hero") for h in all_in_hand_histories]
@@ -935,41 +935,116 @@ def get_all_in_equity_histogram(
         twosided,
     )
 
-    common_options = {
-        "autobinx": False,
-        "xbins": {"start": 0.0, "end": 1.0, "size": 0.05},
-    }
     OPACITY_GREEN = "rgba(52,203,59,0.8)"
     OPACITY_YELLOW = "rgba(204,198,53,0.8)"
     OPACITY_RED = "rgba(206,37,37,0.8)"
 
-    figure = plgo.Figure()
-    figure.add_trace(
-        plgo.Histogram(
-            x=df_winning[MAIN_COLUMN_NAME],
-            name=lang << f"{TRKEY_PREFIX}.legends.hero_won",
-            marker_color=OPACITY_GREEN,
-            **common_options,
+    with np.errstate(divide="ignore", invalid="ignore"):
+        bins = np.linspace(0.0, 1.0, 21)
+        win_hist, _win_edges = np.histogram(df_winning[MAIN_COLUMN_NAME], bins)
+        chop_hist, _chop_edges = np.histogram(df_chopped[MAIN_COLUMN_NAME], bins)
+        lose_hist, _lose_edges = np.histogram(df_losing[MAIN_COLUMN_NAME], bins)
+        sum_hist = win_hist + chop_hist + lose_hist
+        bin_centers = (bins[1:] + bins[:-1]) / 2.0
+        bin_widths = np.diff(bins)
+
+        figure = make_subplots(
+            rows=2,
+            cols=1,
+            shared_xaxes=True,
+            vertical_spacing=0.01,
         )
-    )  # Add winning histogram
-    figure.add_trace(
-        plgo.Histogram(
-            x=df_chopped[MAIN_COLUMN_NAME],
-            name=lang << f"{TRKEY_PREFIX}.legends.chopped",
-            marker_color=OPACITY_YELLOW,
-            **common_options,
+        common_customdata = np.stack(
+            (
+                win_hist,
+                chop_hist,
+                lose_hist,
+                bin_centers - bin_widths / 2.0,
+                bin_centers + bin_widths / 2.0,
+            ),
+            axis=-1,
         )
-    )  # Add chopped histogram
-    figure.add_trace(
-        plgo.Histogram(
-            x=df_losing[MAIN_COLUMN_NAME],
-            name=lang << f"{TRKEY_PREFIX}.legends.hero_lost",
-            marker_color=OPACITY_RED,
-            **common_options,
-        )
-    )  # Add losing histogram
+        common_options = {
+            "x": bin_centers,
+            "width": bin_widths,
+            "customdata": common_customdata,
+        }
+        for bar in [
+            plgo.Bar(
+                y=win_hist,
+                base=chop_hist / 2.0,
+                name=lang << f"{TRKEY_PREFIX}.legends.hero_won",
+                hovertemplate=lang << f"{TRKEY_PREFIX}.hovertemplates.hero_won",
+                marker_color=OPACITY_GREEN,
+                legendgroup=lang << f"{TRKEY_PREFIX}.legends.hero_won",
+                **common_options,
+            ),  # Winning histogram
+            plgo.Bar(
+                y=chop_hist,
+                base=-chop_hist / 2.0,
+                name=lang << f"{TRKEY_PREFIX}.legends.chopped",
+                hovertemplate=lang << f"{TRKEY_PREFIX}.hovertemplates.chopped",
+                marker_color=OPACITY_YELLOW,
+                legendgroup=lang << f"{TRKEY_PREFIX}.legends.chopped",
+                **common_options,
+            ),  # Chopped histogram
+            plgo.Bar(
+                y=lose_hist,
+                base=-chop_hist / 2.0 - lose_hist,
+                name=lang << f"{TRKEY_PREFIX}.legends.hero_lost",
+                hovertemplate=lang << f"{TRKEY_PREFIX}.hovertemplates.hero_lost",
+                marker_color=OPACITY_RED,
+                legendgroup=lang << f"{TRKEY_PREFIX}.legends.hero_lost",
+                **common_options,
+            ),  # Losing histogram
+        ]:
+            figure.add_trace(bar, row=1, col=1)
+
+        common_options["showlegend"] = False
+        for bar in [
+            plgo.Bar(
+                y=win_hist / sum_hist,
+                base=1 - win_hist / sum_hist,
+                name=lang << f"{TRKEY_PREFIX}.legends.hero_won",
+                hovertemplate=lang << f"{TRKEY_PREFIX}.hovertemplates.hero_won",
+                marker_color=OPACITY_GREEN,
+                legendgroup=lang << f"{TRKEY_PREFIX}.legends.hero_won",
+                **common_options,
+            ),  # Winning histogram
+            plgo.Bar(
+                y=chop_hist / sum_hist,
+                base=lose_hist / sum_hist,
+                name=lang << f"{TRKEY_PREFIX}.legends.chopped",
+                hovertemplate=lang << f"{TRKEY_PREFIX}.hovertemplates.chopped",
+                marker_color=OPACITY_YELLOW,
+                legendgroup=lang << f"{TRKEY_PREFIX}.legends.chopped",
+                **common_options,
+            ),  # Chopped histogram
+            plgo.Bar(
+                y=lose_hist / sum_hist,
+                # base=0.0,  # No base set
+                name=lang << f"{TRKEY_PREFIX}.legends.hero_lost",
+                hovertemplate=lang << f"{TRKEY_PREFIX}.hovertemplates.hero_lost",
+                marker_color=OPACITY_RED,
+                legendgroup=lang << f"{TRKEY_PREFIX}.legends.hero_lost",
+                **common_options,
+            ),  # Losing histogram
+        ]:
+            figure.add_trace(bar, row=2, col=1)
+
+    figure.add_shape(
+        type="line",
+        x0=0.0,
+        x1=1.0,
+        y0=1.0,
+        y1=0.0,
+        line={"color": "rgba(0,0,0,0.25)", "dash": "dash"},
+        row=2,
+        col=1,
+    )
+
     figure.update_layout(
-        barmode="stack",
+        barmode="overlay",
         title={
             "text": lang << f"{TRKEY_PREFIX}.title",
             "subtitle": {
@@ -980,8 +1055,29 @@ def get_all_in_equity_histogram(
                 "font": {"style": "italic"},
             },
         },
-        xaxis={"title": {"text": lang << f"{TRKEY_PREFIX}.x_axis"}},
-        yaxis={"title": {"text": lang << f"{TRKEY_PREFIX}.y_axis"}},
+        modebar_remove=["select2d", "lasso2d"],
+    )
+    figure.update_xaxes(fixedrange=True)
+    figure.update_yaxes(fixedrange=True)
+    figure.update_xaxes(
+        title={"text": lang << f"{TRKEY_PREFIX}.x_axis"},
+        tickformat=".2%",
+        range=[0.0, 1.0],
+        row=2,
+        col=1,
+    )
+    figure.update_yaxes(
+        showticklabels=False,
+        title={"text": lang << f"{TRKEY_PREFIX}.y_axis1"},
+        row=1,
+        col=1,
+    )
+    figure.update_yaxes(
+        title={"text": lang << f"{TRKEY_PREFIX}.y_axis2"},
+        tickformat=".0%",
+        range=[0.0, 1.0],
+        row=2,
+        col=1,
     )
     return figure
 
@@ -991,6 +1087,7 @@ def plot_hand_histories(
     hand_histories: typing.Iterable[HandHistory],
     lang: Language = Language.ENGLISH,
     *,
+    max_sampling: int | None = None,
     sort_key: typing.Callable[[HandHistory], typing.Any] = (lambda h: h.sorting_key()),
 ) -> str:
     """
@@ -998,7 +1095,11 @@ def plot_hand_histories(
     """
     hand_histories = sorted(hand_histories, key=sort_key)
     figures: list[plgo.Figure] = [
-        get_all_in_equity_histogram(hand_histories, lang, max_length=250)
+        get_all_in_equity_histogram(
+            hand_histories,
+            lang,
+            max_length=max_sampling if max_sampling else -1,
+        )
     ]
 
     return BASE_HTML_FRAME.format(

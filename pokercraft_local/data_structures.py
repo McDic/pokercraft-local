@@ -288,11 +288,12 @@ class HandHistory:
         stages: typing.Iterable[HAND_STAGE_TYPE] = ("preflop", "flop", "turn", "river"),
     ) -> dict[HAND_STAGE_TYPE, dict[str, tuple[float, bool]]]:
         """
-        Calculate equity for each player who has known cards.
+        Calculate equity for each given player,
+        assuming only these players all-ined.
         Returned value: `{stage: {player_id: (equity, never_lost)}}`
         """
-        if not player_ids:
-            raise ValueError("At least one player ID must be given")
+        if len(player_ids) <= 1:
+            raise ValueError("At least two player IDs must be given")
         for player_id in player_ids:
             if player_id not in self.known_cards:
                 raise ValueError("Player %s does not have known cards" % player_id)
@@ -305,11 +306,23 @@ class HandHistory:
             """
             Local helper function to get equities with given community cards.
             """
-            equity_result = equity.EquityResult([p[1] for p in cards_people], community)
-            return {
-                p[0]: (equity_result.get_equity_py(i), equity_result.never_lost(i))
-                for i, p in enumerate(cards_people)
-            }
+            if len(cards_people) > 2:
+                equity_result = equity.EquityResult(
+                    [p[1] for p in cards_people], community
+                )
+                return {
+                    p[0]: (equity_result.get_equity_py(i), equity_result.never_lost(i))
+                    for i, p in enumerate(cards_people)
+                }
+            else:  # 2 players
+                (pid1, hand1), (pid2, hand2) = cards_people
+                cache: equity.HUPreflopEquityCache = get_global_preflop_hu_cache()
+                win1, win2, tie = cache.get_winlose_py(hand1, hand2)
+                total = win1 + win2 + tie
+                return {
+                    pid1: (win1 / total + tie / total * 0.5, win2 == 0),
+                    pid2: (win2 / total + tie / total * 0.5, win1 == 0),
+                }
 
         result: dict[HAND_STAGE_TYPE, dict[str, tuple[float, bool]]] = {}
         if "preflop" in stages:

@@ -24,6 +24,10 @@
       "en": "Your GG nickname",
       "ko": "당신의 GG 닉네임"
     },
+    "hand_sampling": {
+      "en": "Max number of Hand Histories to sample",
+      "ko": "샘플링할 핸드 히스토리 최대 개수"
+    },
     "exported": {
       "tourney_summary": {
         "en": "Exported CSV and plot successfully; Please check {csv_path} and {plot_path} in {output_dir}.",
@@ -42,6 +46,10 @@
       "fetch_forex_rate": {
         "en": "Fetch the latest forex rate (May fail)",
         "ko": "최신 환율 불러오기 (실패할 수도 있음)"
+      },
+      "hand_sampling_no_limit": {
+        "en": "(No limit)",
+        "ko": "(제한 없음)"
       }
     },
     "error_messages": {
@@ -64,6 +72,10 @@
       "outdated_version": {
         "en": "You are using an outdated version of Pokercraft Local. Please update to the latest version (%d.%d.%d -> %d.%d.%d).",
         "ko": "Pokercraft Local 최신 버전이 출시되었습니다. 최신 버전으로 업데이트 해주세요. (%d.%d.%d -> %d.%d.%d)"
+      },
+      "invalid_hand_sampling_number": {
+        "en": "Max number of hand histories to sample must be a positive integer. Input: \"%s\"",
+        "ko": "샘플링할 핸드 히스토리 최대 개수는 양의 정수여야 합니다. 입력값: \"%s\""
       }
     },
     "export_buttons": {
@@ -453,9 +465,13 @@
           "en": "Hero's Equity at All-in",
           "ko": "히어로의 올인 시점 에퀴티"
         },
-        "y_axis": {
+        "y_axis1": {
           "en": "Number of All-ins",
           "ko": "올인 횟수"
+        },
+        "y_axis2": {
+          "en": "Your Win/Loss Ratio",
+          "ko": "당신의 승률"
         },
         "legends": {
           "hero_lost": {
@@ -469,6 +485,20 @@
           "chopped": {
             "en": "Chopped",
             "ko": "무승부"
+          }
+        },
+        "hovertemplates": {
+          "hero_won": {
+            "en": "Won %{customdata[0]} hands at equity in %{customdata[3]:.2%} ~ %{customdata[4]:.2%}",
+            "ko": "에퀴티 %{customdata[3]:.2%} ~ %{customdata[4]:.2%} 구간에서 %{customdata[0]}번 승리"
+          },
+          "chopped": {
+            "en": "Chopped %{customdata[1]} hands at equity in %{customdata[3]:.2%} ~ %{customdata[4]:.2%}",
+            "ko": "에퀴티 %{customdata[3]:.2%} ~ %{customdata[4]:.2%} 구간에서 %{customdata[1]}번 무승부"
+          },
+          "hero_lost": {
+            "en": "Lost %{customdata[2]} hands at equity in %{customdata[3]:.2%} ~ %{customdata[4]:.2%}",
+            "ko": "에퀴티 %{customdata[3]:.2%} ~ %{customdata[4]:.2%} 구간에서 %{customdata[2]}번 패배"
           }
         }
       }
