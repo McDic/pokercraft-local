@@ -1,3 +1,7 @@
+## v2.0.5
+
+- No visible changes to user; GUI & CI bugfixes
+
 ## v2.0.0
 
 - Introduced hand history analysis

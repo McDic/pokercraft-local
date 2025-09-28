@@ -1,7 +1,7 @@
 import re
 import typing
 
-VERSION: typing.Final[str] = "2.0.4"
+VERSION: typing.Final[str] = "2.0.5"
 
 POKERCRAFT_AHREF: typing.Final[str] = (
     '<a href="https://github.com/McDic/pokercraft-local/">'
