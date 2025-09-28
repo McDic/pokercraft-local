@@ -1,3 +1,14 @@
+## v2.0.0
+
+- Introduced hand history analysis
+  - Featured charts: All-in equity charts
+- Better logging is implemented(No more using `print`)
+- Tweaked GUI for new features
+  - Now "Enter" key is no more working on GUI
+- Introduced local rust module
+  - Merged `pokercraft-local-bankroll` rust module to local using `maturin`
+- Now translations(except plot documentations) are managed by [`.json` file](./pokercraft_local/translation_values.json)
+
 ## v1.8.1
 
 - Introduced "Max Drawdown" on "Historical Performance" section

@@ -13,27 +13,27 @@ Here is working [demo](https://blog.mcdic.net/assets/raw_html/damavaco_performan
 ### 1. Installation
 
 Clone this git repo and install dependencies with `pip install -r requirements.txt`, optionally on virtual environment.
-If you want the library files only, you can download from PyPI. Run `pip install pokercraft-local`.
 
-```bash
-pip install -r requirements.txt  # When you cloned the whole repo
-pip install pokercraft-local  # When you install library only via pip
-```
+You can also download this library from PyPI; Run `pip install pokercraft-local`.
 
 Or alternatively, you can just download compiled binaries from [Releases page](https://github.com/McDic/pokercraft-local/releases).
 This is the best decision when you don't know programming.
 
 ### 2. Collect your data files from Pokercraft
 
-Download *"Game summaries"* file by pressing green button on your pokercraft tournament section.
+Download *"Game summaries"* file by pressing green button on your pokercraft tournament section,
+and *"Hand histories"* file by pressing red button on your pokercraft tournament section.
 If there are too many tournament records on your account, GGNetwork will prevent you from bulk downloading,
 therefore you may have to download separately monthly or weekly records.
 
 ![pokercraft_download](./images/pokercraft_download.png)
 
+Also there are some expiration dates for each file;
+You cannot download tournament summaries for tourneys which are 1 year old or older,
+neither hand histories for tourneys which are 3 months old or older.
+
 After you downloaded, just put all `.zip` files in single folder.
-The unzipping is not necessary anymore from `v1.7.0`.
-The library finds all `GG(blabla).txt` files from both directory and `.zip` files recursively by default.
+The library finds all `GG(blabla).txt` files from a selected directory and `.zip` files recursively by default.
 
 ### 3. Running a program
 
@@ -84,8 +84,14 @@ Each plots are now providing documentations in `.html`,
 so please read when you generated a file.
 There are following sections;
 
+### Tournament Summary Analysis
+
 1. Historical Performances
 2. RRE Heatmaps
-3. Bankroll Analysis with Monte-Carlo simulation
+3. Bankroll Analysis with Monte-Carlo Simulation
 4. Your Prizes
 5. RR by Rank Percentiles
+
+### Hand History Analysis
+
+1. All-in Equity Chart
