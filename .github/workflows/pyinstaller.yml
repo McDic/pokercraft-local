@@ -28,9 +28,14 @@ jobs:
       - run: |
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
-      - name: Run maturin
+      - name: Build Rust modules
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release --out wheels/
+      - name: Install the built wheels
         run: |
-          maturin develop -v --release
+          pip install wheels/*.whl
       - name: Run Pyinstaller
         run: |
           pyinstaller run_gui.py
