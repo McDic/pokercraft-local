@@ -33,9 +33,15 @@ jobs:
         with:
           command: build
           args: --release --out wheels/
-      - name: Install the built wheels
+      - name: Install the built wheels (MacOS, Linux)
+        if: ${{ ! ( matrix.os == 'windows-latest' ) }}
         run: |
           pip install wheels/*.whl
+      - name: Install the built wheels (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        shell: pwsh
+        run: |
+          pip install "wheels\*.whl"
       - name: Run Pyinstaller
         run: |
           pyinstaller run_gui.py
