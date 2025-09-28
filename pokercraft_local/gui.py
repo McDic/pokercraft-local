@@ -36,7 +36,7 @@ class PokerCraftLocalGUI:
     def __init__(self) -> None:
         self._window: tk.Tk = tk.Tk()
         self._window.title(f"Pokercraft Local v{VERSION} - By McDic")
-        self._window.geometry("400x310")
+        self._window.geometry("400x360")
         self._window.resizable(False, False)
 
         # Language selection
@@ -70,7 +70,7 @@ class PokerCraftLocalGUI:
 
         # Output directory
         self._label_output_directory: tk.Label = tk.Label(
-            self._window, text="labal_output_directory"
+            self._window, text="label_output_directory"
         )
         self._label_output_directory.pack()
         self._button_output_directory: tk.Button = tk.Button(
@@ -86,6 +86,15 @@ class PokerCraftLocalGUI:
         self._label_nickname.pack()
         self._input_nickname: tk.Entry = tk.Entry(self._window)
         self._input_nickname.pack()
+
+        # Sampling input
+        self._label_hand_sampling: tk.Label = tk.Label(
+            self._window, text="label_hand_sampling"
+        )
+        self._label_hand_sampling.pack()
+        self._input_hand_sampling: tk.Entry = tk.Entry(self._window)
+        self._input_hand_sampling.pack()
+        self._input_hand_sampling.insert(0, "No Limit")
 
         # Allow freerolls
         self._boolvar_allow_freerolls: tk.BooleanVar = tk.BooleanVar(self._window)
@@ -173,6 +182,9 @@ class PokerCraftLocalGUI:
         )
         self._label_nickname.config(
             text=lang << f"{self.TRKEY_PREFIX}.your_gg_nickname"
+        )
+        self._label_hand_sampling.config(
+            text=lang << f"{self.TRKEY_PREFIX}.hand_sampling"
         )
         self._checkbox_allow_freerolls.config(
             text=lang << f"{self.TRKEY_PREFIX}.checkboxes.include_freerolls"
@@ -302,6 +314,18 @@ class PokerCraftLocalGUI:
             ),
         )
 
+    def get_hand_sampling_limit(self) -> int | None:
+        """
+        Get hand sampling limit.
+        """
+        raw_line = self._input_hand_sampling.get().strip().lower()
+        if raw_line == "no limit":
+            return None
+        max_sampling = int(raw_line)
+        if max_sampling <= 0:
+            raise ValueError("Non-positive integer given")
+        return max_sampling
+
     def analyze_hand_history(self) -> None:
         """
         Analyze hand history files.
@@ -312,11 +336,30 @@ class PokerCraftLocalGUI:
         else:
             return None
 
+        max_sampling: int | None = None
+        try:
+            max_sampling = self.get_hand_sampling_limit()
+        except ValueError:
+            showwarning(
+                self.get_warning_popup_title(),
+                (
+                    THIS_LANG
+                    << (
+                        f"{self.TRKEY_PREFIX}.error_messages."
+                        "invalid_hand_sampling_number"
+                    )
+                )
+                % (self._input_hand_sampling.get().strip(),),
+            )
+            return None
+        logging.info(f"Sampling up to {max_sampling} hand histories.")
+
         plot_path = export_hand_history_analysis(
             main_path=data_directory,
             output_path=output_directory,
             nickname=nickname,
             lang=THIS_LANG,
+            max_sampling=max_sampling,
         )
         showinfo(
             self.get_info_popup_title(),

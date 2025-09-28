@@ -46,10 +46,6 @@
       "fetch_forex_rate": {
         "en": "Fetch the latest forex rate (May fail)",
         "ko": "최신 환율 불러오기 (실패할 수도 있음)"
-      },
-      "hand_sampling_no_limit": {
-        "en": "(No limit)",
-        "ko": "(제한 없음)"
       }
     },
     "error_messages": {

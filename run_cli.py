@@ -61,6 +61,14 @@ def get_argparser() -> ArgumentParser:
         required=True,
         help="Which plot type to export",
     )
+    parser.add_argument(
+        "--max-sampling",
+        type=int,
+        required=False,
+        default=None,
+        help="Maximum number of hand histories to sample "
+        "for hand history analysis (No limit by default)",
+    )
     return parser
 
 
@@ -91,6 +99,7 @@ if __name__ == "__main__":
                 output_path=namespace.output,
                 nickname=namespace.nickname,
                 lang=namespace.lang,
+                max_sampling=namespace.max_sampling,
             )
         case _:
             raise ValueError(f"Unknown plot type: {namespace.plot_type}")
