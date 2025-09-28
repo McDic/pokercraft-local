@@ -1,3 +1,7 @@
+## v2.0.6
+
+- Fixed that `HandHistory.calculate_equity_arbitrary` always accessed cache on HU, which shouldn't
+
 ## v2.0.5
 
 - No visible changes to user; GUI & CI bugfixes
