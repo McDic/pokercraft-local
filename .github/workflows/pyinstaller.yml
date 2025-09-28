@@ -41,7 +41,7 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         shell: pwsh
         run: |
-          pip install "wheels\*.whl"
+          Get-ChildItem wheels\*.whl | ForEach-Object { pip install $_.FullName }
       - name: Run Pyinstaller
         run: |
           pyinstaller run_gui.py
