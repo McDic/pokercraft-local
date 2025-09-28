@@ -10,16 +10,21 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
+  windows:
+    runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        platform:
+          - runner: windows-latest
+            target: x64
+          - runner: windows-latest
+            target: x86
     steps:
       - uses: actions/checkout@v5
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
+          architecture: ${{ matrix.platform.target }}
           python-version: "3.12"
           cache: "pip"
           cache-dependency-path: |
@@ -31,14 +36,10 @@ jobs:
       - name: Build Rust modules
         uses: PyO3/maturin-action@v1
         with:
+          target: ${{ matrix.platform.target }}
           command: build
           args: --release --out wheels/
-      - name: Install the built wheels (MacOS, Linux)
-        if: ${{ ! ( matrix.os == 'windows-latest' ) }}
-        run: |
-          pip install wheels/*.whl
       - name: Install the built wheels (Windows)
-        if: ${{ matrix.os == 'windows-latest' }}
         shell: pwsh
         run: |
           Get-ChildItem wheels\*.whl | ForEach-Object { pip install $_.FullName }
@@ -49,23 +50,18 @@ jobs:
           cd exebuild
           pyinstaller run_gui.py --distpath ../dist --add-data "../pokercraft_local/translation_values.json:pokercraft_local" --add-data "../pokercraft_local/hu_preflop_cache.txt.gz:pokercraft_local"
           cd ..
-      - name: Compress binary files (MacOS, Linux)
-        if: ${{ ! ( matrix.os == 'windows-latest' ) }}
-        env:
-          THIS_OS: ${{ matrix.os }}
-          TAG_VERSION: ${{ github.ref_name }}
-        run: zip -r run_gui-"$THIS_OS"-"$TAG_VERSION".zip dist/run_gui/
       - name: Compress binary files (Windows)
-        if: ${{ matrix.os == 'windows-latest' }}
         env:
           TAG_VERSION: ${{ github.ref_name }}
+          THIS_OS: windows
+          THIS_TARGET: ${{ matrix.platform.target }}
         shell: pwsh
-        run: Compress-Archive -Path dist\run_gui -DestinationPath run_gui-windows-latest-"$Env:TAG_VERSION".zip
+        run: Compress-Archive -Path dist\run_gui -DestinationPath pokercraft-local-"$Env:TAG_VERSION"-"$Env:THIS_OS"-"$Env:THIS_TARGET".zip
       - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            run_gui-*.zip
-            run_gui-*.tar.gz
+            pokercraft-local-*.zip
+            pokercraft-local-*.tar.gz
           body: |
             Please read [CHANGELOG.md](https://github.com/McDic/pokercraft-local/blob/master/CHANGELOG.md) for more information.
