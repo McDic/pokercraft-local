@@ -279,10 +279,26 @@ HAND_HISTORY_PLOT_DOCUMENTATIONS: typing.Final[list[dict[Language, str]]] = [
     # All-in Equity Analysis
     {
         Language.ENGLISH: """
-This section shows analysis of your all-in equity results.
+This section shows analysis of your all-in equity results in two manners;
+
+1. Bidirectional count histograms
+2. Winning/losing rate bar chart
+
+*Creator's comment: This section makes you able to compare
+your actual results and expected equities in all-in situations.
+Many people think they are "unlucky" in general.
+But in reality, it converges to actual equity in long term.*
 """,
         Language.KOREAN: """
-이 섹션은 당신의 올인 에퀴티 분석 결과를 보여줍니다.
+이 섹션은 당신의 올인 에퀴티 분석 결과를 두 가지 방식으로 보여줍니다;
+
+1. 양방향 카운트 히스토그램
+2. 승률 바 차트
+
+*제작자의 코멘트: 이 섹션은 당신이 실제 올인 상황에서 얼마나
+에퀴티에 가까운 결과를 냈는지를 비교할 수 있게 해줍니다.
+많은 사람들이 자신이 전반적으로 "운이 없다"고 생각합니다.
+하지만 실제로 장기적으로는 올인 결과는 에퀴티에 수렴하게 됩니다.*
 """,
     }
 ]

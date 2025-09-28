@@ -21,6 +21,7 @@ from .constants import (
 from .data_structures import HandHistory, TournamentSummary
 from .rust import equity as rust_equity
 from .translate import (
+    HAND_HISTORY_PLOT_DOCUMENTATIONS,
     TOURNEY_SUMMARY_PLOT_DOCUMENTATIONS,
     Language,
     format_dollar,
@@ -1094,7 +1095,7 @@ def plot_hand_histories(
     Generate hand history analysis HTML report.
     """
     hand_histories = sorted(hand_histories, key=sort_key)
-    figures: list[plgo.Figure] = [
+    figures: list[plgo.Figure | None] = [
         get_all_in_equity_histogram(
             hand_histories,
             lang,
@@ -1107,7 +1108,9 @@ def plot_hand_histories(
         summary=markdown("No summary yet.."),
         plots=HORIZONTAL_PLOT_DIVIDER.join(
             fig.to_html(include_plotlyjs=("cdn" if i == 0 else False), full_html=False)
+            + markdown(HAND_HISTORY_PLOT_DOCUMENTATIONS[i][lang])
             for i, fig in enumerate(figures)
+            if fig is not None
         ),
         software_credits=get_software_credits(lang),
     )
