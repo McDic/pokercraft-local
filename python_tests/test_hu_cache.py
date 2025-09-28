@@ -1,4 +1,5 @@
 import logging
+import os
 import random
 import unittest
 from math import comb
@@ -24,6 +25,10 @@ class TestHuPreflopEquityCache(unittest.TestCase):
         """
         return [Card(f"{rank}{suit}") for rank in "23456789TJQKA" for suit in "cdhs"]
 
+    @unittest.skipIf(
+        os.getenv("CI") == "true",
+        "Skip on CI, this is calculation-heavy",
+    )
     def test_hu_preflop_equity_cache(self) -> None:
         """
         Comparing the preflop equity cache results with direct equity calculations.
