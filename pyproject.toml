@@ -21,6 +21,14 @@ classifiers = [
 license = { file = "LICENSE" }
 keywords = ["poker", "pokercraft", "ggpoker"]
 dynamic = ["dependencies", "version"]
+dependencies = [
+    "pandas==2.2.*",
+    "plotly==5.24.*",
+    "statsmodels==0.14.*",
+    "markdown==3.7.*",
+    "forex-python==1.8.*",
+    "requests==2.32.*",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/McDic/pokercraft-local"
