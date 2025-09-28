@@ -54,7 +54,6 @@ def get_argparser() -> ArgumentParser:
         required=False,
         help="Fetch currency rate from the Forex if this flag is provided",
     )
-
     parser.add_argument(
         "--plot-type",
         choices=["tourney", "handhistory"],
@@ -69,14 +68,20 @@ def get_argparser() -> ArgumentParser:
         help="Maximum number of hand histories to sample "
         "for hand history analysis (No limit by default)",
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        required=False,
+        help="Enable debug logging if this flag is provided",
+    )
     return parser
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-
     parser = get_argparser()
     namespace = parser.parse_args()
+
+    logging.basicConfig(level=logging.INFO if not namespace.debug else logging.DEBUG)
 
     match namespace.plot_type:
         case "tourney":
