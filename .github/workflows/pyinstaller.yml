@@ -58,6 +58,7 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path dist\run_gui -DestinationPath pokercraft-local-"$Env:TAG_VERSION"-"$Env:THIS_OS"-"$Env:THIS_TARGET".zip
       - name: Upload to GitHub Releases
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         uses: softprops/action-gh-release@v2
         with:
           files: |
