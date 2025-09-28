@@ -306,7 +306,7 @@ class HandHistory:
             """
             Local helper function to get equities with given community cards.
             """
-            if len(cards_people) > 2:
+            if len(cards_people) > 2 or len(community) > 0:
                 equity_result = equity.EquityResult(
                     [p[1] for p in cards_people], community
                 )
