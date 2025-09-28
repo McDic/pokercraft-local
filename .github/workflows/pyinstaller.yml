@@ -44,7 +44,11 @@ jobs:
           Get-ChildItem wheels\*.whl | ForEach-Object { pip install $_.FullName }
       - name: Run Pyinstaller
         run: |
-          pyinstaller run_gui.py
+          mkdir exebuild
+          cp run_gui.py exebuild
+          cd exebuild
+          pyinstaller run_gui.py --distpath ../dist --add-data "../pokercraft_local/translation_values.json:pokercraft_local" --add-data "../pokercraft_local/hu_preflop_cache.txt.gz:pokercraft_local"
+          cd ..
       - name: Compress binary files (MacOS, Linux)
         if: ${{ ! ( matrix.os == 'windows-latest' ) }}
         env:

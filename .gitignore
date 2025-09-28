@@ -17,6 +17,7 @@ dist/
 build/
 run_gui.spec
 wheels/
+exebuild/
 
 # IDE
 .vscode/
