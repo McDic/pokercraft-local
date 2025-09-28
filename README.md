@@ -17,7 +17,7 @@ Clone this git repo and install dependencies with `pip install -r requirements.t
 You can also download this library from PyPI; Run `pip install pokercraft-local`.
 
 Or alternatively, you can just download compiled binaries from [Releases page](https://github.com/McDic/pokercraft-local/releases).
-This is the best decision when you don't know programming.
+This is the best decision when you are a Windows user and don't know programming.
 
 ### 2. Collect your data files from Pokercraft
 
@@ -71,7 +71,7 @@ To do something programatic, check `run_cli.py` for example references.
 
 #### 3C. When you directly downloaded releases
 
-Execute `run_gui-(YOUR_OS)/run_gui/run_gui.exe` from downloaded zip file on your local machine.
+Execute `pokercraft-local-.../run_gui/run_gui.exe` from downloaded zip file on your local machine.
 
 ### 4. Check results
 
