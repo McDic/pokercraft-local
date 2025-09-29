@@ -136,6 +136,71 @@ Seat 8: Hero (big blind) showed [Kh 7h] and lost with a pair of Threes
         hand_history = next(parser.parse(StringIO(RAW_HAND_HISTORY)))
         self.assertEqual(hand_history.net_profit("Hero"), -30 - 600 - 1025)
 
+    def test_hand_history_3(self):
+        RAW_HAND_HISTORY = """
+Poker Hand #TM4732538867: Tournament #214586167, Zodiac Rooster Night Crow Bounty ¥22 Hold'em No Limit - Level6(150/300) - 2025/07/03 00:03:20
+Table '11' 8-max Seat #7 is the button
+Seat 1: b9df4ba9 (23,051 in chips)
+Seat 2: 50d33192 (23,292 in chips)
+Seat 3: 91be158e (7,746 in chips)
+Seat 4: f69edd6e (3,742 in chips)
+Seat 5: db9370f (12,242 in chips)
+Seat 6: 796c6a7 (9,905 in chips)
+Seat 7: dd18df1 (47,457 in chips)
+Seat 8: Hero (6,564 in chips)
+796c6a7: posts the ante 35
+f69edd6e: posts the ante 35
+50d33192: posts the ante 35
+b9df4ba9: posts the ante 35
+db9370f: posts the ante 35
+91be158e: posts the ante 35
+Hero: posts the ante 35
+dd18df1: posts the ante 35
+Hero: posts small blind 150
+b9df4ba9: posts big blind 300
+*** HOLE CARDS ***
+Dealt to b9df4ba9
+Dealt to 50d33192
+Dealt to 91be158e
+Dealt to f69edd6e
+Dealt to db9370f
+Dealt to 796c6a7
+Dealt to dd18df1
+Dealt to Hero [Kh Kc]
+50d33192: folds
+91be158e: folds
+f69edd6e: folds
+db9370f: folds
+796c6a7: folds
+dd18df1: raises 300 to 600
+Hero: raises 1,350 to 1,950
+b9df4ba9: folds
+dd18df1: calls 1,350
+*** FLOP *** [As Qc 8s]
+Hero: bets 4,579 and is all-in
+dd18df1: calls 4,579
+Hero: shows [Kh Kc] (a pair of Kings)
+dd18df1: shows [9s Ah] (a pair of Aces)
+*** TURN *** [As Qc 8s] [4s]
+*** RIVER *** [As Qc 8s 4s] [3h]
+*** SHOWDOWN ***
+dd18df1 collected 13,638 from pot
+*** SUMMARY ***
+Total pot 13,638 | Rake 0 | Jackpot 0 | Bingo 0 | Fortune 0 | Tax 0
+Board [As Qc 8s 4s 3h]
+Seat 1: b9df4ba9 (big blind) folded before Flop
+Seat 2: 50d33192 folded before Flop
+Seat 3: 91be158e folded before Flop
+Seat 4: f69edd6e folded before Flop
+Seat 5: db9370f folded before Flop
+Seat 6: 796c6a7 folded before Flop
+Seat 7: dd18df1 (button) showed [9s Ah] and won (13,638) with a pair of Aces
+Seat 8: Hero (small blind) showed [Kh Kc] and lost with a pair of Kings
+""".strip()
+        parser = PokercraftHandHistoryParser()
+        hand_history = next(parser.parse(StringIO(RAW_HAND_HISTORY)))
+        self.assertEqual(hand_history.net_profit("Hero"), -35 - 1950 - 4579)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -233,8 +233,8 @@ class HandHistory:
             self.actions_turn,
             self.actions_river,
         ):
+            latest_bet: int = 0
             for action in street:
-                latest_bet: int = 0
                 if action.player_id != player_id:
                     continue
                 match action.action:
@@ -244,7 +244,7 @@ class HandHistory:
                         latest_bet += action.amount
                     case "raise":
                         latest_bet = action.amount
-                total_bet += latest_bet
+            total_bet += latest_bet
 
         if (
             self.uncalled_returned is not None
