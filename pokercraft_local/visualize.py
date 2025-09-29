@@ -965,7 +965,7 @@ def get_all_in_equity_histogram(
             ),
             axis=-1,
         )
-        common_options = {
+        common_options: dict = {
             "x": bin_centers,
             "width": bin_widths,
             "customdata": common_customdata,
