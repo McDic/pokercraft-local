@@ -202,11 +202,67 @@ class HandHistory:
         """
         return (self.tournament_id or 0, self.dt)
 
-    def how_much_won(self, player_id: str) -> int:
+    @functools.cache
+    def initial_chips(self, player_id: str) -> int:
         """
-        Returns how much the given player won in this hand.
+        Returns the initial chips of the given player in this hand.
         """
-        return self.wons.get(player_id, 0)
+        for _seat, (pid, chips) in self.seats.items():
+            if pid == player_id:
+                return chips
+        raise ValueError("Player %s is not in this hand" % player_id)
+
+    @functools.cache
+    def total_chips_put(self, player_id: str) -> int:
+        """
+        Returns how much chips the given player put into the pot
+        in this hand, including both ante/blinds and normal bets.
+        """
+        if player_id not in (pid for pid, _chips in self.seats.values()):
+            raise ValueError("Player %s is not in this hand" % player_id)
+
+        total_bet: int = 0
+
+        # Count ante separately
+        for action in self.actions_preflop:
+            if action.action == "ante" and action.player_id == player_id:
+                total_bet += action.amount
+
+        # Count bets/calls/raises
+        for street in (
+            self.actions_preflop,
+            self.actions_flop,
+            self.actions_turn,
+            self.actions_river,
+        ):
+            latest_bet: int = 0
+            for action in street:
+                if action.player_id != player_id:
+                    continue
+                match action.action:
+                    case "fold" | "check":
+                        continue
+                    case "call" | "bet" | "blind":
+                        latest_bet += action.amount
+                    case "raise":
+                        total_bet = action.amount
+                total_bet += latest_bet
+
+        if (
+            self.uncalled_returned is not None
+            and self.uncalled_returned[0] == player_id
+        ):
+            total_bet -= self.uncalled_returned[1]
+
+        return total_bet
+
+    @functools.cache
+    def net_profit(self, player_id: str) -> int:
+        """
+        Returns the net profit of the given player in this hand.
+        This is equivalent to `self.wons[player_id] - self.total_chips_put(player_id)`.
+        """
+        return self.wons.get(player_id, 0) - self.total_chips_put(player_id)
 
     def all_ined_street(
         self, player_id: str
@@ -429,3 +485,42 @@ def get_global_preflop_hu_cache(
             default_path or Path(__file__).parent / "hu_preflop_cache.txt.gz"
         )
     return GLOBAL_PREFLOP_HU_CACHE
+
+
+class SequentialHandHistories:
+    """
+    Represents a sequence of hand histories in same game.
+    """
+
+    def __init__(self, histories: typing.Iterable[HandHistory]) -> None:
+        self.histories: list[HandHistory] = sorted(
+            histories, key=lambda h: h.sorting_key()
+        )
+        if len(set(h.id for h in self.histories)) != len(self.histories):
+            raise ValueError("Duplicate hand IDs in the given histories")
+        elif len(self.histories) == 0:
+            raise ValueError("No hand histories given")
+        elif len(set(h.tournament_id for h in self.histories)) != 1:
+            raise ValueError("Histories are not from the same tournament")
+
+    def generate_chip_history(self) -> list[int]:
+        """
+        Generate chip history for the "Hero" player.
+        """
+        chip_history: list[int] = [self.histories[0].initial_chips("Hero")]
+        for hand in self.histories:
+            chip_history.append(chip_history[-1] + hand.net_profit("Hero"))
+        return chip_history
+
+    @staticmethod
+    def generate_sequences(
+        histories: typing.Iterable[HandHistory],
+    ) -> typing.Iterable["SequentialHandHistories"]:
+        """
+        Generate sequences of hand histories from given iterable.
+        """
+        sorted_histories = sorted(histories, key=lambda h: h.sorting_key())
+        for _tourney_id, group in itertools.groupby(
+            sorted_histories, lambda h: h.tournament_id
+        ):
+            yield SequentialHandHistories(group)
