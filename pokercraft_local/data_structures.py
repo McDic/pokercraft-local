@@ -1,4 +1,3 @@
-import functools
 import itertools
 import logging
 import math
@@ -13,7 +12,7 @@ from forex_python.converter import CurrencyRates
 
 from .constants import HAND_STAGE_TYPE
 from .rust import card, equity
-from .utils import evaluate_execution_speed
+from .utils import cache_without_hashing_self
 
 Card = card.Card
 HandRank = card.HandRank
@@ -202,7 +201,6 @@ class HandHistory:
         """
         return (self.tournament_id or 0, self.dt)
 
-    @functools.cache
     def initial_chips(self, player_id: str) -> int:
         """
         Returns the initial chips of the given player in this hand.
@@ -212,7 +210,7 @@ class HandHistory:
                 return chips
         raise ValueError("Player %s is not in this hand" % player_id)
 
-    @functools.cache
+    @cache_without_hashing_self
     def total_chips_put(self, player_id: str) -> int:
         """
         Returns how much chips the given player put into the pot
@@ -235,17 +233,17 @@ class HandHistory:
             self.actions_turn,
             self.actions_river,
         ):
-            latest_bet: int = 0
             for action in street:
+                latest_bet: int = 0
                 if action.player_id != player_id:
                     continue
                 match action.action:
                     case "fold" | "check":
-                        continue
+                        pass
                     case "call" | "bet" | "blind":
                         latest_bet += action.amount
                     case "raise":
-                        total_bet = action.amount
+                        latest_bet = action.amount
                 total_bet += latest_bet
 
         if (
@@ -256,7 +254,6 @@ class HandHistory:
 
         return total_bet
 
-    @functools.cache
     def net_profit(self, player_id: str) -> int:
         """
         Returns the net profit of the given player in this hand.
@@ -272,7 +269,7 @@ class HandHistory:
         """
         return self.all_ined.get(player_id)
 
-    @functools.cache
+    @cache_without_hashing_self
     def showdown_players(self) -> frozenset[str]:
         """
         Returns the list of players who reached showdown.
@@ -289,7 +286,7 @@ class HandHistory:
                 players.discard(action.player_id)
         return frozenset(players)
 
-    @functools.cache
+    @cache_without_hashing_self
     def total_pot(self) -> int:
         """
         Returns the total pot size of this hand.
@@ -297,7 +294,7 @@ class HandHistory:
         """
         return sum(self.wons.values())
 
-    @functools.cache
+    @cache_without_hashing_self
     def was_best_hand(self, main_player_id: str) -> int:
         """
         Check if the given player had the best hand against all players
@@ -357,7 +354,7 @@ class HandHistory:
             (player_id, self.known_cards[player_id]) for player_id in player_ids
         ]
 
-        @evaluate_execution_speed
+        # @evaluate_execution_speed
         def get_equities(community: list[Card]) -> dict[str, tuple[float, bool]]:
             """
             Local helper function to get equities with given community cards.
@@ -505,7 +502,7 @@ class SequentialHandHistories:
 
     def generate_chip_history(self) -> list[int]:
         """
-        Generate chip history for the "Hero" player.
+        Generate the chip history for the "Hero" player.
         """
         chip_history: list[int] = [self.histories[0].initial_chips("Hero")]
         for hand in self.histories:

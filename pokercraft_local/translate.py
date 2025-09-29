@@ -300,7 +300,11 @@ But in reality, it converges to actual equity in long term.*
 많은 사람들이 자신이 전반적으로 "운이 없다"고 생각합니다.
 하지만 실제로 장기적으로는 올인 결과는 에퀴티에 수렴하게 됩니다.*
 """,
-    }
+    },
+    {
+        Language.ENGLISH: "Not implemented yet.",
+        Language.KOREAN: "아직 구현되지 않았습니다.",
+    },
 ]
 
 

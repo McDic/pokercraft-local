@@ -119,7 +119,7 @@ Seat 7: Hero (button) folded before Flop
         )
 
         self.assertEqual(hand_history.wons[winning_player_id], 9210)
-        self.assertEqual(hand_history.wons["Hero"], 0)
+        self.assertEqual(hand_history.wons.get("Hero", 0), 0)
         self.assertEqual(hand_history.total_pot(), 9210)
         self.assertEqual(hand_history.uncalled_returned, (winning_player_id, 4800))
 

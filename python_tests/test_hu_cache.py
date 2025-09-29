@@ -6,6 +6,7 @@ from math import comb
 
 from pokercraft_local.data_structures import get_global_preflop_hu_cache
 from pokercraft_local.rust import card, equity
+from pokercraft_local.utils import mark_expensive_test
 
 Card = card.Card
 HUPFCache = equity.HUPreflopEquityCache
@@ -25,15 +26,12 @@ class TestHuPreflopEquityCache(unittest.TestCase):
         """
         return [Card(f"{rank}{suit}") for rank in "23456789TJQKA" for suit in "cdhs"]
 
-    @unittest.skipIf(
-        os.getenv("CI") == "true",
-        "Skip on CI, this is calculation-heavy",
-    )
+    @mark_expensive_test
     def test_hu_preflop_equity_cache(self) -> None:
         """
         Comparing the preflop equity cache results with direct equity calculations.
         """
-        TOTAL_ITERATIONS: int = 100
+        TOTAL_ITERATIONS: int = 200
         all_cards = self.all_cards()
         NUMBER_OF_BOARDS = comb(48, 5)
 

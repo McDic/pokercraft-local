@@ -18,7 +18,7 @@ from .constants import (
     HAND_STAGE_TYPE,
     HORIZONTAL_PLOT_DIVIDER,
 )
-from .data_structures import HandHistory, TournamentSummary
+from .data_structures import HandHistory, SequentialHandHistories, TournamentSummary
 from .rust import equity as rust_equity
 from .translate import (
     HAND_HISTORY_PLOT_DOCUMENTATIONS,
@@ -1083,6 +1083,75 @@ def get_all_in_equity_histogram(
     return figure
 
 
+def get_chip_histories(
+    hand_histories: list[HandHistory],
+) -> plgo.Figure:
+    """
+    Extract chip histories from hand histories.
+    """
+    figure = make_subplots(1, 1)
+    for sequential_hand_histories in SequentialHandHistories.generate_sequences(
+        hand_histories
+    ):
+        first_hh = sequential_hand_histories.histories[0]
+        if first_hh.tournament_id is None:
+            warnings.warn(
+                "Dropping non-tournament hand histories(%d histories found).."
+                % (len(sequential_hand_histories.histories),)
+            )
+            continue
+
+        chip_history_raw = sequential_hand_histories.generate_chip_history()
+        initial_chips = chip_history_raw[0]
+        while chip_history_raw[-1] < 1e-2 * initial_chips:
+            chip_history_raw.pop()
+        if (
+            len(chip_history_raw) >= 2
+            and chip_history_raw[-1] < chip_history_raw[-2] * 1e-3
+        ):
+            chip_history_raw.pop()
+
+        if min(chip_history_raw) < 1e-4 * initial_chips:
+            raise ValueError(
+                'Chip history has too small values(%s) in tourney "%s" (%s)..'
+                % (chip_history_raw, first_hh.tournament_name, first_hh.dt)
+            )
+
+        chip_history = np.array(chip_history_raw)
+        chip_history = np.multiply(chip_history, 1.0 / chip_history[0])
+        figure.add_trace(
+            plgo.Scatter(
+                x=np.arange(len(chip_history)) + 1,
+                y=chip_history,
+                mode="lines",
+                name='Tourney "%s"' % (first_hh.tournament_name,),
+                hovertemplate="Hand %{x}: %{y:.2%} of starting chips",
+            )
+        )
+
+    figure.add_hline(
+        y=1e-3,
+        row=1,
+        col=1,
+        label={
+            "text": "Death Line",
+            "textposition": "end",
+            "yanchor": "bottom",
+            "font": {"color": "black", "weight": 1000, "size": 18},
+        },
+        line_dash="dash",
+        line_color="black",
+    )
+
+    figure.update_layout(
+        title="Chip Histories",
+        showlegend=False,
+    )
+    figure.update_xaxes(autorangeoptions={"minallowed": -1.0})
+    figure.update_yaxes(autorangeoptions={"minallowed": -4.0}, type="log")
+    return figure
+
+
 def plot_hand_histories(
     nickname: str,
     hand_histories: typing.Iterable[HandHistory],
@@ -1099,8 +1168,9 @@ def plot_hand_histories(
         get_all_in_equity_histogram(
             hand_histories,
             lang,
-            max_length=max_sampling if max_sampling else -1,
-        )
+            max_length=10,  # max_sampling if max_sampling else -1,
+        ),
+        get_chip_histories(hand_histories),
     ]
 
     return BASE_HTML_FRAME.format(
