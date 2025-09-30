@@ -1094,6 +1094,7 @@ def get_chip_histories(
 ) -> plgo.Figure:
     """
     Extract chip histories from hand histories.
+    Max sampling is not applied here.
     """
     THIS_TRKEY_PREFIX: typing.Final[str] = "plot.hand_history.chip_histories"
     figure = make_subplots(
@@ -1327,7 +1328,7 @@ def plot_hand_histories(
         get_all_in_equity_histogram(
             hand_histories,
             lang,
-            max_length=10,  # max_sampling if max_sampling else -1,
+            max_length=max_sampling if max_sampling else -1,
         ),
         get_chip_histories(hand_histories, lang),
     ]

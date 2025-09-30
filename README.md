@@ -95,3 +95,4 @@ There are following sections;
 ### Hand History Analysis
 
 1. All-in Equity Chart
+2. Chip Histories

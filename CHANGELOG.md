@@ -1,3 +1,11 @@
+## v2.1.0
+
+- Introduced "Chip Histories" section
+  - Chip stack over time chart
+  - Inversed cumulative histogram of number of hands played chart
+  - Death Threshold histogram chart
+- Some internal helper data structures were developed(`SequentialHandHistories`, `GeneralSimpleSegTree`)
+
 ## v2.0.6
 
 - Fixed that `HandHistory.calculate_equity_arbitrary` always accessed cache on HU, which shouldn't
