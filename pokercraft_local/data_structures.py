@@ -19,6 +19,8 @@ HandRank = card.HandRank
 
 logger = logging.getLogger("pokercraft_local.data_structures")
 
+T = typing.TypeVar("T")
+
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class TournamentSummary:
@@ -489,16 +491,38 @@ class SequentialHandHistories:
     Represents a sequence of hand histories in same game.
     """
 
-    def __init__(self, histories: typing.Iterable[HandHistory]) -> None:
+    def __init__(
+        self,
+        histories: typing.Iterable[HandHistory],
+        re_entry_number: int = 0,
+    ) -> None:
         self.histories: list[HandHistory] = sorted(
             histories, key=lambda h: h.sorting_key()
         )
+        self.re_entry_number: int = re_entry_number
+
         if len(set(h.id for h in self.histories)) != len(self.histories):
             raise ValueError("Duplicate hand IDs in the given histories")
         elif len(self.histories) == 0:
             raise ValueError("No hand histories given")
         elif len(set(h.tournament_id for h in self.histories)) != 1:
             raise ValueError("Histories are not from the same tournament")
+        elif self.re_entry_number < 0:
+            raise ValueError("Re-entry number must be non-negative")
+
+    def get_name(self) -> str:
+        """
+        Get the tournament name of this sequence.
+        """
+        first_hh = self.histories[0]
+        if first_hh.tournament_name is not None:
+            return "%s (%s / Trial #%d)" % (
+                first_hh.tournament_name,
+                first_hh.dt.strftime("%Y%m%d"),
+                self.re_entry_number + 1,
+            )
+        else:
+            raise ValueError("Tournament name is not set")
 
     def generate_chip_history(self) -> list[int]:
         """
@@ -520,4 +544,105 @@ class SequentialHandHistories:
         for _tourney_id, group in itertools.groupby(
             sorted_histories, lambda h: h.tournament_id
         ):
-            yield SequentialHandHistories(group)
+            reset_count: int = 0
+            lis: list[HandHistory] = []
+            for i, history in enumerate(group):
+                lis.append(history)
+                if history.initial_chips("Hero") + history.net_profit("Hero") == 0:
+                    yield SequentialHandHistories(lis, re_entry_number=reset_count)
+                    # Not using `clear`, instead allocate a new list
+                    # just for getting safety from constructor change
+                    lis = []
+                    reset_count += 1
+            if lis:
+                yield SequentialHandHistories(lis, re_entry_number=reset_count)
+
+
+class GeneralSimpleSegTree(typing.Generic[T]):
+    """
+    A simple segment tree implementation for range queries.
+    """
+
+    def __init__(
+        self,
+        data: typing.Iterable[T],
+        func: typing.Callable[[T, T], T],
+    ) -> None:
+        self._func = func
+        self._data: list[list[T]] = [list(data)]
+        while len(self._data[-1]) > 1:
+            prev_level = self._data[-1]
+            next_level: list[T] = []
+            for i in range(0, len(prev_level), 2):
+                if i + 1 < len(prev_level):
+                    next_level.append(func(prev_level[i], prev_level[i + 1]))
+                else:
+                    next_level.append(prev_level[i])
+            self._data.append(next_level)
+
+    def change(self, index: int, value: T) -> None:
+        """
+        Change the value at the given index.
+        """
+        if index < 0 or index >= len(self._data[0]):
+            raise IndexError("Index out of range for segment tree change")
+
+        self._data[0][index] = value
+        for level in range(1, len(self._data)):
+            index >>= 1
+            left = index * 2
+            right = left + 1
+            if right < len(self._data[level - 1]):
+                self._data[level][index] = self._func(
+                    self._data[level - 1][left], self._data[level - 1][right]
+                )
+            else:
+                self._data[level][index] = self._data[level - 1][left]
+
+    def get(self, left: int, right: int) -> T:
+        """
+        Perform a range query on the segment tree.
+        The range is [left, right).
+        """
+        if left < 0 or right > len(self._data[0]) + 1 or left >= right:
+            raise IndexError(
+                "Invalid range for segment tree query: [%d, %d]" % (left, right)
+            )
+
+        # Collect elements with their original indices for proper ordering
+        elements_with_indices = []
+        current_left, current_right = left, right
+        level = 0
+
+        while current_left < current_right:
+            # If left boundary is odd, take the element
+            if current_left & 1:
+                # Calculate the original index range this element represents
+                start_idx = current_left << level
+                elements_with_indices.append(
+                    (start_idx, self._data[level][current_left])
+                )
+                current_left += 1
+
+            # If right boundary is odd, take the element
+            if current_right & 1:
+                current_right -= 1
+                # Calculate the original index range this element represents
+                start_idx = current_right << level
+                elements_with_indices.append(
+                    (start_idx, self._data[level][current_right])
+                )
+
+            # Move to next level
+            current_left >>= 1
+            current_right >>= 1
+            level += 1
+
+        # Sort by original index to maintain left-to-right order
+        # Apply function left-to-right to maintain order
+        # for the (potentially non-commutative) operation
+        elements_with_indices.sort(key=lambda x: x[0])
+        result = elements_with_indices[0][1]
+        for i in range(1, len(elements_with_indices)):
+            result = self._func(result, elements_with_indices[i][1])
+        return result

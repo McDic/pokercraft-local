@@ -497,6 +497,72 @@
             "ko": "에퀴티 %{customdata[3]:.2%} ~ %{customdata[4]:.2%} 구간에서 %{customdata[2]}번 패배"
           }
         }
+      },
+      "chip_histories": {
+        "title": {
+          "en": "Chip Histories on Tournaments",
+          "ko": "토너먼트 칩 변화 히스토리"
+        },
+        "x_axes": {
+          "chip_histories": {
+            "en": "Number of Hands Played",
+            "ko": "플레이한 핸드 수"
+          },
+          "died_at": {
+            "en": "Number of Hands Played",
+            "ko": "플레이한 핸드 수"
+          },
+          "death_threshold": {
+            "en": "Death Threshold<br>(Relative to Previous Peak Stack)",
+            "ko": "사망 임계점<br>(이전 최고점 대비 스택 비율)"
+          }
+        },
+        "y_axes": {
+          "chip_histories": {
+            "en": "Chips Multiplier (Based on Starting Stack)",
+            "ko": "칩 배율 (스타팅 칩 기준)"
+          },
+          "died_at": {
+            "en": "Survival Rate",
+            "ko": "생존 확률"
+          },
+          "death_threshold": {
+            "en": "Death Rate",
+            "ko": "사망률"
+          }
+        },
+        "hovertemplates": {
+          "chip_histories": {
+            "en": "Hand #%{x}: %{y:.3f}x of Starting Stack<br>..from %{fullData.name}<extra></extra>",
+            "ko": "%{x}번째 핸드: 스타팅 칩의 %{y:.3f}배<br>토너 출처: %{fullData.name}<extra></extra>"
+          },
+          "died_at": {
+            "en": "Survived until Hand #%{x} on %{y:.2%} of tournaments",
+            "ko": "%{y:.2%}의 토너먼트에서 %{x}번째 핸드까지 생존"
+          },
+          "death_threshold": {
+            "en": "Never went up again after %{x} of<br>previous peak in %{y:.2%} of tournaments",
+            "ko": "전체 토너 중 %{y:.2%}에서 전고점 대비 %{x}<br>이하로 떨어진 후 다시 오르지 못함"
+          }
+        },
+        "names": {
+          "danger_line": {
+            "en": "Danger Line",
+            "ko": "위험선"
+          },
+          "died_at": {
+            "en": "How Many Hands You Survived",
+            "ko": "생존한 핸드 플레이 수"
+          },
+          "died_at_avg": {
+            "en": "Average Survival Hands: %.1f",
+            "ko": "평균 생존 핸드 수: %.1f"
+          },
+          "death_threshold": {
+            "en": "Death Threshold",
+            "ko": "사망 임계점"
+          }
+        }
       }
     }
   }

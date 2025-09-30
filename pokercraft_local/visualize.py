@@ -18,7 +18,12 @@ from .constants import (
     HAND_STAGE_TYPE,
     HORIZONTAL_PLOT_DIVIDER,
 )
-from .data_structures import HandHistory, SequentialHandHistories, TournamentSummary
+from .data_structures import (
+    GeneralSimpleSegTree,
+    HandHistory,
+    SequentialHandHistories,
+    TournamentSummary,
+)
 from .rust import equity as rust_equity
 from .translate import (
     HAND_HISTORY_PLOT_DOCUMENTATIONS,
@@ -1085,11 +1090,41 @@ def get_all_in_equity_histogram(
 
 def get_chip_histories(
     hand_histories: list[HandHistory],
+    lang: Language,
 ) -> plgo.Figure:
     """
     Extract chip histories from hand histories.
     """
-    figure = make_subplots(1, 1)
+    THIS_TRKEY_PREFIX: typing.Final[str] = "plot.hand_history.chip_histories"
+    figure = make_subplots(
+        2,
+        2,
+        specs=[
+            [{"colspan": 2}, None],
+            [{}, {}],
+        ],
+        vertical_spacing=0.06,
+        horizontal_spacing=0.1,
+    )
+
+    # Gather data, and also add each tourney chip history
+    total_tourneys: int = 0
+    died_at: list[int] = []
+    max_hand_lengths: int = 1
+    death_thresholds: list[float] = [
+        3 / 4,
+        3 / 5,
+        1 / 2,
+        2 / 5,
+        1 / 3,
+        1 / 4,
+        1 / 5,
+        1 / 8,
+        1 / 10,
+    ]
+    death_threshold_count: dict[float, int] = {th: 0 for th in death_thresholds}
+
+    # Iterate each tourney
     for sequential_hand_histories in SequentialHandHistories.generate_sequences(
         hand_histories
     ):
@@ -1101,54 +1136,178 @@ def get_chip_histories(
             )
             continue
 
+        total_tourneys += 1
         chip_history_raw = sequential_hand_histories.generate_chip_history()
         initial_chips = chip_history_raw[0]
-        while chip_history_raw[-1] < 1e-2 * initial_chips:
-            chip_history_raw.pop()
-        if (
-            len(chip_history_raw) >= 2
-            and chip_history_raw[-1] < chip_history_raw[-2] * 1e-3
-        ):
-            chip_history_raw.pop()
 
-        if min(chip_history_raw) < 1e-4 * initial_chips:
-            raise ValueError(
-                'Chip history has too small values(%s) in tourney "%s" (%s)..'
-                % (chip_history_raw, first_hh.tournament_name, first_hh.dt)
-            )
+        # Build segtree to analyze several attributes
+        chip_history_segtree_max = GeneralSimpleSegTree(chip_history_raw, max)
+
+        # Death threshold
+        for threshold in death_thresholds:
+            if all(
+                chip_history_segtree_max.get(idx, len(chip_history_raw)) <= v
+                for idx, v in enumerate(chip_history_raw)
+                if v <= threshold * chip_history_segtree_max.get(0, idx + 1)
+            ):
+                death_threshold_count[threshold] += 1
+
+        # Chip history raw is manipulated for plot from here
+        if chip_history_raw[-1] <= 0:
+            died_at.append(len(chip_history_raw))
+        while chip_history_raw[-1] == 0:
+            chip_history_raw.pop()
+        max_hand_lengths = max(max_hand_lengths, len(chip_history_raw))
 
         chip_history = np.array(chip_history_raw)
-        chip_history = np.multiply(chip_history, 1.0 / chip_history[0])
+        chip_history = np.multiply(chip_history, 1.0 / initial_chips)
         figure.add_trace(
             plgo.Scatter(
                 x=np.arange(len(chip_history)) + 1,
                 y=chip_history,
                 mode="lines",
-                name='Tourney "%s"' % (first_hh.tournament_name,),
-                hovertemplate="Hand %{x}: %{y:.2%} of starting chips",
-            )
+                name=sequential_hand_histories.get_name(),
+                hovertemplate=lang
+                << f"{THIS_TRKEY_PREFIX}.hovertemplates.chip_histories",
+            ),
+            row=1,
+            col=1,
         )
 
-    figure.add_hline(
-        y=1e-3,
+    # Danger line
+    x_danger_line = np.arange(max_hand_lengths) + 1
+    danger_func = lambda x: np.maximum(
+        np.exp(x / 100.0 * math.log(10)) * 1.4e-2, 1.0 / 3
+    )
+    COLOR_DANGER_LINE = "rgba(33,33,33,0.33)"
+    figure.add_trace(
+        plgo.Scatter(
+            x=x_danger_line,
+            y=danger_func(x_danger_line),
+            mode="lines",
+            line={"dash": "dash", "color": COLOR_DANGER_LINE},
+            name=lang << f"{THIS_TRKEY_PREFIX}.names.danger_line",
+            hoverinfo="none",
+        ),
         row=1,
         col=1,
-        label={
-            "text": "Death Line",
-            "textposition": "end",
-            "yanchor": "bottom",
-            "font": {"color": "black", "weight": 1000, "size": 18},
-        },
-        line_dash="dash",
-        line_color="black",
+    )
+    DANGER_ANNOTATION_X = 0.75 * max_hand_lengths
+    figure.add_annotation(
+        x=DANGER_ANNOTATION_X,
+        y=math.log10(danger_func(DANGER_ANNOTATION_X)),
+        text=lang << f"{THIS_TRKEY_PREFIX}.names.danger_line",
+        showarrow=False,
+        font={"size": 24, "color": COLOR_DANGER_LINE, "weight": 1000},
+        yanchor="top",
+        xanchor="left",
+        row=1,
+        col=1,
     )
 
+    # Died at histogram
+    COLOR_DIED_AT = "rgba(38,210,87,0.9)"
+    died_at_xbins = np.arange(max_hand_lengths) + 1
+    died_at_histogram_y, died_at_histogram_x = np.histogram(
+        died_at, bins=died_at_xbins, density=True
+    )
+    died_at_histogram_y = 1.0 - died_at_histogram_y.cumsum() * (
+        len(died_at) / total_tourneys
+    )  # Tourneys with 1st are excluded from `died_at`
+    figure.add_trace(
+        plgo.Bar(
+            x=died_at_histogram_x,
+            y=died_at_histogram_y,
+            marker_color=COLOR_DIED_AT,
+            name=lang << f"{THIS_TRKEY_PREFIX}.names.died_at",
+            hovertemplate=lang << f"{THIS_TRKEY_PREFIX}.hovertemplates.died_at",
+        ),
+        row=2,
+        col=1,
+    )
+
+    # Died at average
+    COLOR_DIED_AT_AVG = "rgba(12,17,166,0.7)"
+    died_at_avg = np.mean(died_at)
+    figure.add_vline(
+        x=died_at_avg,
+        line_dash="dash",
+        line_color=COLOR_DIED_AT_AVG,
+        label={
+            "text": (lang << f"{THIS_TRKEY_PREFIX}.names.died_at_avg") % (died_at_avg,),
+            "font": {"color": COLOR_DIED_AT_AVG, "weight": 1000},
+            "textposition": "end",
+            "xanchor": "right",
+        },
+        row=2,
+        col=1,
+    )
+
+    # Death threshold
+    COLOR_DEATH_THRESHOLD = "rgba(222,118,177,0.9)"
+    sorted_death_thresholds = sorted(death_thresholds, reverse=True)
+    figure.add_trace(
+        plgo.Bar(
+            x=["%2gx" % (threshold,) for threshold in sorted_death_thresholds],
+            y=[
+                death_threshold_count[th] / total_tourneys
+                for th in sorted_death_thresholds
+            ],
+            marker_color=COLOR_DEATH_THRESHOLD,
+            name=lang << f"{THIS_TRKEY_PREFIX}.names.death_threshold",
+            hovertemplate=lang << f"{THIS_TRKEY_PREFIX}.hovertemplates.death_threshold",
+        ),
+        row=2,
+        col=2,
+    )
+
+    # All other settings
     figure.update_layout(
-        title="Chip Histories",
+        title=lang << f"{THIS_TRKEY_PREFIX}.title",
         showlegend=False,
     )
-    figure.update_xaxes(autorangeoptions={"minallowed": -1.0})
-    figure.update_yaxes(autorangeoptions={"minallowed": -4.0}, type="log")
+    figure.update_xaxes(
+        minallowed=0,
+        maxallowed=max_hand_lengths + 1,
+        title=lang << f"{THIS_TRKEY_PREFIX}.x_axes.chip_histories",
+        row=1,
+        col=1,
+    )
+    figure.update_yaxes(
+        minallowed=-2.25,
+        type="log",
+        title=lang << f"{THIS_TRKEY_PREFIX}.y_axes.chip_histories",
+        row=1,
+        col=1,
+    )
+    figure.update_xaxes(
+        minallowed=1,
+        maxallowed=max_hand_lengths + 1,
+        title=lang << f"{THIS_TRKEY_PREFIX}.x_axes.died_at",
+        row=2,
+        col=1,
+    )
+    figure.update_yaxes(
+        minallowed=0.0,
+        maxallowed=1.0,
+        title=lang << f"{THIS_TRKEY_PREFIX}.y_axes.died_at",
+        tickformat=".2%",
+        row=2,
+        col=1,
+    )
+    figure.update_xaxes(
+        title=lang << f"{THIS_TRKEY_PREFIX}.x_axes.death_threshold",
+        row=2,
+        col=2,
+    )
+    figure.update_yaxes(
+        minallowed=0.0,
+        maxallowed=1.0,
+        title=lang << f"{THIS_TRKEY_PREFIX}.y_axes.death_threshold",
+        tickformat=".2%",
+        row=2,
+        col=2,
+    )
     return figure
 
 
@@ -1170,7 +1329,7 @@ def plot_hand_histories(
             lang,
             max_length=10,  # max_sampling if max_sampling else -1,
         ),
-        get_chip_histories(hand_histories),
+        get_chip_histories(hand_histories, lang),
     ]
 
     return BASE_HTML_FRAME.format(
