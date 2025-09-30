@@ -302,8 +302,37 @@ But in reality, it converges to actual equity in long term.*
 """,
     },
     {
-        Language.ENGLISH: "Not implemented yet.",
-        Language.KOREAN: "아직 구현되지 않았습니다.",
+        Language.ENGLISH: """
+This section shows analysis of your chip histories in tournaments.
+
+1. Chip stack over time (Line chart)
+2. Inversed cumulative histogram of number of hands played
+3. Death Threshold histogram;
+    The ratio of non-increasing death after you fall below
+    specific portion of your previous peak stack.
+
+*Creator's comment:
+This section shows how your chip stack evolves over time.
+Most of the time, you die before playing 100 hands.
+Also surprisingly, according to the Death Threshold chart,
+if your stack becomes less than 25% of previous peak,
+then you are very likely to be eliminated soon.*
+""",
+        Language.KOREAN: """
+이 섹션은 토너먼트에서 당신의 칩 히스토리 분석 결과를 보여줍니다.
+
+1. 시간에 따른 칩 스택 (라인 차트)
+2. 플레이한 핸드 수의 역누적 히스토그램
+3. 사망 임계값 히스토그램;
+    이전 최고 스택의 특정 비율 이하로 떨어진 후에
+    계속 칩을 잃기만 하면서 사망할 확률입니다.
+
+*제작자의 코멘트:
+이 섹션은 시간에 따라 당신의 칩 스택이 어떻게 변화하는지를 보여줍니다.
+대부분의 경우, 당신은 100 핸드 전에 탈락합니다.
+또한 놀랍게도, 사망 임계값 차트에 따르면, 이전 최고 스택의 25% 이하로 스택이 떨어지면
+곧 탈락할 가능성이 매우 높다는 것을 알 수 있습니다.*
+""",
     },
 ]
 
