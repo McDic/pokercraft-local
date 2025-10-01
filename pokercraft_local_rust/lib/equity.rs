@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use std::io::BufRead;
 
 use flate2::read::GzDecoder;
-use itertools::Itertools;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 use rustfft::{num_complex::Complex, FftPlanner};
@@ -12,6 +11,7 @@ use statrs::distribution::{ContinuousCDF, Normal};
 
 use crate::card::{Card, Hand, HandRank};
 use crate::errors::PokercraftLocalError;
+use crate::utils::{FixedSizedCombinationIterator, IterWrapper};
 
 /// Result of single equity calculation.
 #[pyclass]
@@ -25,6 +25,59 @@ pub struct EquityResult {
 }
 
 impl EquityResult {
+    /// Chain an array of `N` cards and a slice of fixed cards into a 5-card array.
+    /// This is a helper function, do not call this directly.
+    fn chain5<const N: usize>(arr: [Card; N], fixed: &[Card]) -> [Card; 5] {
+        let mut result = [Card::default(); 5];
+        let mut idx = 0;
+        for &card in fixed {
+            result[idx] = card;
+            idx += 1;
+        }
+        for &card in arr.iter() {
+            result[idx] = card;
+            idx += 1;
+        }
+        result
+    }
+
+    /// Get an iterator over all possible 5-card flops.
+    /// This is a helper function, do not call this directly.
+    fn get_flop_iter(
+        remaining_cards: Vec<Card>,
+        fixed_communities: Vec<Card>,
+    ) -> Result<Box<dyn Iterator<Item = [Card; 5]> + Send>, PokercraftLocalError> {
+        match fixed_communities.len() {
+            0 => Ok(Box::new(FixedSizedCombinationIterator::<Card, 5>::new(
+                remaining_cards.into_iter(),
+            ))),
+            1 => Ok(Box::new(
+                FixedSizedCombinationIterator::<Card, 4>::new(remaining_cards.into_iter())
+                    .map(move |arr| Self::chain5(arr, &fixed_communities)),
+            )),
+            2 => Ok(Box::new(
+                FixedSizedCombinationIterator::<Card, 3>::new(remaining_cards.into_iter())
+                    .map(move |arr| Self::chain5(arr, &fixed_communities)),
+            )),
+            3 => Ok(Box::new(
+                FixedSizedCombinationIterator::<Card, 2>::new(remaining_cards.into_iter())
+                    .map(move |arr| Self::chain5(arr, &fixed_communities)),
+            )),
+            4 => Ok(Box::new(
+                FixedSizedCombinationIterator::<Card, 1>::new(remaining_cards.into_iter())
+                    .map(move |arr| Self::chain5(arr, &fixed_communities)),
+            )),
+            5 => Ok(Box::new(std::iter::once(Self::chain5(
+                [Card::default(); 0],
+                &fixed_communities,
+            )))),
+            len => Err(PokercraftLocalError::GeneralError(format!(
+                "Given {} fixed community cards; Cannot generate the 5-cards flop.",
+                len
+            ))),
+        }
+    }
+
     /// Create a new `EquityResult` by calculating the win/loss
     /// counts for the given player and community cards.
     pub fn new(
@@ -57,91 +110,89 @@ impl EquityResult {
         let get_empty_wins = || vec![vec![0; cards_people.len()]; cards_people.len()];
         let get_empty_loses = || vec![0; cards_people.len()];
 
-        let result = remaining_cards
-            .into_iter()
-            .combinations(5 - cards_community.len())
-            .par_bridge()
-            .map(|remaining_communities| {
-                let mut card7: [Card; 7] = [Card::default(); 7];
-                for (i, card) in cards_community
-                    .iter()
-                    .chain(remaining_communities.iter())
-                    .enumerate()
-                {
-                    card7[i] = *card;
-                }
+        let result = IterWrapper {
+            iter: Self::get_flop_iter(remaining_cards, cards_community)?,
+        }
+        .par_bridge()
+        .map(|communities| {
+            let mut card7: [Card; 7] = [Card::default(); 7];
+            for (i, card) in communities.iter().enumerate() {
+                card7[i] = *card;
+            }
 
-                // Get best hand ranks for each person
-                let mut best_ranks_people = vec![];
-                for (c1, c2) in cards_people.iter() {
-                    card7[5] = *c1;
-                    card7[6] = *c2;
-                    if let Ok((_, best_rank_this_person)) = HandRank::find_best5(card7) {
-                        best_ranks_people.push(best_rank_this_person);
+            // Get best hand ranks for each person
+            let best_ranks_people = cards_people
+                .iter()
+                .map(|&(c1, c2)| {
+                    card7[5] = c1;
+                    card7[6] = c2;
+                    if let Ok((_, best_rank_this_person)) = HandRank::find_best5(&card7) {
+                        Ok(best_rank_this_person)
                     } else {
-                        return Err(PokercraftLocalError::GeneralError(format!(
+                        Err(PokercraftLocalError::GeneralError(format!(
                             "Failed to evaluate hand rank: {:?}",
                             card7
-                        )));
+                        )))
                     }
+                })
+                .collect::<Result<Vec<_>, PokercraftLocalError>>()?;
+
+            // Compare people hand ranks
+            let mut best_rank = &best_ranks_people[0];
+            let mut tied: Vec<usize> = vec![0];
+            for (i, rank) in best_ranks_people.iter().enumerate().skip(1) {
+                if rank > best_rank {
+                    best_rank = rank;
+                    tied = vec![i];
+                } else if rank == best_rank {
+                    tied.push(i);
                 }
+            }
 
-                // Compare people hand ranks
-                let mut best_rank = &best_ranks_people[0];
-                let mut tied: Vec<usize> = vec![0];
-                for (i, rank) in best_ranks_people.iter().enumerate().skip(1) {
-                    if rank > best_rank {
-                        best_rank = rank;
-                        tied = vec![i];
-                    } else if rank == best_rank {
-                        tied.push(i);
-                    }
-                }
+            let mut this_result: Vec<i32> = vec![0; cards_people.len()];
 
-                let mut this_result: Vec<i32> = vec![0; cards_people.len()];
+            // Increment lose counts for all people
+            // Winners' lose counts will be decremented later
+            for i in 0..cards_people.len() {
+                this_result[i] = -1;
+            }
 
-                // Increment lose counts for all people
-                // Winners' lose counts will be decremented later
-                for i in 0..cards_people.len() {
-                    this_result[i] = -1;
-                }
+            // Update win/lose counts
+            let number_of_ties = tied.len() - 1;
+            for &i in tied.iter() {
+                this_result[i] = number_of_ties as i32;
+            }
 
-                // Update win/lose counts
-                let number_of_ties = tied.len() - 1;
-                for &i in tied.iter() {
-                    this_result[i] = number_of_ties as i32;
-                }
-
-                Ok(this_result)
-            })
-            .try_fold(
-                || (get_empty_wins(), get_empty_loses()),
-                |(mut win_acc, mut lose_acc), res| match res {
-                    Ok(this_result) => {
-                        for (i, &val) in this_result.iter().enumerate() {
-                            if val >= 0 {
-                                win_acc[i][val as usize] += 1;
-                            } else {
-                                lose_acc[i] += 1;
-                            }
+            Ok(this_result)
+        })
+        .try_fold(
+            || (get_empty_wins(), get_empty_loses()),
+            |(mut win_acc, mut lose_acc), res: Result<Vec<_>, PokercraftLocalError>| match res {
+                Ok(this_result) => {
+                    for (i, &val) in this_result.iter().enumerate() {
+                        if val >= 0 {
+                            win_acc[i][val as usize] += 1;
+                        } else {
+                            lose_acc[i] += 1;
                         }
-                        Ok((win_acc, lose_acc))
                     }
-                    Err(e) => Err(e),
-                },
-            )
-            .try_reduce(
-                || (get_empty_wins(), get_empty_loses()),
-                |(mut win1, mut lose1), (win2, lose2)| {
-                    for i in 0..win1.len() {
-                        for j in 0..win1[i].len() {
-                            win1[i][j] += win2[i][j];
-                        }
-                        lose1[i] += lose2[i];
+                    Ok((win_acc, lose_acc))
+                }
+                Err(e) => Err(e),
+            },
+        )
+        .try_reduce(
+            || (get_empty_wins(), get_empty_loses()),
+            |(mut win1, mut lose1), (win2, lose2)| {
+                for i in 0..win1.len() {
+                    for j in 0..win1[i].len() {
+                        win1[i][j] += win2[i][j];
                     }
-                    Ok((win1, lose1))
-                },
-            )?;
+                    lose1[i] += lose2[i];
+                }
+                Ok((win1, lose1))
+            },
+        )?;
 
         Ok(Self {
             wins: result.0,

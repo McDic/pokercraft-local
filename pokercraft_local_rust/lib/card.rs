@@ -3,7 +3,7 @@
 use itertools::Itertools;
 use pyo3::prelude::*;
 
-use crate::errors::PokercraftLocalError;
+use crate::{errors::PokercraftLocalError, utils::FixedSizedCombinationIterator};
 
 pub const NUM_OF_SHAPES: usize = 4;
 pub const NUM_OF_NUMBERS: usize = 13;
@@ -546,34 +546,23 @@ impl HandRank {
     }
 
     /// Find the best 5-card hand from the given cards.
-    /// If `cards` has less than 5 cards, return `None`.
-    pub fn find_best5<IC>(cards: IC) -> Result<([Card; 5], HandRank), PokercraftLocalError>
-    where
-        IC: IntoIterator<Item = Card>,
-    {
-        let cards: Vec<Card> = cards.into_iter().collect();
+    /// If `cards` has less than 5 cards, return an error.
+    pub fn find_best5(cards: &[Card]) -> Result<([Card; 5], HandRank), PokercraftLocalError> {
         if cards.len() < 5 {
             return Err(PokercraftLocalError::GeneralError(
                 "Not enough cards; Should have at least 5 cards".to_string(),
             ));
         }
-        let mut best_hand = [cards[0], cards[1], cards[2], cards[3], cards[4]];
-        let mut best_rank = Self::evaluate(best_hand);
-        for combination in cards.iter().combinations(5) {
-            let this_hand = [
-                *combination[0],
-                *combination[1],
-                *combination[2],
-                *combination[3],
-                *combination[4],
-            ];
-            let this_rank = Self::evaluate(this_hand);
+        let mut best_card5 = [cards[0], cards[1], cards[2], cards[3], cards[4]];
+        let mut best_rank = Self::evaluate(best_card5);
+        for this_card5 in FixedSizedCombinationIterator::<Card, 5>::new(cards.iter().copied()) {
+            let this_rank = Self::evaluate(this_card5);
             if this_rank > best_rank {
-                best_hand = this_hand;
+                best_card5 = this_card5;
                 best_rank = this_rank;
             }
         }
-        Ok((best_hand, best_rank))
+        Ok((best_card5, best_rank))
     }
 }
 
@@ -598,7 +587,7 @@ impl HandRank {
     /// Python-exported interface of `Self::find_best5`.
     #[staticmethod]
     pub fn find_best5_py(cards: Vec<Card>) -> PyResult<([Card; 5], HandRank)> {
-        match Self::find_best5(cards) {
+        match Self::find_best5(&cards) {
             Ok(result) => Ok(result),
             Err(e) => Err(e.into()),
         }
@@ -1066,7 +1055,7 @@ mod tests {
             let all_cards = vec![
                 board[0], board[1], board[2], board[3], board[4], hand.0, hand.1,
             ];
-            let (_best_hand, got_best_rank) = HandRank::find_best5(all_cards)?;
+            let (_best_hand, got_best_rank) = HandRank::find_best5(&all_cards)?;
             assert_eq!(
                 got_best_rank,
                 expected_rank,

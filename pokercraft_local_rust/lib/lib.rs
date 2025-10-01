@@ -4,6 +4,7 @@ pub mod bankroll;
 pub mod card;
 pub mod equity;
 pub mod errors;
+pub mod utils;
 
 /// A Python module implemented in Rust.
 #[pymodule]
