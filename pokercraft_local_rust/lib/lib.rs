@@ -9,36 +9,39 @@ pub mod utils;
 /// A Python module implemented in Rust.
 #[pymodule]
 #[pyo3(name = "rust")]
-fn main_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_submodule(&bankroll_submodule(m)?)?;
-    m.add_submodule(&card_submodule(m)?)?;
-    m.add_submodule(&equity_submodule(m)?)?;
+fn main_module(m_main: &Bound<'_, PyModule>) -> PyResult<()> {
+    new_submodule(m_main, "bankroll", |m_bankroll| {
+        m_bankroll.add_function(wrap_pyfunction!(bankroll::simulate, m_bankroll)?)?;
+        m_bankroll.add_class::<bankroll::BankruptcyMetric>()?;
+        Ok(())
+    })?;
+    new_submodule(m_main, "card", |m_card| {
+        m_card.add_class::<card::Card>()?;
+        m_card.add_class::<card::CardNumber>()?;
+        m_card.add_class::<card::CardShape>()?;
+        m_card.add_class::<card::HandRank>()?;
+        Ok(())
+    })?;
+    new_submodule(m_main, "equity", |m_equity| {
+        m_equity.add_class::<equity::EquityResult>()?;
+        m_equity.add_class::<equity::LuckCalculator>()?;
+        m_equity.add_class::<equity::HUPreflopEquityCache>()?;
+        Ok(())
+    })?;
     Ok(())
 }
 
-/// Add the `card` submodule to the parent module.
-fn card_submodule<'a>(parent: &Bound<'a, PyModule>) -> PyResult<Bound<'a, PyModule>> {
-    let m = PyModule::new(parent.py(), "card")?;
-    m.add_class::<card::Card>()?;
-    m.add_class::<card::CardNumber>()?;
-    m.add_class::<card::CardShape>()?;
-    m.add_class::<card::HandRank>()?;
-    Ok(m)
-}
-
-/// Add the `equity` submodule to the parent module.
-fn equity_submodule<'a>(parent: &Bound<'a, PyModule>) -> PyResult<Bound<'a, PyModule>> {
-    let m = PyModule::new(parent.py(), "equity")?;
-    m.add_class::<equity::EquityResult>()?;
-    m.add_class::<equity::LuckCalculator>()?;
-    m.add_class::<equity::HUPreflopEquityCache>()?;
-    Ok(m)
-}
-
-/// Add the `bankroll` submodule to the parent module.
-fn bankroll_submodule<'a>(parent: &Bound<'a, PyModule>) -> PyResult<Bound<'a, PyModule>> {
-    let m = PyModule::new(parent.py(), "bankroll")?;
-    m.add_function(wrap_pyfunction!(bankroll::simulate, &m)?)?;
-    m.add_class::<bankroll::BankruptcyMetric>()?;
-    Ok(m)
+/// Helper function to create and add a new submodule to the parent module.
+fn new_submodule<'a, F>(
+    parent: &Bound<'a, PyModule>,
+    name: &'static str,
+    mut performer: F,
+) -> PyResult<()>
+where
+    F: FnMut(&Bound<'a, PyModule>) -> PyResult<()>,
+{
+    let m = PyModule::new(parent.py(), name)?;
+    parent.add_submodule(&m)?;
+    performer(&m)?;
+    Ok(())
 }
