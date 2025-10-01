@@ -139,7 +139,7 @@ impl EquityResult {
 
             // Compare people hand ranks
             let mut best_rank = &best_ranks_people[0];
-            let mut tied: Vec<usize> = Vec::with_capacity(10);
+            let mut tied: Vec<usize> = Vec::with_capacity(8);
             tied.push(0);
             for (i, rank) in best_ranks_people.iter().enumerate().skip(1) {
                 if rank > best_rank {
