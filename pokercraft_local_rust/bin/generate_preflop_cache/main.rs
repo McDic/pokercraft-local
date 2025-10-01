@@ -97,7 +97,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_all_headsup_hands() {
+    fn test_headsup_hands_len() {
         let all_headsup_hands = get_all_headsup_hands();
         assert_eq!(all_headsup_hands.len(), 47008);
     }
