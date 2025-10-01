@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 import time
 import typing
@@ -77,3 +78,7 @@ def mark_expensive_test(
         os.getenv("RUN_EXPENSIVE_TESTS", "false").lower() != "true",
         "Skipping because this is calculation-heavy",
     )(method)
+
+
+def log2_or_nan(x: float | typing.Any) -> float:
+    return math.log2(x) if x > 0 else math.nan
