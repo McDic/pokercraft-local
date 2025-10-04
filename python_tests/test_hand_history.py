@@ -200,6 +200,8 @@ Seat 8: Hero (small blind) showed [Kh Kc] and lost with a pair of Kings
         parser = PokercraftHandHistoryParser()
         hand_history = next(parser.parse(StringIO(RAW_HAND_HISTORY)))
         self.assertEqual(hand_history.net_profit("Hero"), -35 - 1950 - 4579)
+        self.assertEqual(hand_history.was_best_hand("Hero"), -1)
+        self.assertEqual(hand_history.was_best_hand("dd18df1"), 0)
 
 
 if __name__ == "__main__":
