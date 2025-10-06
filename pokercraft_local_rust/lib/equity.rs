@@ -562,7 +562,7 @@ impl LuckCalculator {
         out
     }
 
-    /// Build the Poisson–Binomial PMF coefficients f[k] = Pr(W = k)
+    /// Build the Poisson–Binomial PMF coefficients `f[k] = Pr(W = k)`
     /// using an FFT-based product tree.
     /// This implementation is provided by ChatGPT.
     fn poisson_binomial_pmf(ps: &[f64]) -> Vec<f64> {
