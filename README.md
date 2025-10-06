@@ -1,8 +1,12 @@
 # Pokercraft Local
 
 This is a customized visualization tool using downloaded data from Pokercraft in GGNetwork.
+Following is a list of working demos.
 
-Here is working [demo](https://blog.mcdic.net/assets/raw_html/damavaco_performance.html).
+- [Tourney result analysis](https://blog.mcdic.net/assets/raw_html/damavaco_performance_en.html)
+- [Hand history analysis](https://blog.mcdic.net/assets/raw_html/damavaco_handhistories_en.html)
+
+일반인을 위한 한글 사용법 문서는 [여기](INSTRUCTION_kr.md)를 눌러주세요.
 
 ## Dependencies
 
