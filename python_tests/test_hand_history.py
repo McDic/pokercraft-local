@@ -1,8 +1,6 @@
 import unittest
 from io import StringIO
-from pprint import pprint
 
-from pokercraft_local.data_structures import TournamentSummary
 from pokercraft_local.parser import PokercraftHandHistoryParser
 
 
