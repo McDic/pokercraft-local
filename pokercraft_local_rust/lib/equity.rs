@@ -78,11 +78,97 @@ impl EquityResult {
         }
     }
 
+    /// Calculate the win/lose counts for a single board.
+    fn single_board_calculation(
+        communities: [Card; 5],
+        cards_people: &[Hand],
+    ) -> Result<Vec<i32>, PokercraftLocalError> {
+        let mut card7: [Card; 7] = [Card::default(); 7];
+        for (i, card) in communities.into_iter().enumerate() {
+            card7[i] = card;
+        }
+
+        // Get best hand ranks for each person
+        let best_ranks_people = cards_people
+            .iter()
+            .map(|&(c1, c2)| {
+                card7[5] = c1;
+                card7[6] = c2;
+                if let Ok((_, best_rank_this_person)) = HandRank::find_best5(&card7) {
+                    Ok(best_rank_this_person)
+                } else {
+                    Err(PokercraftLocalError::GeneralError(format!(
+                        "Failed to evaluate hand rank: {:?}",
+                        card7
+                    )))
+                }
+            })
+            .collect::<Result<Vec<_>, PokercraftLocalError>>()?;
+
+        // Compare people hand ranks
+        let mut best_rank = &best_ranks_people[0];
+        let mut tied: Vec<usize> = Vec::with_capacity(8);
+        tied.push(0);
+        for (i, rank) in best_ranks_people.iter().enumerate().skip(1) {
+            if rank > best_rank {
+                best_rank = rank;
+                tied = vec![i];
+            } else if rank == best_rank {
+                tied.push(i);
+            }
+        }
+
+        let mut this_result: Vec<i32> = vec![0; cards_people.len()];
+
+        // Increment lose counts for all people
+        // Winners' lose counts will be decremented later
+        for i in 0..cards_people.len() {
+            this_result[i] = -1;
+        }
+
+        // Update win/lose counts
+        let number_of_ties = tied.len() - 1;
+        for &i in tied.iter() {
+            this_result[i] = number_of_ties as i32;
+        }
+
+        Ok(this_result)
+    }
+
+    /// A helper function for `try_fold` in folding results.
+    fn folding_fn(
+        (mut win_acc, mut lose_acc): (Vec<Vec<u64>>, Vec<u64>),
+        res: Result<Vec<i32>, PokercraftLocalError>,
+    ) -> Result<(Vec<Vec<u64>>, Vec<u64>), PokercraftLocalError> {
+        match res {
+            Ok(this_result) => {
+                for (i, &val) in this_result.iter().enumerate() {
+                    if val >= 0 {
+                        win_acc[i][val as usize] += 1;
+                    } else {
+                        lose_acc[i] += 1;
+                    }
+                }
+                Ok((win_acc, lose_acc))
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Helper function to create empty win/lose counts.
+    fn get_empty_winloses(num_players: usize) -> (Vec<Vec<u64>>, Vec<u64>) {
+        (
+            vec![vec![0; num_players]; num_players],
+            vec![0; num_players],
+        )
+    }
+
     /// Create a new `EquityResult` by calculating the win/loss
     /// counts for the given player and community cards.
     pub fn new(
         cards_people: Vec<Hand>,
         cards_community: Vec<Card>,
+        parallel_calculation: bool,
     ) -> Result<Self, PokercraftLocalError> {
         let remaining_cards = Card::all()
             .into_iter()
@@ -106,94 +192,31 @@ impl EquityResult {
             ));
         }
 
-        // This is the result
-        let get_empty_wins = || vec![vec![0; cards_people.len()]; cards_people.len()];
-        let get_empty_loses = || vec![0; cards_people.len()];
-
-        let result = IterWrapper {
+        let iter = IterWrapper {
             iter: Self::get_flop_iter(remaining_cards, cards_community)?,
-        }
-        .par_bridge()
-        .map(|communities| {
-            let mut card7: [Card; 7] = [Card::default(); 7];
-            for (i, card) in communities.into_iter().enumerate() {
-                card7[i] = card;
-            }
+        };
+        let num_players = cards_people.len();
 
-            // Get best hand ranks for each person
-            let best_ranks_people = cards_people
-                .iter()
-                .map(|&(c1, c2)| {
-                    card7[5] = c1;
-                    card7[6] = c2;
-                    if let Ok((_, best_rank_this_person)) = HandRank::find_best5(&card7) {
-                        Ok(best_rank_this_person)
-                    } else {
-                        Err(PokercraftLocalError::GeneralError(format!(
-                            "Failed to evaluate hand rank: {:?}",
-                            card7
-                        )))
-                    }
-                })
-                .collect::<Result<Vec<_>, PokercraftLocalError>>()?;
-
-            // Compare people hand ranks
-            let mut best_rank = &best_ranks_people[0];
-            let mut tied: Vec<usize> = Vec::with_capacity(8);
-            tied.push(0);
-            for (i, rank) in best_ranks_people.iter().enumerate().skip(1) {
-                if rank > best_rank {
-                    best_rank = rank;
-                    tied = vec![i];
-                } else if rank == best_rank {
-                    tied.push(i);
-                }
-            }
-
-            let mut this_result: Vec<i32> = vec![0; cards_people.len()];
-
-            // Increment lose counts for all people
-            // Winners' lose counts will be decremented later
-            for i in 0..cards_people.len() {
-                this_result[i] = -1;
-            }
-
-            // Update win/lose counts
-            let number_of_ties = tied.len() - 1;
-            for &i in tied.iter() {
-                this_result[i] = number_of_ties as i32;
-            }
-
-            Ok(this_result)
-        })
-        .try_fold(
-            || (get_empty_wins(), get_empty_loses()),
-            |(mut win_acc, mut lose_acc), res: Result<Vec<_>, PokercraftLocalError>| match res {
-                Ok(this_result) => {
-                    for (i, &val) in this_result.iter().enumerate() {
-                        if val >= 0 {
-                            win_acc[i][val as usize] += 1;
-                        } else {
-                            lose_acc[i] += 1;
+        let result = if parallel_calculation {
+            iter.par_bridge()
+                .map(|communities| Self::single_board_calculation(communities, &cards_people))
+                .try_fold(|| Self::get_empty_winloses(num_players), Self::folding_fn)
+                .try_reduce(
+                    || Self::get_empty_winloses(num_players),
+                    |(mut win1, mut lose1), (win2, lose2)| {
+                        for i in 0..win1.len() {
+                            for j in 0..win1[i].len() {
+                                win1[i][j] += win2[i][j];
+                            }
+                            lose1[i] += lose2[i];
                         }
-                    }
-                    Ok((win_acc, lose_acc))
-                }
-                Err(e) => Err(e),
-            },
-        )
-        .try_reduce(
-            || (get_empty_wins(), get_empty_loses()),
-            |(mut win1, mut lose1), (win2, lose2)| {
-                for i in 0..win1.len() {
-                    for j in 0..win1[i].len() {
-                        win1[i][j] += win2[i][j];
-                    }
-                    lose1[i] += lose2[i];
-                }
-                Ok((win1, lose1))
-            },
-        )?;
+                        Ok((win1, lose1))
+                    },
+                )
+        } else {
+            iter.map(|communities| Self::single_board_calculation(communities, &cards_people))
+                .try_fold(Self::get_empty_winloses(num_players), Self::folding_fn)
+        }?;
 
         Ok(Self {
             wins: result.0,
@@ -249,7 +272,7 @@ impl EquityResult {
     /// the `i`-th player wins with `c` other players having the same rank.
     #[new]
     pub fn new_py(cards_people: Vec<(Card, Card)>, cards_community: Vec<Card>) -> PyResult<Self> {
-        Self::new(cards_people, cards_community).map_err(|e| e.into())
+        Self::new(cards_people, cards_community, true).map_err(|e| e.into())
     }
 
     /// Python-exported interface of `self.get_equity`.
@@ -664,7 +687,7 @@ mod tests {
         cards_community: Vec<Card>,
         expected_equities: Vec<f64>,
     ) -> Result<(), PokercraftLocalError> {
-        let equity = EquityResult::new(cards_people, cards_community)?;
+        let equity = EquityResult::new(cards_people, cards_community, true)?;
         for (i, &expected) in expected_equities.iter().enumerate() {
             let actual = equity.get_equity(i)?;
             assert!((actual - expected).abs() < 1e-4);

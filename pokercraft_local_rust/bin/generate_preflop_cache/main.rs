@@ -85,7 +85,7 @@ fn main() {
     );
 
     let _calc_handle = all_headsup_hands.par_iter().for_each(|(hand1, hand2)| {
-        let equity_result = EquityResult::new(vec![*hand1, *hand2], vec![]).unwrap();
+        let equity_result = EquityResult::new(vec![*hand1, *hand2], vec![], true).unwrap();
         tx.send(((*hand1, *hand2), equity_result)).unwrap();
     });
     drop(tx);

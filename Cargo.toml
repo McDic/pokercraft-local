@@ -8,6 +8,10 @@ publish = false
 name = "generate_preflop_cache"
 path = "pokercraft_local_rust/bin/generate_preflop_cache/main.rs"
 
+[[bin]]
+name = "benchmark_equity"
+path = "pokercraft_local_rust/bin/benchmark_equity/main.rs"
+
 [lib]
 name = "pokercraft_local_rust"
 crate-type = ["cdylib", "lib"]
