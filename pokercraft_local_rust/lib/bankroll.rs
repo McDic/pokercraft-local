@@ -45,7 +45,7 @@ impl BankruptcyMetric {
         (self
             .simulated_results
             .iter()
-            .filter(|(capital, _bank)| *capital <= 0.0)
+            .filter(|(capital, _it)| *capital <= 0.0)
             .count() as f64)
             / (self.len() as f64)
     }
@@ -58,7 +58,7 @@ impl BankruptcyMetric {
         (self
             .simulated_results
             .iter()
-            .filter(|(capital, _bank)| *capital > 0.0)
+            .filter(|(capital, _it)| *capital > 0.0)
             .count() as f64)
             / (self.len() as f64)
     }
@@ -71,7 +71,7 @@ impl BankruptcyMetric {
         (self
             .simulated_results
             .iter()
-            .filter(|(capital, _bank)| *capital > 1.0)
+            .filter(|(capital, _it)| *capital > 1.0)
             .count() as f64)
             / (self.len() as f64)
     }
