@@ -15,9 +15,12 @@ pub struct BankruptcyMetric {
 
 impl BankruptcyMetric {
     /// Create a new instance with empty statistics.
-    pub fn new() -> Self {
+    pub fn new<I>(v: I) -> Self
+    where
+        I: IntoIterator<Item = (f64, u32)>,
+    {
         BankruptcyMetric {
-            simulated_results: Vec::new(),
+            simulated_results: v.into_iter().collect(),
         }
     }
 
@@ -76,7 +79,7 @@ impl BankruptcyMetric {
 
 impl Default for BankruptcyMetric {
     fn default() -> Self {
-        Self::new()
+        Self::new(std::iter::empty())
     }
 }
 
@@ -105,20 +108,19 @@ pub fn simulate(
         return Err(PyValueError::new_err("Simulation count must be positive"));
     }
 
-    let mut metric = BankruptcyMetric::new();
-    (0..simulation_count)
-        .into_par_iter()
-        .map(|_| {
-            simple_monte_carlo_loop(
-                initial_capital,
-                &relative_return_results,
-                max_iteration,
-                Some(profit_exit_multiplier),
-            )
-        })
-        .collect::<Vec<(f64, u32)>>()
-        .into_iter()
-        .for_each(|result| metric.push(result));
+    let metric = BankruptcyMetric::new(
+        (0..simulation_count)
+            .into_par_iter()
+            .map(|_| {
+                simple_monte_carlo_loop(
+                    initial_capital,
+                    &relative_return_results,
+                    max_iteration,
+                    Some(profit_exit_multiplier),
+                )
+            })
+            .collect::<Vec<_>>(),
+    );
     Ok(metric)
 }
 
