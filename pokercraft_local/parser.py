@@ -338,7 +338,7 @@ class PokercraftHandHistoryParser(AbstractParser[HandHistory]):
     )
 
     LINE1_INTRO: STR_PATTERN = regex.compile(
-        r"Poker Hand #TM(\d+)\: Tournament #(\d+)\, (.+) \- Level(\d+)"
+        r"Poker Hand #(TM|BR|SG)(\d+)\: Tournament #(\d+)\, (.+) \- Level(\d+)"
         r"\(([\d\,]+)\/([\d\,]+)\) \- (\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2})"
     )
     LINE2_TABLE_NUM: STR_PATTERN = regex.compile(
@@ -429,6 +429,7 @@ class PokercraftHandHistoryParser(AbstractParser[HandHistory]):
 
                 if match := self.LINE1_INTRO.match(line):
                     (
+                        _,
                         hand_id_str,
                         tournament_id_str,
                         tournament_name,
