@@ -599,14 +599,18 @@ class GeneralSimpleSegTree(typing.Generic[T]):
             else:
                 self._data[level][index] = self._data[level - 1][left]
 
-    def get(self, left: int, right: int) -> T:
+    def get(self, left: int | None = None, right: int | None = None) -> T:
         """
         Perform a range query on the segment tree.
         The range is [left, right).
         """
-        if left < 0 or right > len(self._data[0]) + 1 or left >= right:
+        if left is None:
+            left = 0
+        if right is None:
+            right = len(self._data[0])
+        if left < 0 or right > len(self._data[0]) or left >= right:
             raise IndexError(
-                "Invalid range for segment tree query: [%d, %d]" % (left, right)
+                "Invalid range for segment tree query: [%d, %d)" % (left, right)
             )
 
         # Collect elements with their original indices for proper ordering

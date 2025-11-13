@@ -313,9 +313,9 @@ def get_chip_histories(
         # Death threshold
         for threshold in death_thresholds:
             if all(
-                chip_history_segtree_max.get(idx, len(chip_history_raw)) <= v
+                chip_history_segtree_max.get(idx, None) <= v
                 for idx, v in enumerate(chip_history_raw)
-                if v <= threshold * chip_history_segtree_max.get(0, idx + 1)
+                if v <= threshold * chip_history_segtree_max.get(None, idx + 1)
             ):
                 death_threshold_count[threshold] += 1
 
