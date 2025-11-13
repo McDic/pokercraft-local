@@ -34,18 +34,24 @@ class CardNumber(Enum):
     King = enumauto()
     Ace = enumauto()
 
+    def __int__(self) -> int: ...
+    @staticmethod
+    def all_py() -> list[CardNumber]: ...
+
 class Card:
     """
     A playing card.
     """
 
     def __init__(self, card_str: str) -> None: ...
-    def get_number(self) -> CardNumber:
+    @property
+    def number(self) -> CardNumber:
         """
         Get the card number.
         """
         ...
-    def get_shape(self) -> CardShape:
+    @property
+    def shape(self) -> CardShape:
         """
         Get the card shape.
         """
