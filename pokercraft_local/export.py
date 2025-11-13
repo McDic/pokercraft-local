@@ -71,6 +71,7 @@ def export_hand_history_analysis(
     nickname: str,
     lang: Language,
     max_sampling: int | None = None,
+    fast_debug_mode: bool = False,
 ) -> Path:
     """
     Export data from given info and return `plot_file_path`.
@@ -96,7 +97,7 @@ def export_hand_history_analysis(
                 nickname,
                 hand_histories,
                 lang=lang,
-                max_sampling=max_sampling,
+                max_sampling=max_sampling if not fast_debug_mode else 10,
             )
         )
     return plot_path

@@ -74,6 +74,12 @@ def get_argparser() -> ArgumentParser:
         required=False,
         help="Enable debug logging if this flag is provided",
     )
+    parser.add_argument(
+        "--fast-debug",
+        action="store_true",
+        required=False,
+        help="Enable fast debugging",
+    )
     return parser
 
 
@@ -105,6 +111,7 @@ if __name__ == "__main__":
                 nickname=namespace.nickname,
                 lang=namespace.lang,
                 max_sampling=namespace.max_sampling,
+                fast_debug_mode=namespace.fast_debug,
             )
         case _:
             raise ValueError(f"Unknown plot type: {namespace.plot_type}")
