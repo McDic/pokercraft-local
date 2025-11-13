@@ -62,6 +62,7 @@ Seat 8: cb5c8d18 folded before Flop
         parser = PokercraftHandHistoryParser()
         hand_history = next(parser.parse(StringIO(RAW_HAND_HISTORY)))
         self.assertEqual(hand_history.net_profit("Hero"), -6 - 100)
+        self.assertEqual(hand_history.get_offset_from_button("Hero"), -4)
 
     def test_hand_history_2(self):
         RAW_HAND_HISTORY = """
@@ -133,6 +134,7 @@ Seat 8: Hero (big blind) showed [Kh 7h] and lost with a pair of Threes
         parser = PokercraftHandHistoryParser()
         hand_history = next(parser.parse(StringIO(RAW_HAND_HISTORY)))
         self.assertEqual(hand_history.net_profit("Hero"), -30 - 600 - 1025)
+        self.assertEqual(hand_history.get_offset_from_button("Hero"), 2)
 
     def test_hand_history_3(self):
         RAW_HAND_HISTORY = """
@@ -200,6 +202,7 @@ Seat 8: Hero (small blind) showed [Kh Kc] and lost with a pair of Kings
         self.assertEqual(hand_history.net_profit("Hero"), -35 - 1950 - 4579)
         self.assertEqual(hand_history.was_best_hand("Hero"), -1)
         self.assertEqual(hand_history.was_best_hand("dd18df1"), 0)
+        self.assertEqual(hand_history.get_offset_from_button("Hero"), 1)
 
 
 if __name__ == "__main__":

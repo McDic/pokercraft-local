@@ -98,6 +98,9 @@ Seat 7: Hero (button) folded before Flop
         self.assertEqual(hand_history.max_seats, 7)
         self.assertEqual(hand_history.dt, datetime(2025, 8, 1, 0, 53, 29))
 
+        self.assertEqual(hand_history.sb_seat, 1)
+        self.assertEqual(hand_history.bb_seat, 2)
+
         self.assertEqual(
             hand_history.community_cards,
             [Card("4c"), Card("3d"), Card("As"), Card("Jd")],

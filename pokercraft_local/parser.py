@@ -454,6 +454,8 @@ class PokercraftHandHistoryParser(AbstractParser[HandHistory]):
                         bb=bb,
                         dt=dt,
                         button_seat=-1,  # To be filled later
+                        sb_seat=None,
+                        bb_seat=-1,  # To be filled later
                         max_seats=999,  # To be filled later
                     )
                     current_stage = "preflop"
@@ -489,6 +491,14 @@ class PokercraftHandHistoryParser(AbstractParser[HandHistory]):
                             is_all_in=False,
                         )
                     )
+                    if post_type == "small blind":
+                        this_hand_history.sb_seat = this_hand_history.get_seat_number(
+                            player_id
+                        )
+                    elif post_type == "big blind":
+                        this_hand_history.bb_seat = this_hand_history.get_seat_number(
+                            player_id
+                        )
 
                 elif line == self.LINE5_HOLE_CARDS:  # Just a marker line
                     raise_if_not_in_stage("preflop", "LINE5_HOLE_CARDS")

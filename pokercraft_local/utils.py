@@ -57,6 +57,9 @@ def cache_without_hashing_self(
         key = (id(self), args, frozenset(kwargs.items()))
         if key not in cache:
             cache[key] = func(self, *args, **kwargs)
+            # For some reasons, some different objects can be created
+            # in exact same memory location, therefore `id(self)` is not
+            # a safe way to cache. Let me think some more about this.
         return cache[key]
 
     return wrapper

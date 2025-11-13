@@ -12,7 +12,6 @@ from forex_python.converter import CurrencyRates
 
 from .constants import HAND_STAGE_TYPE
 from .rust import card, equity
-from .utils import cache_without_hashing_self
 
 Card = card.Card
 HandRank = card.HandRank
@@ -172,6 +171,8 @@ class HandHistory:
     bb: int
     dt: datetime  # timezone is local
     button_seat: int
+    sb_seat: int | None  # SB seat is optional
+    bb_seat: int
     max_seats: int
 
     seats: dict[int, tuple[str, int]] = field(
@@ -206,13 +207,60 @@ class HandHistory:
     def initial_chips(self, player_id: str) -> int:
         """
         Returns the initial chips of the given player in this hand.
+        If non-existing player ID is given, raises `KeyError`.
         """
         for _seat, (pid, chips) in self.seats.items():
             if pid == player_id:
                 return chips
-        raise ValueError("Player %s is not in this hand" % player_id)
+        raise KeyError("Player %s is not in this hand" % player_id)
 
-    @cache_without_hashing_self
+    def get_seat_number(self, player_id: str) -> int:
+        """
+        Returns the seat number by given player ID.
+        If non-existing player ID is given, raises `KeyError`.
+        """
+        for seat, (pid, _chips) in self.seats.items():
+            if pid == player_id:
+                return seat
+        raise KeyError("Player %s is not in this hand" % player_id)
+
+    def get_offset_from_button(self, player_id: str) -> int:
+        """
+        Returns the offset of the given player from the button.
+        - If player is at button, returns 0.
+        - If player is at SB/BB, returns 1/2.
+        - If player is before the button, returns negative number.
+        """
+        player_seat = self.get_seat_number(player_id)
+
+        if player_seat == self.sb_seat:
+            return 1
+        elif player_seat == self.bb_seat:
+            return 2
+
+        current_seat: int = self.button_seat
+        offset: int = 0
+        min_seat, max_seat = min(self.seats), max(self.seats)
+
+        def decrement(seat: int) -> int:
+            """
+            Return the closest previous seat.
+            BTN -> CO -> MP+1 -> MP -> UTG+1 -> UTG -> BB -> SB -> ..
+            """
+            while True:
+                if min_seat >= seat:
+                    seat = max_seat
+                else:
+                    seat -= 1
+                if seat in self.seats:
+                    return seat
+
+        while True:
+            if current_seat == player_seat:
+                return offset
+            current_seat = decrement(current_seat)
+            offset -= 1
+
     def total_chips_put(self, player_id: str) -> int:
         """
         Returns how much chips the given player put into the pot
@@ -271,7 +319,6 @@ class HandHistory:
         """
         return self.all_ined.get(player_id)
 
-    @cache_without_hashing_self
     def showdown_players(self) -> frozenset[str]:
         """
         Returns the list of players who reached showdown.
@@ -288,7 +335,6 @@ class HandHistory:
                 players.discard(action.player_id)
         return frozenset(players)
 
-    @cache_without_hashing_self
     def total_pot(self) -> int:
         """
         Returns the total pot size of this hand.
@@ -296,7 +342,6 @@ class HandHistory:
         """
         return sum(self.wons.values())
 
-    @cache_without_hashing_self
     def was_best_hand(self, main_player_id: str) -> int:
         """
         Check if the given player had the best hand against all players
