@@ -563,6 +563,27 @@
             "ko": "사망 임계점"
           }
         }
+      },
+      "hand_usages": {
+        "title": {
+          "en": "Your Hand Usage by Position",
+          "ko": "당신의 포지션별 핸드 통계"
+        },
+        "positions": {
+          "UTG": { "en": "UTG" },
+          "UTG1": { "en": "UTG+1" },
+          "MP": { "en": "LJ (MP)" },
+          "MP1": { "en": "HJ (MP+1)" },
+          "CO": { "en": "CO" },
+          "BTN": { "en": "BTN" },
+          "SB": { "en": "SB" },
+          "BB": { "en": "BB" },
+          "all_positions": { "en": "All Positions", "ko": "모든 포지션" }
+        },
+        "hovertemplate": {
+          "en": "%{text}: Usage %{z:.2%}",
+          "ko": "%{text}: 사용빈도 %{z:.2%}"
+        }
       }
     }
   }

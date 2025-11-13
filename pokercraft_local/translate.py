@@ -334,6 +334,27 @@ then you are very likely to be eliminated soon.*
 곧 탈락할 가능성이 매우 높다는 것을 알 수 있습니다.*
 """,
     },
+    {
+        Language.ENGLISH: """
+This section shows your hand usage statistics by table positions.
+The VPIP is counted by "number of non-folds on preflop" /
+"number of cards dealt" with some exception handlings.
+(Raising and then folding to 3bet/4bet also increases VPIP here.)
+
+*Creator's comment:
+This section helps you to analyze how your range becomes different by positions.
+For me, initially I was surprised to see my opening ranges were very static except BB.*
+""",
+        Language.KOREAN: """
+이 섹션은 테이블 포지션별 당신의 핸드 사용 통계를 보여줍니다.
+VPIP는 "프리플랍에 폴드하지 않은 횟수" / "카드를 딜링받은 횟수"로 계산됩니다.
+(몇몇 예외처리가 존재하며, 레이징 후 3벳/4벳에 폴드하는 경우 등에는 VPIP가 증가합니다.)
+
+*제작자의 코멘트:
+이 섹션은 당신의 레인지가 포지션에 따라 어떻게 달라지는지를 보여줍니다.
+저의 경우, 제 레인지가 빅블을 제외하고 포지션에 따라 크게 달라지지 않아서 놀랐습니다.*
+""",
+    },
 ]
 
 

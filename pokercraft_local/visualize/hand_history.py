@@ -11,10 +11,14 @@ from plotly.subplots import make_subplots
 
 from ..constants import BASE_HTML_FRAME, HAND_STAGE_TYPE, HORIZONTAL_PLOT_DIVIDER
 from ..data_structures import GeneralSimpleSegTree, HandHistory, SequentialHandHistories
+from ..rust import card as rust_card
 from ..rust import equity as rust_equity
 from ..translate import HAND_HISTORY_PLOT_DOCUMENTATIONS, Language, get_software_credits
 
 logger = logging.getLogger("pokercraft_local.visualize")
+
+Card = rust_card.Card
+CardNumber = rust_card.CardNumber
 
 
 def get_all_in_equity_histogram(
@@ -478,6 +482,165 @@ def get_chip_histories(
     return figure
 
 
+def get_hand_usage_heatmaps(
+    hand_histories: list[HandHistory],
+    lang: Language,
+) -> plgo.Figure | None:
+    """
+    Get hand usage heatmaps.
+    """
+    TRKEY_PREFIX: typing.Final[str] = "plot.hand_history.hand_usages"
+
+    figure = make_subplots(
+        3,
+        3,
+        specs=[[{"rowspan": 1, "colspan": 1} for _ in range(3)] for _ in range(3)],
+        vertical_spacing=0.05,
+        horizontal_spacing=0.02,
+    )
+    matrices = {
+        offset: [
+            [{"prefold": 0, "total_dealt": 0} for _ in range(13)] for _ in range(13)
+        ]
+        for offset in (-5, -4, -3, -2, -1, 0, 1, 2, None)
+    }
+    matrices[-6] = matrices[-5]
+
+    def get_idx2d(hand: tuple[Card, Card]) -> tuple[int, int]:
+        """
+        Get 2D matrix index from given card.
+        """
+        is_suited = hand[0].shape == hand[1].shape
+        num_big = int(hand[0].number)
+        num_small = int(hand[1].number)
+        num_big, num_small = max(num_big, num_small), min(num_big, num_small)
+        if is_suited:
+            # Suited: big row, small column
+            return -2 + num_big, 14 - num_small
+        else:
+            # Offsuited / pocket: big column, small row
+            return (-2 + num_small, 14 - num_big)
+
+    def idx2d_to_str(idx2d: tuple[int, int]) -> str:
+        x, y = idx2d
+        desired_number_x = x + 2
+        desired_number_y = -y + 14
+        is_suited = desired_number_x > desired_number_y
+        cardnum_x = next(
+            cardnum
+            for cardnum in CardNumber.all_py()
+            if int(cardnum) == desired_number_x
+        )
+        cardnum_y = next(
+            cardnum
+            for cardnum in CardNumber.all_py()
+            if int(cardnum) == desired_number_y
+        )
+        if cardnum_x == cardnum_y:
+            return str(cardnum_x) + str(cardnum_y)
+        elif is_suited:
+            return str(cardnum_x) + str(cardnum_y) + "s"
+        else:
+            return str(cardnum_y) + str(cardnum_x) + "o"
+
+    def increment(
+        matrix_element: dict[str, int],
+        prefolded: bool,
+    ) -> None:
+        """
+        Helper function to apply changes on individual matrix element.
+        """
+        matrix_element["total_dealt"] += 1
+        if prefolded:
+            matrix_element["prefold"] += 1
+
+    def aggregate_vpip(matrix: list[list[dict]]) -> float:
+        """
+        Aggregate VPIP.
+        """
+        prefold_total: int = 0
+        total_dealt: int = 0
+        for row in matrix:
+            for element in row:
+                prefold_total += element["prefold"]
+                total_dealt += element["total_dealt"]
+        return 1 - prefold_total / total_dealt if total_dealt > 0 else float("nan")
+
+    for hand_history in hand_histories:
+        button_offset = hand_history.get_offset_from_button("Hero")
+        if button_offset not in matrices:
+            warnings.warn(
+                "Button offset %d is not available; Hand ID %s from %s (%s)"
+                % (
+                    button_offset,
+                    hand_history.id,
+                    hand_history.tournament_name,
+                    hand_history.dt,
+                )
+            )
+            continue
+
+        hero_hand = hand_history.known_cards["Hero"]
+        idx_x, idx_y = get_idx2d(hero_hand)
+        prefolded = hand_history.preflop_passive_folded("Hero")
+        # was_best_hand = hand_history.was_best_hand("Hero")
+        # won_showdown = 1.0 / (was_best_hand + 1) if was_best_hand >= 0 else 0.0
+        if prefolded is not None:
+            increment(matrices[button_offset][idx_x][idx_y], prefolded)
+            increment(matrices[None][idx_x][idx_y], prefolded)
+
+    del matrices[-6]
+
+    heatmaps = {
+        offset: [
+            [1 - col["prefold"] / col["total_dealt"] for col in row] for row in matrix
+        ]
+        for offset, matrix in matrices.items()
+    }
+    texts = [[idx2d_to_str((i, j)) for j in range(13)] for i in range(13)]
+
+    for btn_offset, fig_x, fig_y, pos_name in (  # type: ignore[assignment]
+        (-5, 0, 0, "UTG"),
+        (-4, 0, 1, "UTG1"),
+        (-3, 0, 2, "MP"),
+        (-2, 1, 0, "MP1"),
+        (-1, 1, 1, "CO"),
+        (0, 1, 2, "BTN"),
+        (1, 2, 0, "SB"),
+        (2, 2, 1, "BB"),
+        (None, 2, 2, "all_positions"),
+    ):
+        this_title = (lang << f"{TRKEY_PREFIX}.positions.{pos_name}") + (
+            " (VPIP %.2f%%)" % (100 * aggregate_vpip(matrices[btn_offset]),)
+        )
+        figure.add_trace(
+            plgo.Heatmap(
+                z=heatmaps[btn_offset],
+                text=texts,
+                name=this_title,
+                texttemplate="%{text}",
+                showscale=False,
+                hovertemplate=lang << f"{TRKEY_PREFIX}.hovertemplate",
+            ),
+            row=fig_x + 1,
+            col=fig_y + 1,
+        )
+        figure.update_xaxes(
+            row=fig_x + 1,
+            col=fig_y + 1,
+            title=this_title,
+        )
+
+    figure.update_layout(
+        title=lang << f"{TRKEY_PREFIX}.title",
+        xaxis_showgrid=False,
+        yaxis_showgrid=False,
+    )
+    figure.update_xaxes(showticklabels=False)
+    figure.update_yaxes(showticklabels=False)
+    return figure
+
+
 def plot_hand_histories(
     nickname: str,
     hand_histories: typing.Iterable[HandHistory],
@@ -497,6 +660,7 @@ def plot_hand_histories(
             max_length=max_sampling if max_sampling else -1,
         ),
         get_chip_histories(hand_histories, lang),
+        get_hand_usage_heatmaps(hand_histories, lang),
     ]
 
     return BASE_HTML_FRAME.format(

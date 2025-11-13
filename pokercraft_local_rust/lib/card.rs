@@ -159,6 +159,11 @@ impl CardNumber {
     fn __str__(&self) -> PyResult<String> {
         Ok(format!("{}", self))
     }
+
+    #[staticmethod]
+    fn all_py() -> PyResult<[CardNumber; NUM_OF_NUMBERS]> {
+        Ok(CardNumber::all())
+    }
 }
 
 impl std::fmt::Display for CardNumber {

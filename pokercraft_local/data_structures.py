@@ -156,6 +156,17 @@ class BetAction:
     amount: int
     is_all_in: bool
 
+    def all_in_toggled(self) -> "BetAction":
+        """
+        Return a `is_all_in` toggled version of `self`.
+        """
+        return BetAction(
+            player_id=self.player_id,
+            action=self.action,
+            amount=self.amount,
+            is_all_in=not self.is_all_in,
+        )
+
 
 @dataclass(kw_only=True, slots=True)  # Frozen removed for convenience
 class HandHistory:
@@ -228,7 +239,7 @@ class HandHistory:
         """
         Returns the offset of the given player from the button.
         - If player is at button, returns 0.
-        - If player is at SB/BB, returns 1/2.
+        - If player is at blind, returns 1(SB) or 2(BB).
         - If player is before the button, returns negative number.
         """
         player_seat = self.get_seat_number(player_id)
@@ -311,18 +322,55 @@ class HandHistory:
         """
         return self.wons.get(player_id, 0) - self.total_chips_put(player_id)
 
+    def preflop_passive_folded(self, player_id: str) -> bool | None:
+        """
+        Returns `True` if the given player folded without any betting action at preflop.
+        This does not counts when the player raised but folded to 3bet.
+        If the player is forcibly all-ined by ante or blind, this returns `True`.
+
+        This returns `None` when
+        - The player is at BB, but all people before BB folded,
+            therefore the player won the pot.
+        - The player checked at BB.
+        """
+        for action in self.actions_preflop:
+            if action.action in ("ante", "blind"):
+                if action.player_id == player_id and action.is_all_in:
+                    return True
+            elif action.player_id == player_id:
+                match action.action:
+                    case "fold":
+                        return True
+                    case "check":
+                        return None
+                    case _:
+                        return False
+        if self.bb_seat == self.get_seat_number(player_id):
+            return None
+        else:
+            raise ValueError(
+                "Couldn't find any preflop action for"
+                "given player %s (%s %s / %s, actions: %s)"
+                % (
+                    player_id,
+                    self.tournament_name,
+                    self.dt,
+                    self.id,
+                    self.actions_preflop,
+                )
+            )
+
     def all_ined_street(
         self, player_id: str
     ) -> typing.Literal["preflop", "flop", "turn", "river", None]:
         """
-        Returns the street where the player went all-in, or None if not all-in.
+        Returns the street where the player went all-in, or `None` if not all-in.
         """
         return self.all_ined.get(player_id)
 
     def showdown_players(self) -> frozenset[str]:
         """
         Returns the list of players who reached showdown.
-        Because this function is cached, the returned value is immutable.
         """
         players = set(player_id for player_id, _chips in self.seats.values())
         for action in itertools.chain(
@@ -338,7 +386,6 @@ class HandHistory:
     def total_pot(self) -> int:
         """
         Returns the total pot size of this hand.
-        This function is cached, so be careful.
         """
         return sum(self.wons.values())
 

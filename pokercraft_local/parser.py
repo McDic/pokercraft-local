@@ -396,6 +396,42 @@ class PokercraftHandHistoryParser(AbstractParser[HandHistory]):
         r"(?:won|collected) \(([\d\,]+)\))"
     )
 
+    @staticmethod
+    def final_postprocess_handhistory(hand_history: HandHistory) -> HandHistory:
+        """
+        Do some postprocessing on parsed data before yielding.
+        """
+        # Ante all-in?
+        max_ante = max(
+            action.amount
+            for action in hand_history.actions_preflop
+            if action.action == "ante"
+        )
+        for i, action in enumerate(hand_history.actions_preflop):
+            if (
+                action.action == "ante"
+                and action.amount < max_ante
+                and not action.is_all_in
+            ):
+                hand_history.actions_preflop[i] = action.all_in_toggled()
+
+        # SB/BB all-in?
+        for i, action in enumerate(hand_history.actions_preflop):
+            if action.action == "blind":
+                if (
+                    hand_history.sb_seat is not None
+                    and hand_history.seats[hand_history.sb_seat][0] == action.player_id
+                    and hand_history.sb > action.amount
+                    and not action.is_all_in
+                ) or (
+                    hand_history.seats[hand_history.bb_seat][0] == action.player_id
+                    and hand_history.bb > action.amount
+                    and not action.is_all_in
+                ):
+                    hand_history.actions_preflop[i] = action.all_in_toggled()
+
+        return hand_history
+
     def parse(self, instream: typing.TextIO) -> typing.Iterator[HandHistory]:
         continuous_newline_count: int = 0
         this_hand_history: HandHistory
@@ -714,7 +750,7 @@ class PokercraftHandHistoryParser(AbstractParser[HandHistory]):
 
                 elif line == self.LINE8_HEADER_SUMMARY:
                     raise_if_not_in_stage("showdown", "LINE8_HEADER_SUMMARY")
-                    yield this_hand_history
+                    yield self.final_postprocess_handhistory(this_hand_history)
                     del this_hand_history
 
                 elif match := self.LINE8_POT.match(line):
