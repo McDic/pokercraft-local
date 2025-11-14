@@ -38,6 +38,10 @@
         "ko": "그래프 파일이 성공적으로 생성되었습니다. {output_dir} 안에 있는 {plot_path}를 확인해주세요."
       }
     },
+    "credits": {
+      "en": "Open Project Homepage",
+      "ko": "프로젝트 홈페이지 열기"
+    },
     "checkboxes": {
       "include_freerolls": {
         "en": "Include Freerolls",
@@ -46,6 +50,12 @@
       "fetch_forex_rate": {
         "en": "Fetch the latest forex rate (May fail)",
         "ko": "최신 환율 불러오기 (실패할 수도 있음)"
+      },
+      "hand_history": {
+        "all_in_equity": {
+          "en": "All-in Equity Analysis",
+          "ko": "올인 에퀴티 분석"
+        }
       }
     },
     "error_messages": {
@@ -72,6 +82,10 @@
       "invalid_hand_sampling_number": {
         "en": "Max number of hand histories to sample must be a positive integer. Input: \"%s\"",
         "ko": "샘플링할 핸드 히스토리 최대 개수는 양의 정수여야 합니다. 입력값: \"%s\""
+      },
+      "cannot_open_browser": {
+        "en": "Could not open browser: %s",
+        "ko": "인터넷 브라우저를 열 수 없습니다: %s"
       }
     },
     "export_buttons": {

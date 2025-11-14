@@ -2,6 +2,7 @@ import locale
 import logging
 import tkinter as tk
 import tkinter.ttk as ttk
+import webbrowser
 from pathlib import Path
 from tkinter import filedialog
 from tkinter.messagebox import showinfo, showwarning
@@ -12,6 +13,25 @@ from .pypi_query import VERSION_EXTRACTED, get_library_versions
 from .translate import Language
 
 logger = logging.getLogger("pokercraft_local.gui")
+
+
+class BooleanCheckbox:
+    """
+    Tkinter checkbox wrapper for convenience.
+    """
+
+    def __init__(self, master, default: bool = False) -> None:
+        self._boolvar = tk.BooleanVar(master, value=default)
+        self._checkbox = tk.Checkbutton(
+            master, variable=self._boolvar, onvalue=True, offvalue=False
+        )
+        self._checkbox.pack()
+
+    def get_state(self) -> bool:
+        return self._boolvar.get()
+
+    def set_text(self, text: str) -> None:
+        self._checkbox.config(text=text)
 
 
 class PokerCraftLocalGUI:
@@ -37,8 +57,6 @@ class PokerCraftLocalGUI:
     def __init__(self) -> None:
         self._window: tk.Tk = tk.Tk()
         self._window.title(f"Pokercraft Local v{VERSION} - By McDic")
-        self._window.geometry("400x600")
-        self._window.resizable(False, False)
 
         # Language selection
         self._label_language_selection: tk.Label = tk.Label(
@@ -58,10 +76,7 @@ class PokerCraftLocalGUI:
             command=lambda strvar: self.reset_display_by_language(strvar),
         )
         self._menu_language_selection.pack()
-        self._separator_after_lang_selection = ttk.Separator(
-            self._window, orient="horizontal"
-        )
-        self._separator_after_lang_selection.pack(fill="x", pady=10)
+        self._separator_after_lang_selection = self.create_hr(self._window)
 
         # Target directory
         self._label_data_directory: tk.Label = tk.Label(
@@ -96,10 +111,7 @@ class PokerCraftLocalGUI:
         self._input_nickname.pack()
 
         # Etc settings
-        self._separator_before_etc_settings = ttk.Separator(
-            self._window, orient="horizontal"
-        )
-        self._separator_before_etc_settings.pack(fill="x", pady=10)
+        self._separator_before_etc_settings = self.create_hr(self._window)
         self._button_etc_settings: tk.Button = tk.Button(
             self._window,
             text="button_etc_settings",
@@ -124,32 +136,17 @@ class PokerCraftLocalGUI:
         self._input_hand_sampling.insert(0, "No Limit")
 
         # Allow freerolls
-        self._boolvar_allow_freerolls: tk.BooleanVar = tk.BooleanVar(self._window)
-        self._checkbox_allow_freerolls: tk.Checkbutton = tk.Checkbutton(
-            self._frame_etc_settings,
-            text="checkbox_allow_freerolls",
-            variable=self._boolvar_allow_freerolls,
-            onvalue=True,
-            offvalue=False,
+        self._checkbox_allow_freerolls = BooleanCheckbox(
+            self._frame_etc_settings, default=False
         )
-        self._checkbox_allow_freerolls.pack()
 
         # Use realtime forex conversion
-        self._boolvar_fetch_forex: tk.BooleanVar = tk.BooleanVar(self._window)
-        self._checkbox_fetch_forex: tk.Checkbutton = tk.Checkbutton(
-            self._frame_etc_settings,
-            text="checkbox_fetch_forex",
-            variable=self._boolvar_fetch_forex,
-            onvalue=True,
-            offvalue=False,
+        self._checkbox_fetch_forex = BooleanCheckbox(
+            self._frame_etc_settings, default=False
         )
-        self._checkbox_fetch_forex.pack()
 
         # Analyze summary button
-        self._separator_before_analyze_summary = ttk.Separator(
-            self._window, orient="horizontal"
-        )
-        self._separator_before_analyze_summary.pack(fill="x", pady=10)
+        self._separator_before_analyze_summary = self.create_hr(self._window)
         self._button_expand_analyze_summary: tk.Button = tk.Button(
             self._window,
             text="button_analyze_summary_section",
@@ -171,10 +168,7 @@ class PokerCraftLocalGUI:
         self._button_analyze_summary.pack()
 
         # Hand history analysis button
-        self._separator_before_analyze_hand_history = ttk.Separator(
-            self._window, orient="horizontal"
-        )
-        self._separator_before_analyze_hand_history.pack(fill="x", pady=10)
+        self._separator_before_analyze_hand_history = self.create_hr(self._window)
         self._button_expand_hand_history: tk.Button = tk.Button(
             self._window,
             text="button_analyze_hand_history_section",
@@ -186,6 +180,9 @@ class PokerCraftLocalGUI:
         self._frame_hand_history_section = tk.Frame(self._window, relief="sunken", bd=1)
         self._visibility_hand_history_section: bool = True
         self._toggle_analyze_hand_history()
+        self._checkbox_hand_history_all_in_equities = BooleanCheckbox(
+            self._frame_hand_history_section, default=True
+        )
         self._button_analyze_hand_history: tk.Button = tk.Button(
             self._frame_hand_history_section,
             text="button_analyze_hand_history",
@@ -193,8 +190,50 @@ class PokerCraftLocalGUI:
         )
         self._button_analyze_hand_history.pack()
 
+        # Credits button
+        self._separator_before_credits = self.create_hr(self._window)
+        self._button_credits: tk.Button = tk.Button(
+            self._window,
+            text="button_credits",
+            command=self._open_credits,
+        )
+        self._button_credits.pack()
+
         # Reset display by language
         self.reset_display_by_language(self._strvar_language_selection)
+        self.resize()
+
+    @staticmethod
+    def create_hr(master) -> ttk.Separator:
+        """
+        Create a horizontal separator.
+        """
+        separator = ttk.Separator(master, orient="horizontal")
+        separator.pack(fill="x", pady=10)
+        return separator
+
+    def resize(self) -> None:
+        """
+        Resize entire GUI.
+        """
+        self._window.update_idletasks()  # Calculate required size
+        self._window.minsize(
+            self._window.winfo_reqwidth(),
+            self._window.winfo_reqheight(),
+        )
+
+    def _open_credits(self) -> None:
+        try:
+            webbrowser.open("https://github.com/McDic/pokercraft-local")
+        except Exception as e:
+            showwarning(
+                self.get_warning_popup_title(),
+                (
+                    self.get_lang()
+                    << f"{self.TRKEY_PREFIX}.error_messages.cannot_open_browser"
+                )
+                % (str(e),),
+            )
 
     def _toggle_etc_options(self) -> None:
         """
@@ -205,6 +244,7 @@ class PokerCraftLocalGUI:
             self._frame_etc_settings.pack_forget()
         else:
             self._frame_etc_settings.pack(after=self._button_etc_settings)
+        self.resize()
 
     def _toggle_analyze_summary(self) -> None:
         """
@@ -219,6 +259,7 @@ class PokerCraftLocalGUI:
             self._frame_analyze_summary_section.pack(
                 after=self._button_expand_analyze_summary
             )
+        self.resize()
 
     def _toggle_analyze_hand_history(self) -> None:
         """
@@ -233,6 +274,7 @@ class PokerCraftLocalGUI:
             self._frame_hand_history_section.pack(
                 after=self._button_expand_hand_history
             )
+        self.resize()
 
     @staticmethod
     def display_path(path: Path) -> str:
@@ -285,10 +327,10 @@ class PokerCraftLocalGUI:
         self._label_hand_sampling.config(
             text=lang << f"{self.TRKEY_PREFIX}.hand_sampling"
         )
-        self._checkbox_allow_freerolls.config(
+        self._checkbox_allow_freerolls.set_text(
             text=lang << f"{self.TRKEY_PREFIX}.checkboxes.include_freerolls"
         )
-        self._checkbox_fetch_forex.config(
+        self._checkbox_fetch_forex.set_text(
             text=lang << f"{self.TRKEY_PREFIX}.checkboxes.fetch_forex_rate"
         )
         self._button_analyze_summary.config(
@@ -306,6 +348,13 @@ class PokerCraftLocalGUI:
         self._button_expand_hand_history.config(
             text=lang << f"{self.TRKEY_PREFIX}.sections.hand_history"
         )
+        self._checkbox_hand_history_all_in_equities.set_text(
+            text=lang << f"{self.TRKEY_PREFIX}.checkboxes.hand_history.all_in_equity"
+        )
+        self._button_credits.config(text=lang << f"{self.TRKEY_PREFIX}.credits")
+
+        # Resize GUI because text might be changed
+        self.resize()
 
     def choose_data_directory(self) -> None:
         """
@@ -399,7 +448,7 @@ class PokerCraftLocalGUI:
         else:
             return None
 
-        if self._boolvar_allow_freerolls.get():
+        if self._checkbox_allow_freerolls.get_state():
             logging.info("Allowing freerolls on the graph.")
         else:
             logging.info("Disallowing freerolls on the graph.")
@@ -408,10 +457,10 @@ class PokerCraftLocalGUI:
             main_path=data_directory,
             output_path=output_directory,
             nickname=nickname,
-            allow_freerolls=self._boolvar_allow_freerolls.get(),
+            allow_freerolls=self._checkbox_allow_freerolls.get_state(),
             lang=THIS_LANG,
             exclude_csv=False,
-            use_realtime_currency_rate=self._boolvar_fetch_forex.get(),
+            use_realtime_currency_rate=self._checkbox_fetch_forex.get_state(),
         )
         showinfo(
             self.get_info_popup_title(),
