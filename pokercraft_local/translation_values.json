@@ -51,6 +51,28 @@
         "en": "Fetch the latest forex rate (May fail)",
         "ko": "최신 환율 불러오기 (실패할 수도 있음)"
       },
+      "tourney_summary": {
+        "historical_performance": {
+          "en": "Historical Performance",
+          "ko": "과거 성적"
+        },
+        "rre_heatmaps": {
+          "en": "RRE Heatmaps",
+          "ko": "RRE 히트맵"
+        },
+        "bankroll": {
+          "en": "Bankroll Analysis (Auto-skipped if negative PnL)",
+          "ko": "뱅크롤 분석 (루징시 자동 생략)"
+        },
+        "prize_chart": {
+          "en": "Prize Chart",
+          "ko": "상금 분포 차트"
+        },
+        "rr_by_rank": {
+          "en": "RR by Rank Percentile",
+          "ko": "순위 백분위별 RR"
+        }
+      },
       "hand_history": {
         "all_in_equity": {
           "en": "All-in Equity Analysis",

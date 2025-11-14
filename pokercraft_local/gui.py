@@ -145,7 +145,7 @@ class PokerCraftLocalGUI:
             self._frame_etc_settings, default=False
         )
 
-        # Analyze summary button
+        # Tourney summary analysis section
         self._separator_before_analyze_summary = self.create_hr(self._window)
         self._button_expand_analyze_summary: tk.Button = tk.Button(
             self._window,
@@ -160,14 +160,29 @@ class PokerCraftLocalGUI:
         )
         self._visibility_analyze_summary_section: bool = True
         self._toggle_analyze_summary()
+        self._checkbox_summary_historical_performance = BooleanCheckbox(
+            self._frame_analyze_summary_section, default=True
+        )
+        self._checkbox_summary_rre_heatmaps = BooleanCheckbox(
+            self._frame_analyze_summary_section, default=False
+        )
+        self._checkbox_summary_bankroll = BooleanCheckbox(
+            self._frame_analyze_summary_section, default=True
+        )
+        self._checkbox_summary_prize_chart = BooleanCheckbox(
+            self._frame_analyze_summary_section, default=True
+        )
+        self._checkbox_summary_rr_by_percentile = BooleanCheckbox(
+            self._frame_analyze_summary_section, default=True
+        )
         self._button_analyze_summary: tk.Button = tk.Button(
             self._frame_analyze_summary_section,
             text="button_analyze_summary",
             command=self.analyze_summary,
         )
-        self._button_analyze_summary.pack()
+        self._button_analyze_summary.pack(pady=5)
 
-        # Hand history analysis button
+        # Hand history analysis section
         self._separator_before_analyze_hand_history = self.create_hr(self._window)
         self._button_expand_hand_history: tk.Button = tk.Button(
             self._window,
@@ -194,7 +209,7 @@ class PokerCraftLocalGUI:
             text="button_analyze_hand_history",
             command=self.analyze_hand_history,
         )
-        self._button_analyze_hand_history.pack()
+        self._button_analyze_hand_history.pack(pady=5)
 
         # Credits button
         self._separator_before_credits = self.create_hr(self._window)
@@ -351,6 +366,22 @@ class PokerCraftLocalGUI:
         self._button_expand_analyze_summary.config(
             text=lang << f"{self.TRKEY_PREFIX}.sections.tourney_summary"
         )
+        self._checkbox_summary_historical_performance.set_text(
+            text=lang
+            << f"{self.TRKEY_PREFIX}.checkboxes.tourney_summary.historical_performance"
+        )
+        self._checkbox_summary_rre_heatmaps.set_text(
+            text=lang << f"{self.TRKEY_PREFIX}.checkboxes.tourney_summary.rre_heatmaps"
+        )
+        self._checkbox_summary_bankroll.set_text(
+            text=lang << f"{self.TRKEY_PREFIX}.checkboxes.tourney_summary.bankroll"
+        )
+        self._checkbox_summary_prize_chart.set_text(
+            text=lang << f"{self.TRKEY_PREFIX}.checkboxes.tourney_summary.prize_chart"
+        )
+        self._checkbox_summary_rr_by_percentile.set_text(
+            text=lang << f"{self.TRKEY_PREFIX}.checkboxes.tourney_summary.rr_by_rank"
+        )
         self._button_expand_hand_history.config(
             text=lang << f"{self.TRKEY_PREFIX}.sections.hand_history"
         )
@@ -466,6 +497,20 @@ class PokerCraftLocalGUI:
         else:
             logging.info("Disallowing freerolls on the graph.")
 
+        toggling_masks = [
+            self._checkbox_summary_historical_performance.get_state(),
+            self._checkbox_summary_rre_heatmaps.get_state(),
+            self._checkbox_summary_bankroll.get_state(),
+            self._checkbox_summary_prize_chart.get_state(),
+            self._checkbox_summary_rr_by_percentile.get_state(),
+        ]
+        if not any(toggling_masks):
+            showwarning(
+                self.get_warning_popup_title(),
+                THIS_LANG << f"{self.TRKEY_PREFIX}.error_messages.all_charts_disabled",
+            )
+            return None
+
         csv_path, plot_path = export_tourney_summary(
             main_path=data_directory,
             output_path=output_directory,
@@ -474,6 +519,7 @@ class PokerCraftLocalGUI:
             lang=THIS_LANG,
             exclude_csv=False,
             use_realtime_currency_rate=self._checkbox_fetch_forex.get_state(),
+            toggling_masks=toggling_masks,
         )
         showinfo(
             self.get_info_popup_title(),

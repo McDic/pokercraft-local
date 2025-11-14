@@ -21,7 +21,7 @@ from ..translate import (
     generate_summary_table_md,
     get_software_credits,
 )
-from ..utils import log2_or_nan
+from ..utils import infinite_iter, log2_or_nan
 
 
 def get_historical_charts(
@@ -819,28 +819,41 @@ def plot_tournament_summaries(
     window_sizes: tuple[int, ...] = DEFAULT_WINDOW_SIZES,
     bankroll_simulation_count: int = 25_000,
     bankroll_min_simulation_iterations: int = 40_000,
+    toggling_masks: typing.Iterable[bool] = (),
 ) -> str:
     """
     Generate all chart reports from tournament summaries
     and return a complete HTML string.
     """
+    iter_masks = iter(toggling_masks or infinite_iter(default=True))
+
     tournaments = sorted(tournaments, key=sort_key)
     figures: list[plgo.Figure | None] = [
-        get_historical_charts(
-            tournaments,
-            lang,
-            window_sizes=window_sizes,
+        (
+            get_historical_charts(
+                tournaments,
+                lang,
+                window_sizes=window_sizes,
+            )
+            if next(iter_masks)
+            else None
         ),
-        get_profit_heatmap_charts(tournaments, lang),
-        get_bankroll_charts(
-            tournaments,
-            lang,
-            simulation_count=bankroll_simulation_count,
-            min_simulation_iterations=bankroll_min_simulation_iterations,
+        get_profit_heatmap_charts(tournaments, lang) if next(iter_masks) else None,
+        (
+            get_bankroll_charts(
+                tournaments,
+                lang,
+                simulation_count=bankroll_simulation_count,
+                min_simulation_iterations=bankroll_min_simulation_iterations,
+            )
+            if next(iter_masks)
+            else None
         ),
-        get_profit_pies(tournaments, lang),
-        get_rr_by_rank_chart(tournaments, lang),
+        get_profit_pies(tournaments, lang) if next(iter_masks) else None,
+        get_rr_by_rank_chart(tournaments, lang) if next(iter_masks) else None,
     ]
+
+    plotlyjs_iter = infinite_iter("cdn", default=False)
     return BASE_HTML_FRAME.format(
         title=(lang << "plot.tourney_summary.title") % (nickname,),
         summary=markdown(
@@ -848,7 +861,7 @@ def plot_tournament_summaries(
             extensions=["tables"],
         ),
         plots=HORIZONTAL_PLOT_DIVIDER.join(  # type: ignore[var-annotated]
-            fig.to_html(include_plotlyjs=("cdn" if i == 0 else False), full_html=False)
+            fig.to_html(include_plotlyjs=next(plotlyjs_iter), full_html=False)
             + markdown(doc_dict[lang])
             for i, (doc_dict, fig) in enumerate(
                 zip(TOURNEY_SUMMARY_PLOT_DOCUMENTATIONS, figures, strict=True)

@@ -28,6 +28,7 @@ def export_tourney_summary(
     lang: Language,
     exclude_csv: bool = True,
     use_realtime_currency_rate: bool = True,
+    toggling_masks: Iterable[bool] = (),
 ) -> tuple[Path, Path]:
     """
     Export data from given info,
@@ -59,7 +60,14 @@ def export_tourney_summary(
     # Export plot HTML
     plot_path = output_path / f"analysis_tourney_summaries_{current_time_strf}.html"
     with open(plot_path, "w", encoding="utf-8") as html_file:
-        html_file.write(plot_tournament_summaries(nickname, summaries, lang=lang))
+        html_file.write(
+            plot_tournament_summaries(
+                nickname,
+                summaries,
+                lang=lang,
+                toggling_masks=toggling_masks,
+            )
+        )
 
     return csv_path, plot_path
 
