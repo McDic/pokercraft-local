@@ -49,6 +49,18 @@ class Language(Enum):
         else:
             raise KeyError(f"Translation for '{entire_key}' not found.")
 
+    def get_gui_select_text(self) -> str:
+        """
+        Get text for GUI language selection.
+        """
+        match self:
+            case Language.ENGLISH:
+                return "English"
+            case Language.KOREAN:
+                return "한국어 (Korean)"
+            case _:
+                raise ValueError("Unsupported language")
+
 
 def generate_summary_table_md(lang: Language, *kvs: tuple[str, typing.Any]) -> str:
     """

@@ -1,6 +1,7 @@
 import locale
 import logging
 import tkinter as tk
+import tkinter.ttk as ttk
 from pathlib import Path
 from tkinter import filedialog
 from tkinter.messagebox import showinfo, showwarning
@@ -36,7 +37,7 @@ class PokerCraftLocalGUI:
     def __init__(self) -> None:
         self._window: tk.Tk = tk.Tk()
         self._window.title(f"Pokercraft Local v{VERSION} - By McDic")
-        self._window.geometry("400x360")
+        self._window.geometry("400x600")
         self._window.resizable(False, False)
 
         # Language selection
@@ -45,15 +46,22 @@ class PokerCraftLocalGUI:
         )
         self._label_language_selection.pack()
         self._strvar_language_selection: tk.StringVar = tk.StringVar(
-            value=self.get_default_language().value
+            value=self.get_default_language().get_gui_select_text()
         )
+        self._language_selection_mapping = {
+            lang.get_gui_select_text(): lang for lang in Language
+        }
         self._menu_language_selection: tk.OptionMenu = tk.OptionMenu(
             self._window,
             self._strvar_language_selection,
-            *[lang.value for lang in Language],
+            *[lang.get_gui_select_text() for lang in Language],
             command=lambda strvar: self.reset_display_by_language(strvar),
         )
         self._menu_language_selection.pack()
+        self._separator_after_lang_selection = ttk.Separator(
+            self._window, orient="horizontal"
+        )
+        self._separator_after_lang_selection.pack(fill="x", pady=10)
 
         # Target directory
         self._label_data_directory: tk.Label = tk.Label(
@@ -87,19 +95,38 @@ class PokerCraftLocalGUI:
         self._input_nickname: tk.Entry = tk.Entry(self._window)
         self._input_nickname.pack()
 
+        # Etc settings
+        self._separator_before_etc_settings = ttk.Separator(
+            self._window, orient="horizontal"
+        )
+        self._separator_before_etc_settings.pack(fill="x", pady=10)
+        self._button_etc_settings: tk.Button = tk.Button(
+            self._window,
+            text="button_etc_settings",
+            command=self._toggle_etc_options,
+            anchor="w",
+            relief="flat",
+        )
+        self._button_etc_settings.pack()
+        self._frame_etc_settings: tk.Frame = tk.Frame(
+            self._window, relief="sunken", bd=1
+        )
+        self._visibility_etc_options: bool = True
+        self._toggle_etc_options()
+
         # Sampling input
         self._label_hand_sampling: tk.Label = tk.Label(
-            self._window, text="label_hand_sampling"
+            self._frame_etc_settings, text="label_hand_sampling"
         )
         self._label_hand_sampling.pack()
-        self._input_hand_sampling: tk.Entry = tk.Entry(self._window)
+        self._input_hand_sampling: tk.Entry = tk.Entry(self._frame_etc_settings)
         self._input_hand_sampling.pack()
         self._input_hand_sampling.insert(0, "No Limit")
 
         # Allow freerolls
         self._boolvar_allow_freerolls: tk.BooleanVar = tk.BooleanVar(self._window)
         self._checkbox_allow_freerolls: tk.Checkbutton = tk.Checkbutton(
-            self._window,
+            self._frame_etc_settings,
             text="checkbox_allow_freerolls",
             variable=self._boolvar_allow_freerolls,
             onvalue=True,
@@ -110,7 +137,7 @@ class PokerCraftLocalGUI:
         # Use realtime forex conversion
         self._boolvar_fetch_forex: tk.BooleanVar = tk.BooleanVar(self._window)
         self._checkbox_fetch_forex: tk.Checkbutton = tk.Checkbutton(
-            self._window,
+            self._frame_etc_settings,
             text="checkbox_fetch_forex",
             variable=self._boolvar_fetch_forex,
             onvalue=True,
@@ -118,17 +145,49 @@ class PokerCraftLocalGUI:
         )
         self._checkbox_fetch_forex.pack()
 
-        # Export chart button
-        self._button_export_chart: tk.Button = tk.Button(
-            self._window,
-            text="button_export",
-            command=self.export_chart,
+        # Analyze summary button
+        self._separator_before_analyze_summary = ttk.Separator(
+            self._window, orient="horizontal"
         )
-        self._button_export_chart.pack()
+        self._separator_before_analyze_summary.pack(fill="x", pady=10)
+        self._button_expand_analyze_summary: tk.Button = tk.Button(
+            self._window,
+            text="button_analyze_summary_section",
+            anchor="w",
+            relief="flat",
+            command=self._toggle_analyze_summary,
+        )
+        self._button_expand_analyze_summary.pack()
+        self._frame_analyze_summary_section = tk.Frame(
+            self._window, relief="sunken", bd=1
+        )
+        self._visibility_analyze_summary_section: bool = True
+        self._toggle_analyze_summary()
+        self._button_analyze_summary: tk.Button = tk.Button(
+            self._frame_analyze_summary_section,
+            text="button_analyze_summary",
+            command=self.analyze_summary,
+        )
+        self._button_analyze_summary.pack()
 
         # Hand history analysis button
-        self._button_analyze_hand_history: tk.Button = tk.Button(
+        self._separator_before_analyze_hand_history = ttk.Separator(
+            self._window, orient="horizontal"
+        )
+        self._separator_before_analyze_hand_history.pack(fill="x", pady=10)
+        self._button_expand_hand_history: tk.Button = tk.Button(
             self._window,
+            text="button_analyze_hand_history_section",
+            anchor="w",
+            relief="flat",
+            command=self._toggle_analyze_hand_history,
+        )
+        self._button_expand_hand_history.pack()
+        self._frame_hand_history_section = tk.Frame(self._window, relief="sunken", bd=1)
+        self._visibility_hand_history_section: bool = True
+        self._toggle_analyze_hand_history()
+        self._button_analyze_hand_history: tk.Button = tk.Button(
+            self._frame_hand_history_section,
             text="button_analyze_hand_history",
             command=self.analyze_hand_history,
         )
@@ -136,6 +195,44 @@ class PokerCraftLocalGUI:
 
         # Reset display by language
         self.reset_display_by_language(self._strvar_language_selection)
+
+    def _toggle_etc_options(self) -> None:
+        """
+        Toggle etc options visibility.
+        """
+        self._visibility_etc_options = not self._visibility_etc_options
+        if not self._visibility_etc_options:
+            self._frame_etc_settings.pack_forget()
+        else:
+            self._frame_etc_settings.pack(after=self._button_etc_settings)
+
+    def _toggle_analyze_summary(self) -> None:
+        """
+        Toggle analyze summary section.
+        """
+        self._visibility_analyze_summary_section = (
+            not self._visibility_analyze_summary_section
+        )
+        if not self._visibility_analyze_summary_section:
+            self._frame_analyze_summary_section.pack_forget()
+        else:
+            self._frame_analyze_summary_section.pack(
+                after=self._button_expand_analyze_summary
+            )
+
+    def _toggle_analyze_hand_history(self) -> None:
+        """
+        Toggle analyze hand history section.
+        """
+        self._visibility_hand_history_section = (
+            not self._visibility_hand_history_section
+        )
+        if not self._visibility_hand_history_section:
+            self._frame_hand_history_section.pack_forget()
+        else:
+            self._frame_hand_history_section.pack(
+                after=self._button_expand_hand_history
+            )
 
     @staticmethod
     def display_path(path: Path) -> str:
@@ -148,13 +245,15 @@ class PokerCraftLocalGUI:
         """
         Get current selected language.
         """
-        return Language(self._strvar_language_selection.get())
+        return self._language_selection_mapping[self._strvar_language_selection.get()]
 
     def reset_display_by_language(self, strvar: tk.StringVar | str) -> None:
         """
         Reset display by changed language.
         """
-        lang = Language(strvar if isinstance(strvar, str) else strvar.get())
+        lang = self._language_selection_mapping[
+            strvar if isinstance(strvar, str) else strvar.get()
+        ]
         self._label_language_selection.config(
             text=lang << f"{self.TRKEY_PREFIX}.select_language"
         )
@@ -192,11 +291,20 @@ class PokerCraftLocalGUI:
         self._checkbox_fetch_forex.config(
             text=lang << f"{self.TRKEY_PREFIX}.checkboxes.fetch_forex_rate"
         )
-        self._button_export_chart.config(
+        self._button_analyze_summary.config(
             text=lang << f"{self.TRKEY_PREFIX}.export_buttons.tourney_summary"
         )
         self._button_analyze_hand_history.config(
             text=lang << f"{self.TRKEY_PREFIX}.export_buttons.hand_history"
+        )
+        self._button_etc_settings.config(
+            text=lang << f"{self.TRKEY_PREFIX}.sections.etc_settings"
+        )
+        self._button_expand_analyze_summary.config(
+            text=lang << f"{self.TRKEY_PREFIX}.sections.tourney_summary"
+        )
+        self._button_expand_hand_history.config(
+            text=lang << f"{self.TRKEY_PREFIX}.sections.hand_history"
         )
 
     def choose_data_directory(self) -> None:
@@ -281,7 +389,7 @@ class PokerCraftLocalGUI:
             return None
         return nickname, self._data_directory, self._output_directory
 
-    def export_chart(self) -> None:
+    def analyze_summary(self) -> None:
         """
         Export the visualization charts.
         """

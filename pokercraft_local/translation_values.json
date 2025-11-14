@@ -76,12 +76,26 @@
     },
     "export_buttons": {
       "tourney_summary": {
-        "en": "Analyze tournament summaries",
-        "ko": "토너먼트 결과 분석하기"
+        "en": "Analyze",
+        "ko": "분석하기"
       },
       "hand_history": {
-        "en": "Analyze hand histories",
-        "ko": "핸드 히스토리 분석하기"
+        "en": "Analyze",
+        "ko": "분석하기"
+      }
+    },
+    "sections": {
+      "etc_settings": {
+        "en": "Extra settings",
+        "ko": "기타 설정"
+      },
+      "tourney_summary": {
+        "en": "Tourney Summary",
+        "ko": "토너먼트 결과 분석"
+      },
+      "hand_history": {
+        "en": "Hand History",
+        "ko": "핸드 히스토리 분석"
       }
     }
   },
