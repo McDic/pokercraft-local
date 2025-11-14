@@ -239,7 +239,7 @@ class PokerCraftLocalGUI:
         """
         self._window.update_idletasks()  # Calculate required size
         self._window.minsize(
-            self._window.winfo_reqwidth(),
+            self._window.winfo_reqwidth() + 70,
             self._window.winfo_reqheight(),
         )
 
