@@ -529,6 +529,13 @@ class PokerCraftLocalGUI:
             self._checkbox_hand_history_chip_histories.get_state(),
             self._checkbox_hand_history_hand_usage_by_positions.get_state(),
         ]
+        if not any(toggling_masks):
+            showwarning(
+                self.get_warning_popup_title(),
+                THIS_LANG << f"{self.TRKEY_PREFIX}.error_messages.all_charts_disabled",
+            )
+            return None
+
         plot_path = export_hand_history_analysis(
             main_path=data_directory,
             output_path=output_directory,

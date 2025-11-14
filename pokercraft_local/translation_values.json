@@ -94,6 +94,10 @@
       "cannot_open_browser": {
         "en": "Could not open browser: %s",
         "ko": "인터넷 브라우저를 열 수 없습니다: %s"
+      },
+      "all_charts_disabled": {
+        "en": "All charts are disabled; Please activate at least 1 chart to visualize.",
+        "ko": "모든 차트가 비활성화되었습니다. 최소 1개 이상의 차트를 활성화시켜주세요."
       }
     },
     "export_buttons": {
