@@ -43,7 +43,7 @@ The library finds all `GG(blabla).txt` files from a selected directory and `.zip
 
 For GUI, if you successfully run the program, you will be able to view something like following image.
 
-![gui_screen](./images/gui_screen_en_2.0.0.png)
+![gui_screen](./images/gui_screen_en_2.2.0.png)
 
 #### 3A. When you cloned this whole repo
 
@@ -100,3 +100,4 @@ There are following sections;
 
 1. All-in Equity Chart
 2. Chip Histories
+3. Your Hand Usage by Positions

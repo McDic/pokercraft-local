@@ -1,6 +1,13 @@
+## v2.2.0
+
+- Introduced "Your Hand Usage by Positions" section in hand history analysis
+- Reworked a lot in GUI; Now there are separated sections for each settings or exportings
+- Some optimizations on rust side module calculations
+- Added Korean documentation for non-programmer Koreans
+
 ## v2.1.0
 
-- Introduced "Chip Histories" section
+- Introduced "Chip Histories" section in hand history analysis
   - Chip stack over time chart
   - Inversed cumulative histogram of number of hands played chart
   - Death Threshold histogram chart

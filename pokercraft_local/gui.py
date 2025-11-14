@@ -361,10 +361,10 @@ class PokerCraftLocalGUI:
             text=lang << f"{self.TRKEY_PREFIX}.export_buttons.hand_history"
         )
         self._button_etc_settings.config(
-            text=lang << f"{self.TRKEY_PREFIX}.sections.etc_settings"
+            text="▼ " + (lang << f"{self.TRKEY_PREFIX}.sections.etc_settings")
         )
         self._button_expand_analyze_summary.config(
-            text=lang << f"{self.TRKEY_PREFIX}.sections.tourney_summary"
+            text="▼ " + (lang << f"{self.TRKEY_PREFIX}.sections.tourney_summary")
         )
         self._checkbox_summary_historical_performance.set_text(
             text=lang
@@ -383,7 +383,7 @@ class PokerCraftLocalGUI:
             text=lang << f"{self.TRKEY_PREFIX}.checkboxes.tourney_summary.rr_by_rank"
         )
         self._button_expand_hand_history.config(
-            text=lang << f"{self.TRKEY_PREFIX}.sections.hand_history"
+            text="▼ " + (lang << f"{self.TRKEY_PREFIX}.sections.hand_history")
         )
         self._checkbox_hand_history_all_in_equities.set_text(
             text=lang << f"{self.TRKEY_PREFIX}.checkboxes.hand_history.all_in_equity"
