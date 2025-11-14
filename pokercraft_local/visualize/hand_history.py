@@ -14,6 +14,7 @@ from ..data_structures import GeneralSimpleSegTree, HandHistory, SequentialHandH
 from ..rust import card as rust_card
 from ..rust import equity as rust_equity
 from ..translate import HAND_HISTORY_PLOT_DOCUMENTATIONS, Language, get_software_credits
+from ..utils import infinite_iter
 
 logger = logging.getLogger("pokercraft_local.visualize")
 
@@ -648,26 +649,33 @@ def plot_hand_histories(
     *,
     max_sampling: int | None = None,
     sort_key: typing.Callable[[HandHistory], typing.Any] = (lambda h: h.sorting_key()),
+    toggling_masks: typing.Iterable[bool] = (),
 ) -> str:
     """
     Generate hand history analysis HTML report.
     """
+    iter_masks = iter(toggling_masks or infinite_iter(default=True))
     hand_histories = sorted(hand_histories, key=sort_key)
     figures: list[plgo.Figure | None] = [
-        get_all_in_equity_histogram(
-            hand_histories,
-            lang,
-            max_length=max_sampling if max_sampling else -1,
+        (
+            get_all_in_equity_histogram(
+                hand_histories,
+                lang,
+                max_length=max_sampling if max_sampling else -1,
+            )
+            if next(iter_masks)
+            else None
         ),
-        get_chip_histories(hand_histories, lang),
-        get_hand_usage_heatmaps(hand_histories, lang),
+        get_chip_histories(hand_histories, lang) if next(iter_masks) else None,
+        get_hand_usage_heatmaps(hand_histories, lang) if next(iter_masks) else None,
     ]
 
+    plotlyjs_iter = infinite_iter("cdn", default=False)
     return BASE_HTML_FRAME.format(
         title=(lang << "plot.hand_history.title") % (nickname,),
         summary=markdown("No summary yet.."),
         plots=HORIZONTAL_PLOT_DIVIDER.join(
-            fig.to_html(include_plotlyjs=("cdn" if i == 0 else False), full_html=False)
+            fig.to_html(include_plotlyjs=next(plotlyjs_iter), full_html=False)
             + markdown(HAND_HISTORY_PLOT_DOCUMENTATIONS[i][lang])
             for i, fig in enumerate(figures)
             if fig is not None

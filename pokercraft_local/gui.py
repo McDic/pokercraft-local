@@ -183,6 +183,12 @@ class PokerCraftLocalGUI:
         self._checkbox_hand_history_all_in_equities = BooleanCheckbox(
             self._frame_hand_history_section, default=True
         )
+        self._checkbox_hand_history_chip_histories = BooleanCheckbox(
+            self._frame_hand_history_section, default=True
+        )
+        self._checkbox_hand_history_hand_usage_by_positions = BooleanCheckbox(
+            self._frame_hand_history_section, default=True
+        )
         self._button_analyze_hand_history: tk.Button = tk.Button(
             self._frame_hand_history_section,
             text="button_analyze_hand_history",
@@ -351,6 +357,13 @@ class PokerCraftLocalGUI:
         self._checkbox_hand_history_all_in_equities.set_text(
             text=lang << f"{self.TRKEY_PREFIX}.checkboxes.hand_history.all_in_equity"
         )
+        self._checkbox_hand_history_chip_histories.set_text(
+            text=lang << f"{self.TRKEY_PREFIX}.checkboxes.hand_history.chip_histories"
+        )
+        self._checkbox_hand_history_hand_usage_by_positions.set_text(
+            text=lang
+            << f"{self.TRKEY_PREFIX}.checkboxes.hand_history.hand_usage_by_positions"
+        )
         self._button_credits.config(text=lang << f"{self.TRKEY_PREFIX}.credits")
 
         # Resize GUI because text might be changed
@@ -511,12 +524,18 @@ class PokerCraftLocalGUI:
             return None
         logging.info(f"Sampling up to {max_sampling} hand histories.")
 
+        toggling_masks = [
+            self._checkbox_hand_history_all_in_equities.get_state(),
+            self._checkbox_hand_history_chip_histories.get_state(),
+            self._checkbox_hand_history_hand_usage_by_positions.get_state(),
+        ]
         plot_path = export_hand_history_analysis(
             main_path=data_directory,
             output_path=output_directory,
             nickname=nickname,
             lang=THIS_LANG,
             max_sampling=max_sampling,
+            toggling_masks=toggling_masks,
         )
         showinfo(
             self.get_info_popup_title(),

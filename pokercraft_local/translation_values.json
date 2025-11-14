@@ -55,6 +55,14 @@
         "all_in_equity": {
           "en": "All-in Equity Analysis",
           "ko": "올인 에퀴티 분석"
+        },
+        "chip_histories": {
+          "en": "Chip Histories",
+          "ko": "칩 히스토리 분석"
+        },
+        "hand_usage_by_positions": {
+          "en": "Hand Usage by Positions",
+          "ko": "포지션별 핸드 통계"
         }
       }
     },

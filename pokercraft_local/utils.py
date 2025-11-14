@@ -5,6 +5,7 @@ import time
 import typing
 import unittest
 
+T = typing.TypeVar("T")
 P = typing.ParamSpec("P")
 Sel = typing.TypeVar("Sel")
 Ret = typing.TypeVar("Ret")
@@ -85,3 +86,14 @@ def mark_expensive_test(
 
 def log2_or_nan(x: float | typing.Any) -> float:
     return math.log2(x) if x > 0 else math.nan
+
+
+def infinite_iter(*first_values: T, default: T) -> typing.Iterator[T]:
+    """
+    Returns an endless iterator that yields
+    `*first_values, default, default, ...`.
+    """
+    for element in first_values:
+        yield element
+    while True:
+        yield default

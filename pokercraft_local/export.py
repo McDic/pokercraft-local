@@ -72,6 +72,7 @@ def export_hand_history_analysis(
     lang: Language,
     max_sampling: int | None = None,
     fast_debug_mode: bool = False,
+    toggling_masks: Iterable[bool] = (),
 ) -> Path:
     """
     Export data from given info and return `plot_file_path`.
@@ -98,6 +99,7 @@ def export_hand_history_analysis(
                 hand_histories,
                 lang=lang,
                 max_sampling=max_sampling if not fast_debug_mode else 10,
+                toggling_masks=toggling_masks,
             )
         )
     return plot_path
