@@ -1,3 +1,7 @@
+## v2.2.2
+
+- Fixed wrong hand categorization(pocket) on internal calculation in Hand Usage by Position part
+
 ## v2.2.1
 
 - Better GUI design: Now the entire window size is slightly bigger
