@@ -528,14 +528,19 @@ def get_hand_usage_heatmaps(
             # Offsuited / pocket: big column, small row
             return (-2 + num_small, 14 - num_big)
 
-    def is_suited(idx2d: tuple[int, int]) -> bool:
+    def get_hand_category(
+        idx2d: tuple[int, int],
+    ) -> typing.Literal["suited", "offsuit", "pocket"]:
         """
-        Check if the hand at given index is suited.
+        Check if the hand at given index is suited, offsuit, or pocket.
         """
         x, y = idx2d
         desired_number_x = x + 2
         desired_number_y = -y + 14
-        return desired_number_x > desired_number_y
+        if desired_number_x == desired_number_y:
+            return "pocket"
+        else:
+            return "suited" if desired_number_x > desired_number_y else "offsuit"
 
     def idx2d_to_str(idx2d: tuple[int, int]) -> str:
         x, y = idx2d
@@ -551,12 +556,15 @@ def get_hand_usage_heatmaps(
             for cardnum in CardNumber.all_py()
             if int(cardnum) == desired_number_y
         )
-        if cardnum_x == cardnum_y:
-            return str(cardnum_x) + str(cardnum_y)
-        elif is_suited(idx2d):
-            return str(cardnum_x) + str(cardnum_y) + "s"
-        else:
-            return str(cardnum_y) + str(cardnum_x) + "o"
+        match get_hand_category(idx2d):
+            case "pocket":
+                return str(cardnum_x) + str(cardnum_y)
+            case "suited":
+                return str(cardnum_x) + str(cardnum_y) + "s"
+            case "offsuit":
+                return str(cardnum_y) + str(cardnum_x) + "o"
+            case _:
+                raise Exception("Unreachable")
 
     def increment(
         matrix_element: dict[str, int],
@@ -590,12 +598,15 @@ def get_hand_usage_heatmaps(
         for x, row in enumerate(matrix):
             for y, element in enumerate(row):
                 this_weight: int
-                if x == y:
-                    this_weight = 6  # Pocket
-                elif is_suited((x, y)):
-                    this_weight = 4  # Suited
-                else:
-                    this_weight = 12  # Offsuited
+                match get_hand_category((x, y)):
+                    case "pocket":
+                        this_weight = 6  # Pocket
+                    case "suited":
+                        this_weight = 4  # Suited
+                    case "offsuit":
+                        this_weight = 12  # Offsuited
+                    case _:
+                        raise Exception("Unreachable")
                 if vpip(element["prefold"], element["total_dealt"]) > minimum_vpip:
                     range_weight += this_weight
                 total_weight += this_weight
