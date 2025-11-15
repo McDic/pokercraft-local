@@ -507,6 +507,12 @@ def get_hand_usage_heatmaps(
     }
     matrices[-6] = matrices[-5]
 
+    def vpip(prefold: int, total: int) -> float:
+        """
+        Calculate VPIP from prefold and total dealt.
+        """
+        return 1 - prefold / total if total > 0 else float("nan")
+
     def get_idx2d(hand: tuple[Card, Card]) -> tuple[int, int]:
         """
         Get 2D matrix index from given card.
@@ -565,7 +571,7 @@ def get_hand_usage_heatmaps(
             for element in row:
                 prefold_total += element["prefold"]
                 total_dealt += element["total_dealt"]
-        return 1 - prefold_total / total_dealt if total_dealt > 0 else float("nan")
+        return vpip(prefold_total, total_dealt)
 
     for hand_history in hand_histories:
         button_offset = hand_history.get_offset_from_button("Hero")
@@ -594,7 +600,7 @@ def get_hand_usage_heatmaps(
 
     heatmaps = {
         offset: [
-            [1 - col["prefold"] / col["total_dealt"] for col in row] for row in matrix
+            [vpip(col["prefold"], col["total_dealt"]) for col in row] for row in matrix
         ]
         for offset, matrix in matrices.items()
     }
