@@ -1,3 +1,8 @@
+## v2.2.1
+
+- Better GUI design: Now the entire window size is slightly bigger
+- Bug fix on VPIP calculation, and also added range usage percentage
+
 ## v2.2.0
 
 - Introduced "Your Hand Usage by Positions" section in hand history analysis
