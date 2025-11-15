@@ -528,11 +528,19 @@ def get_hand_usage_heatmaps(
             # Offsuited / pocket: big column, small row
             return (-2 + num_small, 14 - num_big)
 
+    def is_suited(idx2d: tuple[int, int]) -> bool:
+        """
+        Check if the hand at given index is suited.
+        """
+        x, y = idx2d
+        desired_number_x = x + 2
+        desired_number_y = -y + 14
+        return desired_number_x > desired_number_y
+
     def idx2d_to_str(idx2d: tuple[int, int]) -> str:
         x, y = idx2d
         desired_number_x = x + 2
         desired_number_y = -y + 14
-        is_suited = desired_number_x > desired_number_y
         cardnum_x = next(
             cardnum
             for cardnum in CardNumber.all_py()
@@ -545,7 +553,7 @@ def get_hand_usage_heatmaps(
         )
         if cardnum_x == cardnum_y:
             return str(cardnum_x) + str(cardnum_y)
-        elif is_suited:
+        elif is_suited(idx2d):
             return str(cardnum_x) + str(cardnum_y) + "s"
         else:
             return str(cardnum_y) + str(cardnum_x) + "o"
@@ -572,6 +580,26 @@ def get_hand_usage_heatmaps(
                 prefold_total += element["prefold"]
                 total_dealt += element["total_dealt"]
         return vpip(prefold_total, total_dealt)
+
+    def get_range_usage(matrix: list[list[dict]], minimum_vpip: float = 0.0) -> float:
+        """
+        Get range usage percentage.
+        """
+        total_weight: int = 0
+        range_weight: int = 0
+        for x, row in enumerate(matrix):
+            for y, element in enumerate(row):
+                this_weight: int
+                if x == y:
+                    this_weight = 6  # Pocket
+                elif is_suited((x, y)):
+                    this_weight = 4  # Suited
+                else:
+                    this_weight = 12  # Offsuited
+                if vpip(element["prefold"], element["total_dealt"]) > minimum_vpip:
+                    range_weight += this_weight
+                total_weight += this_weight
+        return range_weight / total_weight
 
     for hand_history in hand_histories:
         button_offset = hand_history.get_offset_from_button("Hero")
@@ -618,7 +646,11 @@ def get_hand_usage_heatmaps(
         (None, 2, 2, "all_positions"),
     ):
         this_title = (lang << f"{TRKEY_PREFIX}.positions.{pos_name}") + (
-            " (VPIP %.2f%%)" % (100 * aggregate_vpip(matrices[btn_offset]),)
+            " (VPIP %.2f%%, Range %.2f%%)"
+            % (
+                100 * aggregate_vpip(matrices[btn_offset]),
+                100 * get_range_usage(matrices[btn_offset], minimum_vpip=0.1),
+            )
         )
         figure.add_trace(
             plgo.Heatmap(
