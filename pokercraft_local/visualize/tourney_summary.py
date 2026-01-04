@@ -563,7 +563,14 @@ def get_bankroll_charts(
     )
     figure.update_layout(
         modebar_remove=["select2d", "lasso2d"],
-        legend_title_text=lang << f"{TRKEY_PREFIX}.legends.title",
+        legend={
+            "title_text": lang << f"{TRKEY_PREFIX}.legends.title",
+            "orientation": "h",
+            "xanchor": "center",
+            "x": 0.5,
+            "yanchor": "top",
+            "y": -0.05,
+        },
         yaxis_title=None,
         title_subtitle_text=lang << f"{TRKEY_PREFIX}.subtitle",
         title_subtitle_font_style="italic",
@@ -764,6 +771,13 @@ def get_rr_by_rank_chart(
         title_subtitle_text=lang << f"{TRKEY_PREFIX}.subtitle",
         title_subtitle_font_style="italic",
         xaxis_title=lang << f"{TRKEY_PREFIX}.x_axis",
+        legend={
+            "orientation": "h",
+            "xanchor": "center",
+            "x": 0.5,
+            "yanchor": "top",
+            "y": -0.05,
+        },
     )
     OPACITY_RED = "rgba(255,0,0,0.3)"
     OPACITY_GRAY = "rgb(180,180,180)"
