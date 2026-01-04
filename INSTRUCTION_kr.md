@@ -3,7 +3,7 @@
 *This document is a user guide for Korean non-programmers.*
 
 이 문서는 Pokercraft Local을 사용하는 가이드를 담고 있습니다.
-이 문서의 주 독자층은 프로그래밍을 잘 모르는 한국인입니다.
+이 문서의 타겟 독자층은 프로그래밍을 잘 모르는 한국인입니다.
 일반적인 개발자를 위한 문서는 [README.md](README.md)를 참조해주세요.
 
 Pokercraft Local을 활용해서 나온 분석파일들의 데모는 다음 링크들을 통해 보실 수 있습니다.
@@ -37,22 +37,26 @@ Pokercraft Local에 쓰일 수 있는 데이터는 2가지입니다.
 
 맨 처음 프로그램을 실행하면 기본 설정이 영어로 뜰 겁니다.
 
-![gui_screen_en](images/gui_screen_en_2.0.0.png)
+![gui_screen_en](images/gui_screen_en_2.2.2.png)
 
-여기서 "*Select Language*"쪽 버튼을 눌러서 `en` (English)을 `ko` (Korean)로 바꿔줍시다.
+여기서 "*Select Language*" 버튼을 눌러서 `en` (English)을 `ko` (Korean)로 바꿔줍시다.
 
-![gui_screen_kr](images/gui_screen_kr_2.0.5.webp)
+![gui_screen_kr](images/gui_screen_kr_2.2.2.png)
 
 그럼 이제 한국말로 화면이 뜰 겁니다.
-각 옵션에 대한 설명은 다음과 같습니다.
-필수 옵션은 굵은 글씨체로 표시했습니다.
+필수 옵션에 대한 설명은 다음과 같습니다.
 
 - **데이터 폴더(Data Directory)**: 포커크래프트에서 다운받은 `.zip` 파일들이 있는 폴더를 선택해주세요.
 - **분석파일 내보낼 폴더(Output Directory)**: 분석파일을 내보낼 폴더를 선택해주세요.
 - **GG 닉네임(Your GG nickname)**: GG 닉네임을 써주세요. 유효성 검사를 하는 건 아니라서 아무거나 막 써도 되긴 합니다.
-- 샘플링할 핸드 히스토리 최대 개수(Max number of Hand Histories to sample): 핸드 히스토리 분석에 나오는 그래프 중에서 몇몇은 샘플링으로 최대 개수를 제한할 수 있습니다. 올인 에퀴티 같은 것들이 계산이 너무 오래 걸려서 그렇습니다. "No Limit" 또는 숫자를 입력하셔야 합니다.
-- 프리롤 포함하기(Include Freerolls): 토너먼트 손익 그래프 등에서 프리롤 데이터를 포함합니다.
-- 최신 환율 불러오기(Fetch the latest forex rate): 조디악 토너먼트 등은 중국 위안화를 사용하는데, 이것들을 미국 달러로 정확하게 변환할 수 있는 최신 환율을 불러옵니다. 근데 Forex API쪽에서 타이트하게 요청 횟수 제한을 잡는 거 같아서 툴을 반복해서 사용할 경우 실패할 가능성이 높습니다.
+
+이제 원하시는 분석을 해볼 차례입니다.
+GUI 화면에서 모든 옵션 페이지를 열면 다음과 같은 모습이 나옵니다.
+
+![gui_screen_kr_expanded](images/gui_screen_kr_2.2.2_expanded.png)
+
+여기서 이제 초록색 다운로드 버튼으로 받은 데이터에는 *"토너먼트 결과 분석"* 을,
+빨간색 다운로드 버튼으로 받은 데이터에는 *"핸드 히스토리 분석"* 을 눌러주세요.
 
 ---
 

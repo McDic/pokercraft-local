@@ -1,3 +1,8 @@
+## v2.3.0
+
+- Added table in Historical Performance section
+- Moved a legend to bottom in several graphs in Tourney Summary Analysis
+
 ## v2.2.2
 
 - Fixed wrong hand categorization(pocket) on internal calculation in Hand Usage by Position part
