@@ -256,6 +256,28 @@
             "ko": "최근 %d개 토너 기준"
           }
         },
+        "table_headers": {
+          "tourney_name": {
+            "en": "Tourney Name",
+            "ko": "토너 이름"
+          },
+          "buy_in": {
+            "en": "Buy-in",
+            "ko": "바인금액"
+          },
+          "profit": {
+            "en": "Profit",
+            "ko": "수익"
+          },
+          "rake": {
+            "en": "Paid Rake",
+            "ko": "지불한 레이크"
+          },
+          "net_profit": {
+            "en": "Total Net Profit",
+            "ko": "누적 순수익"
+          }
+        },
         "horizontal_lines": {
           "break_even": {
             "en": "Break-even",

@@ -24,14 +24,14 @@ from ..translate import (
 from ..utils import infinite_iter, log2_or_nan
 
 
-def get_historical_charts(
+def get_historical_charts_and_table(
     tournaments: list[TournamentSummary],
     lang: Language,
     *,
     window_sizes: tuple[int, ...] = DEFAULT_WINDOW_SIZES,
 ) -> plgo.Figure:
     """
-    Get historical charts.
+    Get historical charts and table.
     """
     TRKEY_PREFIX: typing.Final[str] = "plot.tourney_summary.historical_performance"
 
@@ -81,14 +81,21 @@ def get_historical_charts(
 
     figure = make_subplots(
         rows=3,
-        cols=1,
+        cols=2,
         shared_xaxes=True,
         row_titles=[
             lang << f"{TRKEY_PREFIX}.y_axes.net_profit_and_rake",
             lang << f"{TRKEY_PREFIX}.y_axes.profitable_ratio",
             lang << f"{TRKEY_PREFIX}.y_axes.average_buy_in",
         ],
+        horizontal_spacing=0.01,
         vertical_spacing=0.01,
+        specs=[
+            [{"type": "scatter"}, {"rowspan": 3, "type": "table"}],
+            [{"type": "scatter"}, None],
+            [{"type": "scatter"}, None],
+        ],
+        column_widths=[0.75, 0.25],
     )
     common_options = {"x": df_base.index, "mode": "lines"}
 
@@ -158,6 +165,34 @@ def get_historical_charts(
             col=1,
         )
 
+    figure.add_trace(
+        plgo.Table(
+            header={
+                "values": [
+                    "#",
+                    lang << f"{TRKEY_PREFIX}.table_headers.tourney_name",
+                    lang << f"{TRKEY_PREFIX}.table_headers.buy_in",
+                    lang << f"{TRKEY_PREFIX}.table_headers.profit",
+                    lang << f"{TRKEY_PREFIX}.table_headers.rake",
+                    lang << f"{TRKEY_PREFIX}.table_headers.net_profit",
+                ]
+            },
+            cells={
+                "values": [
+                    df_base.index,
+                    df_base["Tournament Name"],
+                    df_base["Buy In"],
+                    df_base["Profit"],
+                    df_base["Rake"],
+                    df_base["Net Profit"],
+                ],
+                "format": ["", "", "$,.2f", "$,.2f", "$,.2f", "$,.2f"],
+            },
+        ),
+        row=1,
+        col=2,
+    )
+
     # Update layouts and axes
     figure.update_layout(
         title=lang << f"{TRKEY_PREFIX}.title",
@@ -172,7 +207,15 @@ def get_historical_charts(
                 for i in range(1, len(df_base) + 1)
             },
         },
-        legend_groupclick="toggleitem",
+        legend={
+            "orientation": "h",
+            "xanchor": "center",
+            "x": 0.5,
+            "yanchor": "bottom",
+            "y": -0.275,
+            "maxheight": 0.2,
+            "groupclick": "toggleitem",
+        },
     )
     figure.update_traces(
         visible="legendonly",
@@ -186,8 +229,9 @@ def get_historical_charts(
             )
             or any(str(num) in barline.name for num in (100, 400, 800))
         ),
+        col=1,
     )
-    figure.update_traces(xaxis="x")
+    figure.update_traces(xaxis="x", col=1)
     figure.update_yaxes(
         row=2,
         col=1,
@@ -212,6 +256,7 @@ def get_historical_charts(
         minallowed=1,
         maxallowed=len(df_base),
         rangeslider_thickness=0.075,
+        col=1,
     )
     figure.update_yaxes(fixedrange=False)
 
@@ -246,6 +291,7 @@ def get_historical_charts(
             "font": {"color": OPACITY_BLUE, "weight": 1000, "size": 18},
             "yanchor": "bottom",
         },
+        exclude_empty_subplots=False,
     )
     figure.add_hline(
         y=df_base["Max Drawdown"].min(),
@@ -259,6 +305,7 @@ def get_historical_charts(
             "font": {"color": OPACITY_PURPLE, "weight": 1000, "size": 18},
             "yanchor": "bottom",
         },
+        exclude_empty_subplots=False,
     )
     for threshold, trkey_suffix in [
         (5.0, "micro_low"),
@@ -280,7 +327,6 @@ def get_historical_charts(
             exclude_empty_subplots=False,
         )
     figure.update_shapes(xref="x domain", xsizemode="scaled", x0=0, x1=1)
-
     return figure
 
 
@@ -830,7 +876,7 @@ def plot_tournament_summaries(
     tournaments = sorted(tournaments, key=sort_key)
     figures: list[plgo.Figure | None] = [
         (
-            get_historical_charts(
+            get_historical_charts_and_table(
                 tournaments,
                 lang,
                 window_sizes=window_sizes,
