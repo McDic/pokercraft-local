@@ -245,7 +245,7 @@ class PokerCraftLocalGUI:
 
     def _open_credits(self) -> None:
         try:
-            webbrowser.open("https://github.com/McDic/pokercraft-local")
+            webbrowser.open("https://github.com/McDic/pokercraft-local", new=1)
         except Exception as e:
             showwarning(
                 self.get_warning_popup_title(),
