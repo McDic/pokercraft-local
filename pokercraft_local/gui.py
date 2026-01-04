@@ -218,7 +218,7 @@ class PokerCraftLocalGUI:
             text="button_credits",
             command=self._open_credits,
         )
-        self._button_credits.pack()
+        self._button_credits.pack(pady=5)
 
         # Reset display by language
         self.reset_display_by_language(self._strvar_language_selection)
