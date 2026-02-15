@@ -17,6 +17,8 @@ pokercraft-core = { workspace = true, features = ["wasm"] }
 wasm-bindgen.workspace = true
 js-sys.workspace = true
 console_error_panic_hook = { version = "0.1", optional = true }
+# Enable JS random source for WASM
+getrandom = { version = "0.2", features = ["js"] }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"

@@ -22,3 +22,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Generated WASM files (built by wasm-pack in CI)
+src/wasm/

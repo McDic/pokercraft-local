@@ -319,18 +319,7 @@ impl Card {
     pub fn to_string_wasm(&self) -> String {
         format!("{}", self)
     }
-
-    /// Get the shape of this card.
-    #[wasm_bindgen(getter)]
-    pub fn shape(&self) -> CardShape {
-        self.shape
-    }
-
-    /// Get the number of this card.
-    #[wasm_bindgen(getter)]
-    pub fn number(&self) -> CardNumber {
-        self.number
-    }
+    // Note: shape and number getters are auto-generated from public struct fields
 }
 
 impl std::fmt::Display for Card {
