@@ -139,7 +139,7 @@ export function getRRByRankData(tournaments: TournamentSummary[]): RRByRankData 
       xanchor: 'center',
       x: 0.5,
       yanchor: 'top',
-      y: -0.1,
+      y: -0.2,
     },
     shapes: [
       // Break-even horizontal line (RR = 1)
@@ -178,14 +178,14 @@ export function getRRByRankData(tournaments: TournamentSummary[]): RRByRankData 
     ],
     annotations: [
       {
-        text: 'Break-even',
+        text: '<b>Break-even</b>',
         xref: 'paper',
-        x: 0.98,
-        yref: 'y',
-        y: 1,
-        showarrow: false,
+        x: 1,
         xanchor: 'right',
-        yanchor: 'top',
+        yref: 'y',
+        y: Math.log10(1), // log10(1) = 0 for RR = 1 on log scale
+        yanchor: 'bottom',
+        showarrow: false,
         font: { color: 'rgba(255,0,0,0.5)', size: 14 },
       },
       {
