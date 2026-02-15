@@ -97,7 +97,7 @@ export async function getChipHistoriesData(
       y: normalizedHistory,
       mode: 'lines',
       name: getSequenceDisplayName(seq),
-      hovertemplate: 'Hand #%{x}<br>Stack: %{y:.2f}x initial<extra></extra>',
+      hovertemplate: '%{fullData.name}<br>Hand #%{x}<br>Stack: %{y:.2f}x initial<extra></extra>',
     } as Data)
 
     // Yield every 50 tournaments to keep UI responsive
@@ -126,30 +126,40 @@ export async function getChipHistoriesData(
     hoverinfo: 'skip',
   } as Data)
 
-  // Died-at histogram
-  if (diedAt.length > 0 && totalTourneys > 0) {
-    const histogramBins = new Map<number, number>()
+  // Died-at survival curve (continuous)
+  // Survival at hand N = % of players who survived to ENTER hand N
+  // If someone busts at hand X, they entered X alive but died, so survival drops at X+1
+  // Extends to maxHandLength to include tournaments where player won (never busted)
+  if (totalTourneys > 0) {
+    // Count busts at each hand number
+    const bustCounts = new Map<number, number>()
     for (const d of diedAt) {
-      histogramBins.set(d, (histogramBins.get(d) ?? 0) + 1)
+      bustCounts.set(d, (bustCounts.get(d) ?? 0) + 1)
     }
 
-    const sortedBins = Array.from(histogramBins.entries()).sort((a, b) => a[0] - b[0])
-    let cumSum = 0
-    const survivalRates: number[] = []
+    // Build continuous survival rate from hand 1 to maxHandLength
     const binPositions: number[] = []
+    const survivalRates: number[] = []
+    let cumBusts = 0
 
-    for (const [bin, count] of sortedBins) {
-      cumSum += count
-      binPositions.push(bin)
-      survivalRates.push(1 - (cumSum / totalTourneys))
+    for (let hand = 1; hand <= maxHandLength; hand++) {
+      // Survival at hand N = 1 - (busts at hands 1..N-1) / total
+      // cumBusts currently contains busts from hands 1 to hand-1
+      binPositions.push(hand)
+      survivalRates.push(1 - cumBusts / totalTourneys)
+      // Add busts at this hand - they affect the NEXT hand's survival
+      cumBusts += bustCounts.get(hand) ?? 0
     }
 
     traces.push({
-      type: 'bar',
+      type: 'scatter',
       x: binPositions,
       y: survivalRates,
+      mode: 'lines',
       name: 'Survival Rate',
-      marker: { color: 'rgba(38,210,87,0.9)' },
+      line: { color: 'rgba(38,210,87,0.9)', width: 2 },
+      fill: 'tozeroy',
+      fillcolor: 'rgba(38,210,87,0.3)',
       hovertemplate: 'Hand #%{x}<br>Survival: %{y:.1%}<extra></extra>',
       xaxis: 'x2',
       yaxis: 'y2',
@@ -163,9 +173,9 @@ export async function getChipHistoriesData(
       type: 'bar',
       x: sortedThresholds.map(t => `${t.toFixed(2)}x`),
       y: sortedThresholds.map(t => (deathThresholdCount.get(t) ?? 0) / totalTourneys),
-      name: 'Death Threshold Pass Rate',
+      name: 'Death Threshold Die Rate',
       marker: { color: 'rgba(222,118,177,0.9)' },
-      hovertemplate: '%{x}<br>Pass Rate: %{y:.1%}<extra></extra>',
+      hovertemplate: 'Below %{x} of peak<br>→ %{y:.1%} never recovered<extra></extra>',
       xaxis: 'x3',
       yaxis: 'y3',
     } as Data)
@@ -192,7 +202,7 @@ export async function getChipHistoriesData(
     yaxis: {
       title: { text: 'Stack (x initial)' },
       type: 'log',
-      domain: [0.4, 1],
+      domain: [0.45, 1],
       anchor: 'x',
       range: [-2.25, 2],
     },
@@ -204,7 +214,7 @@ export async function getChipHistoriesData(
     yaxis2: {
       title: { text: 'Survival Rate' },
       tickformat: '.0%',
-      domain: [0, 0.32],
+      domain: [0, 0.30],
       anchor: 'x2',
       range: [0, 1],
     },
@@ -214,9 +224,9 @@ export async function getChipHistoriesData(
       anchor: 'y3',
     },
     yaxis3: {
-      title: { text: 'Pass Rate' },
+      title: { text: 'Die Rate' },
       tickformat: '.0%',
-      domain: [0, 0.32],
+      domain: [0, 0.30],
       anchor: 'x3',
       range: [0, 1],
     },
@@ -227,9 +237,19 @@ export async function getChipHistoriesData(
         yref: 'y2',
         x: avgDiedAt,
         y: 0.5,
-        showarrow: true,
-        arrowhead: 2,
+        showarrow: false,
+        xanchor: 'left',
         font: { color: 'rgba(12,17,166,0.7)' },
+      },
+      {
+        text: '<b>Danger Line</b>',
+        xref: 'x',
+        yref: 'y',
+        x: Math.min(maxHandLength, 150),
+        y: Math.log10(Math.max(Math.exp((Math.min(maxHandLength, 150) / 100) * Math.log(10)) * 0.014, 1 / 3)),
+        showarrow: false,
+        font: { color: 'rgba(33,33,33,0.33)', size: 24 },
+        yanchor: 'top',
       },
     ],
     shapes: [
