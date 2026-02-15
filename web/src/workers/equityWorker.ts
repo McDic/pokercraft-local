@@ -73,27 +73,17 @@ async function ensurePreflopCache(): Promise<HUPreflopEquityCache | null> {
   for (const path of possiblePaths) {
     try {
       const cacheUrl = new URL(path, self.location.origin).href
-      console.log('Trying preflop cache from:', cacheUrl)
-
       const response = await fetch(cacheUrl)
-      if (!response.ok) {
-        console.log('Not found at', path, '- trying next...')
-        continue
-      }
+      if (!response.ok) continue
 
       const bytes = new Uint8Array(await response.arrayBuffer())
-      console.log('Preflop cache bytes loaded:', bytes.length)
-
       preflopCache = new HUPreflopEquityCache(bytes)
-      console.log('Preflop cache initialized successfully from:', path)
       return preflopCache
-    } catch (error) {
-      console.log('Failed at', path, ':', error)
+    } catch {
       continue
     }
   }
 
-  console.warn('Failed to load preflop cache from any path')
   return null
 }
 
@@ -127,23 +117,23 @@ function calculateEquity(
       )
       cacheHits++
       return equity
-    } catch (e) {
+    } catch {
       cacheMisses++
-      console.warn('Cache lookup failed:', heroCards, 'vs', opponents[0], e)
       // Fall through to full calculation
     }
   }
 
   // Full calculation
   fullCalcs++
+  let equityResult: EquityResult | null = null
   try {
     const allHands = [heroCards, ...opponents]
-    const equityResult = new EquityResult(allHands, communityAtAllIn)
-    const equity = equityResult.getEquity(0)
-    equityResult.free()
-    return equity
+    equityResult = new EquityResult(allHands, communityAtAllIn)
+    return equityResult.getEquity(0)
   } catch {
     return null
+  } finally {
+    equityResult?.free()
   }
 }
 

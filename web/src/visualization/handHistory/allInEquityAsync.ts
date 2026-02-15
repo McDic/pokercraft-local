@@ -214,14 +214,6 @@ export async function collectAllInDataAsync(
   const results = await Promise.all(workerPromises)
   const allData = results.flat()
 
-  // Log aggregated cache stats
-  console.log(`[Equity] All-in calculation complete:`, {
-    totalHands: allData.length,
-    cacheHits: totalCacheHits,
-    cacheMisses: totalCacheMisses,
-    fullCalcs: totalFullCalcs,
-    workers: chunks.length,
-  })
 
   // Calculate combined luck score
   const wasmModule = await import('../../wasm/pokercraft_wasm')
