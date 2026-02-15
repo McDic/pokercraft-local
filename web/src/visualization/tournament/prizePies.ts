@@ -101,7 +101,7 @@ export function getPrizePiesData(tournaments: TournamentSummary[]): PrizePiesDat
       pull: piePulls,
       name: 'Individual Prizes',
       hovertemplate: '%{label}: %{value:$,.2f}',
-      domain: { row: 0, column: 0 },
+      domain: { x: [0, 0.48], y: [0, 1] },
       showlegend: false,
     } as Data,
     {
@@ -112,7 +112,7 @@ export function getPrizePiesData(tournaments: TournamentSummary[]): PrizePiesDat
       maxdepth: 2,
       name: 'Prizes by Weekday',
       hovertemplate: '%{label}: %{value:$,.2f}',
-      domain: { row: 1, column: 0 },
+      domain: { x: [0.52, 1], y: [0, 1] },
     } as Data,
   ]
 
@@ -121,29 +121,25 @@ export function getPrizePiesData(tournaments: TournamentSummary[]): PrizePiesDat
       text: 'Prize Distribution',
       subtitle: { text: 'Individual tournaments and by weekday' },
     },
-    height: 800,
-    grid: {
-      rows: 2,
-      columns: 1,
-    },
+    height: 500,
     annotations: [
       {
-        text: 'Individual Prizes',
-        x: 0.5,
-        y: 0.85,
+        text: '<b>Individual Prizes</b>',
+        x: 0.24,
+        y: 1.05,
         xref: 'paper',
         yref: 'paper',
         showarrow: false,
-        font: { size: 14, weight: 700 },
+        font: { size: 14 },
       },
       {
-        text: 'Prizes by Weekday',
-        x: 0.5,
-        y: 0.35,
+        text: '<b>Prizes by Weekday</b>',
+        x: 0.76,
+        y: 1.05,
         xref: 'paper',
         yref: 'paper',
         showarrow: false,
-        font: { size: 14, weight: 700 },
+        font: { size: 14 },
       },
     ],
   }

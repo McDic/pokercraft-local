@@ -197,7 +197,7 @@ export function TournamentCharts({ tournaments, bankrollResults }: TournamentCha
             data={state.historical.traces}
             layout={{ ...state.historical.layout, autosize: true }}
             useResizeHandler
-            style={{ width: '100%', height: '800px' }}
+            style={{ width: '100%', height: state.historical.layout.height }}
             config={{ responsive: true }}
           />
         </section>
@@ -209,7 +209,7 @@ export function TournamentCharts({ tournaments, bankrollResults }: TournamentCha
             data={state.rre.traces}
             layout={{ ...state.rre.layout, autosize: true }}
             useResizeHandler
-            style={{ width: '100%', height: '500px' }}
+            style={{ width: '100%', height: state.rre.layout.height }}
             config={{ responsive: true }}
           />
         </section>
@@ -221,7 +221,7 @@ export function TournamentCharts({ tournaments, bankrollResults }: TournamentCha
             data={state.bankroll.traces}
             layout={{ ...state.bankroll.layout, autosize: true }}
             useResizeHandler
-            style={{ width: '100%', height: '400px' }}
+            style={{ width: '100%', height: state.bankroll.layout.height }}
             config={{ responsive: true }}
           />
         </section>
@@ -233,7 +233,7 @@ export function TournamentCharts({ tournaments, bankrollResults }: TournamentCha
             data={state.prizePies.traces}
             layout={{ ...state.prizePies.layout, autosize: true }}
             useResizeHandler
-            style={{ width: '100%', height: '800px' }}
+            style={{ width: '100%', height: state.prizePies.layout.height }}
             config={{ responsive: true }}
           />
         </section>
@@ -245,7 +245,7 @@ export function TournamentCharts({ tournaments, bankrollResults }: TournamentCha
             data={state.rrByRank.traces}
             layout={{ ...state.rrByRank.layout, autosize: true }}
             useResizeHandler
-            style={{ width: '100%', height: '500px' }}
+            style={{ width: '100%', height: state.rrByRank.layout.height }}
             config={{ responsive: true }}
           />
         </section>
