@@ -142,7 +142,7 @@ export function getBankrollAnalysisData(
       xanchor: 'center',
       x: 0.5,
       yanchor: 'top',
-      y: -0.1,
+      y: -0.3,
     },
     height: 400,
   }
