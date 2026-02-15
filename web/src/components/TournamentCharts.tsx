@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from 'react'
 import Plot from 'react-plotly.js'
 import type { Data, Layout } from 'plotly.js-dist-min'
 import type { TournamentSummary } from '../types'
-import type { BankrollResult } from '../visualization'
+import type { BankrollWorkerResult } from '../workers/analysisWorker'
 import { yieldToBrowser } from '../utils'
 
 interface ChartData {
@@ -16,7 +16,7 @@ interface ChartData {
 
 interface TournamentChartsProps {
   tournaments: TournamentSummary[]
-  bankrollResults: BankrollResult[]
+  bankrollResults: BankrollWorkerResult[]
 }
 
 interface ChartsState {

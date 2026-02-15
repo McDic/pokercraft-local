@@ -3,12 +3,12 @@
  */
 
 import { useCallback, useState } from 'react'
-import type { AnalysisProgress } from '../hooks/useAsyncAnalysis'
+import type { AnalysisProgress } from '../hooks/useAnalysisWorker'
 
 interface FileUploaderProps {
   onFilesSelected: (files: FileList | File[]) => void
   isLoading: boolean
-  progress: AnalysisProgress
+  progress: AnalysisProgress | null
   tournamentCount: number
   handHistoryCount: number
 }
@@ -66,10 +66,10 @@ export function FileUploader({
             <div className="progress-bar">
               <div
                 className="progress-fill"
-                style={{ width: `${progress.percentage}%` }}
+                style={{ width: `${progress?.percentage ?? 0}%` }}
               />
             </div>
-            <p className="progress-message">{progress.message}</p>
+            <p className="progress-message">{progress?.message ?? 'Loading...'}</p>
           </div>
         ) : (
           <>

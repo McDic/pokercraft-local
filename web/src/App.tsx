@@ -1,8 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.css'
-
-// WASM
-import init, { version } from './wasm/pokercraft_wasm'
 
 // Components
 import {
@@ -15,12 +12,11 @@ import {
 } from './components'
 
 // Hooks
-import { useAsyncAnalysis } from './hooks/useAsyncAnalysis'
+import { useAnalysisWorker } from './hooks/useAnalysisWorker'
 
 function App() {
-  const [wasmReady, setWasmReady] = useState(false)
-  const [wasmVersion, setWasmVersion] = useState('')
   const [activeTab, setActiveTab] = useState<ChartTab>('tournament')
+  const prevDataLengthRef = useRef({ tournaments: 0, handHistories: 0 })
 
   const {
     isLoading,
@@ -29,16 +25,28 @@ function App() {
     handHistories,
     bankrollResults,
     errors,
+    wasmVersion,
     parseFiles,
-  } = useAsyncAnalysis()
+    runAnalysis,
+  } = useAnalysisWorker()
 
-  // Initialize WASM
+  // Auto-run analysis when new data is parsed
   useEffect(() => {
-    init().then(() => {
-      setWasmReady(true)
-      setWasmVersion(version())
-    })
-  }, [])
+    const prevTournaments = prevDataLengthRef.current.tournaments
+    const prevHH = prevDataLengthRef.current.handHistories
+
+    // Check if new data was added
+    if (
+      (tournaments.length > prevTournaments || handHistories.length > prevHH) &&
+      !isLoading
+    ) {
+      prevDataLengthRef.current = {
+        tournaments: tournaments.length,
+        handHistories: handHistories.length,
+      }
+      runAnalysis()
+    }
+  }, [tournaments.length, handHistories.length, isLoading, runAnalysis])
 
   // Auto-switch tab when data changes
   useEffect(() => {
@@ -48,16 +56,6 @@ function App() {
       setActiveTab('tournament')
     }
   }, [tournaments.length, handHistories.length])
-
-  if (!wasmReady) {
-    return (
-      <div className="app">
-        <div className="loading-screen">
-          Loading WASM module...
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="app">

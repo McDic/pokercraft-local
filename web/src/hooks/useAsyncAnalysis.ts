@@ -108,29 +108,48 @@ export function useAsyncAnalysis() {
       setProgress('parsing', 'Merging data...', 85)
       await yieldToBrowser()
 
-      // Merge with existing data, deduplicating
+      // Merge and sort with yielding between steps
+      // Get current state snapshot via ref pattern
+      let currentTournaments: TournamentSummary[] = []
+      let currentHH: HandHistory[] = []
       setState(prev => {
-        const mergedTournaments = mergeTournaments(prev.tournaments, result.tournaments)
-          .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
-
-        const mergedHH = mergeById(prev.handHistories, result.handHistories)
-          .sort((a, b) => a.datetime.getTime() - b.datetime.getTime())
-
-        const newTournamentCount = mergedTournaments.length - prev.tournaments.length
-        const newHHCount = mergedHH.length - prev.handHistories.length
-
-        return {
-          ...prev,
-          tournaments: mergedTournaments,
-          handHistories: mergedHH,
-          errors: [...prev.errors, ...result.errors],
-          progress: {
-            stage: 'parsing',
-            message: `Added ${newTournamentCount} tournaments, ${newHHCount} hand histories`,
-            percentage: 100,
-          },
-        }
+        currentTournaments = prev.tournaments
+        currentHH = prev.handHistories
+        return prev
       })
+      await yieldToBrowser()
+
+      setProgress('parsing', 'Merging tournaments...', 87)
+      const mergedTournaments = mergeTournaments(currentTournaments, result.tournaments)
+      await yieldToBrowser()
+
+      setProgress('parsing', 'Sorting tournaments...', 90)
+      mergedTournaments.sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+      await yieldToBrowser()
+
+      setProgress('parsing', 'Merging hand histories...', 93)
+      const mergedHH = mergeById(currentHH, result.handHistories)
+      await yieldToBrowser()
+
+      setProgress('parsing', 'Sorting hand histories...', 96)
+      mergedHH.sort((a, b) => a.datetime.getTime() - b.datetime.getTime())
+      await yieldToBrowser()
+
+      const newTournamentCount = mergedTournaments.length - currentTournaments.length
+      const newHHCount = mergedHH.length - currentHH.length
+
+      // Update state with merged data
+      setState(prev => ({
+        ...prev,
+        tournaments: mergedTournaments,
+        handHistories: mergedHH,
+        errors: [...prev.errors, ...result.errors],
+        progress: {
+          stage: 'parsing',
+          message: `Added ${newTournamentCount} tournaments, ${newHHCount} hand histories`,
+          percentage: 100,
+        },
+      }))
 
       await yieldToBrowser()
 
