@@ -13,9 +13,19 @@ export function Header({ wasmVersion }: HeaderProps) {
         <h1>Pokercraft Local</h1>
         <span className="subtitle">Poker Analytics Dashboard</span>
       </div>
-      {wasmVersion && (
-        <span className="version">WASM v{wasmVersion}</span>
-      )}
+      <div className="header-links">
+        <a
+          href="https://github.com/McDic/pokercraft-local"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="github-link"
+        >
+          GitHub
+        </a>
+        {wasmVersion && (
+          <span className="version">WASM v{wasmVersion}</span>
+        )}
+      </div>
     </header>
   )
 }

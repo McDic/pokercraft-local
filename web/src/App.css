@@ -41,6 +41,28 @@
   border-radius: 4px;
 }
 
+.header-links {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header .github-link {
+  color: #888;
+  font-size: 0.875rem;
+  text-decoration: none;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid #444;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.header .github-link:hover {
+  color: #fff;
+  border-color: #666;
+  background: #333;
+}
+
 /* File Uploader */
 .file-uploader {
   margin-bottom: 2rem;
