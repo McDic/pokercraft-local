@@ -7,10 +7,11 @@ import init, { simulate, version } from './wasm/pokercraft_wasm'
 
 // Parser
 import { loadAndParseFiles, CurrencyRateConverter } from './parser'
-import type { TournamentSummary } from './types'
+import type { TournamentSummary, HandHistory } from './types'
 
 // Visualization
 import {
+  // Tournament charts
   getHistoricalPerformanceData,
   getRREHeatmapData,
   getPrizePiesData,
@@ -18,12 +19,17 @@ import {
   collectRelativeReturns,
   getBankrollAnalysisData,
   type BankrollResult,
+  // Hand history charts
+  getChipHistoriesData,
+  getHandUsageHeatmapsData,
+  getAllInEquityData,
 } from './visualization'
 
 function App() {
   const [wasmReady, setWasmReady] = useState(false)
   const [wasmVersion, setWasmVersion] = useState('')
   const [tournaments, setTournaments] = useState<TournamentSummary[]>([])
+  const [handHistories, setHandHistories] = useState<HandHistory[]>([])
   const [errors, setErrors] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
@@ -50,7 +56,13 @@ function App() {
         (a, b) => a.startTime.getTime() - b.startTime.getTime()
       )
 
+      // Sort hand histories by datetime
+      const sortedHH = [...result.handHistories].sort(
+        (a, b) => a.datetime.getTime() - b.datetime.getTime()
+      )
+
       setTournaments(sorted)
+      setHandHistories(sortedHH)
       setErrors(result.errors)
     } catch (e) {
       setErrors([e instanceof Error ? e.message : String(e)])
@@ -126,13 +138,18 @@ function App() {
     return <div className="loading">Loading WASM module...</div>
   }
 
-  // Generate chart data
+  // Generate tournament chart data
   const historicalData = tournaments.length > 0 ? getHistoricalPerformanceData(tournaments) : null
   const rreData = tournaments.length > 0 ? getRREHeatmapData(tournaments) : null
   const prizePiesData = tournaments.length > 0 ? getPrizePiesData(tournaments) : null
   const rrByRankData = tournaments.length > 0 ? getRRByRankData(tournaments) : null
   const bankrollResults = runBankrollAnalysis()
   const bankrollData = bankrollResults.length > 0 ? getBankrollAnalysisData(bankrollResults) : null
+
+  // Generate hand history chart data
+  const chipHistoriesData = handHistories.length > 0 ? getChipHistoriesData(handHistories) : null
+  const handUsageData = handHistories.length > 0 ? getHandUsageHeatmapsData(handHistories) : null
+  const allInEquityData = handHistories.length > 0 ? getAllInEquityData(handHistories) : null
 
   return (
     <div className="app">
@@ -175,9 +192,12 @@ function App() {
         </div>
       )}
 
-      {tournaments.length > 0 && (
+      {(tournaments.length > 0 || handHistories.length > 0) && (
         <div className="stats">
-          <p>Loaded {tournaments.length} tournaments</p>
+          <p>
+            Loaded {tournaments.length} tournaments
+            {handHistories.length > 0 && `, ${handHistories.length} hand histories`}
+          </p>
         </div>
       )}
 
@@ -233,6 +253,40 @@ function App() {
             layout={{ ...rrByRankData.layout, autosize: true }}
             useResizeHandler
             style={{ width: '100%', height: '500px' }}
+          />
+        </section>
+      )}
+
+      {/* Hand History Charts */}
+      {chipHistoriesData && chipHistoriesData.traces.length > 0 && (
+        <section className="chart-section">
+          <Plot
+            data={chipHistoriesData.traces}
+            layout={{ ...chipHistoriesData.layout, autosize: true }}
+            useResizeHandler
+            style={{ width: '100%', height: '900px' }}
+          />
+        </section>
+      )}
+
+      {allInEquityData && allInEquityData.traces.length > 0 && (
+        <section className="chart-section">
+          <Plot
+            data={allInEquityData.traces}
+            layout={{ ...allInEquityData.layout, autosize: true }}
+            useResizeHandler
+            style={{ width: '100%', height: '700px' }}
+          />
+        </section>
+      )}
+
+      {handUsageData && handUsageData.traces.length > 0 && (
+        <section className="chart-section">
+          <Plot
+            data={handUsageData.traces}
+            layout={{ ...handUsageData.layout, autosize: true }}
+            useResizeHandler
+            style={{ width: '100%', height: '900px' }}
           />
         </section>
       )}

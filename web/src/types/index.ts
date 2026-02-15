@@ -249,6 +249,168 @@ export function getHandHistoryNetProfit(h: HandHistory, playerId: string): numbe
   return (h.wons.get(playerId) ?? 0) - getHandHistoryTotalChipsPut(h, playerId)
 }
 
+/**
+ * Get the offset of a player from the button.
+ * - If player is at button, returns 0.
+ * - If player is at SB, returns 1.
+ * - If player is at BB, returns 2.
+ * - Other positions return negative numbers (e.g., CO = -1, MP = -2, etc.)
+ */
+export function getHandHistoryOffsetFromButton(h: HandHistory, playerId: string): number {
+  const playerSeat = getHandHistorySeatNumber(h, playerId)
+
+  if (playerSeat === h.sbSeat) return 1
+  if (playerSeat === h.bbSeat) return 2
+
+  let currentSeat = h.buttonSeat
+  let offset = 0
+  const seats = Array.from(h.seats.keys()).sort((a, b) => a - b)
+  const minSeat = Math.min(...seats)
+  const maxSeat = Math.max(...seats)
+
+  const decrement = (seat: number): number => {
+    while (true) {
+      if (seat <= minSeat) {
+        seat = maxSeat
+      } else {
+        seat -= 1
+      }
+      if (h.seats.has(seat)) return seat
+    }
+  }
+
+  while (true) {
+    if (currentSeat === playerSeat) return offset
+    currentSeat = decrement(currentSeat)
+    offset -= 1
+    // Safety: prevent infinite loop
+    if (offset < -10) break
+  }
+
+  throw new Error(`Could not calculate offset for player ${playerId}`)
+}
+
+/**
+ * Check if a player folded preflop without any betting action.
+ * Returns:
+ * - true: Player folded passively (no raises/calls before folding)
+ * - false: Player took an aggressive action before folding
+ * - null: Player checked at BB or won without acting
+ */
+export function getHandHistoryPreflopPassiveFolded(h: HandHistory, playerId: string): boolean | null {
+  for (const action of h.actionsPreflop) {
+    if (action.action === 'ante' || action.action === 'blind') {
+      if (action.playerId === playerId && action.isAllIn) {
+        return true
+      }
+    } else if (action.playerId === playerId) {
+      switch (action.action) {
+        case 'fold':
+          return true
+        case 'check':
+          return null
+        default:
+          return false
+      }
+    }
+  }
+  // If we're at BB and no action found, everyone folded to us
+  if (h.bbSeat === getHandHistorySeatNumber(h, playerId)) {
+    return null
+  }
+  return null
+}
+
+/**
+ * Get the street where a player went all-in, or null if they didn't go all-in.
+ */
+export function getHandHistoryAllInedStreet(h: HandHistory, playerId: string): HandStage | null {
+  return h.allIned.get(playerId) ?? null
+}
+
+// ============================================================================
+// Sequential Hand Histories (for grouping hands by tournament)
+// ============================================================================
+
+export interface SequentialHandHistories {
+  histories: HandHistory[]
+  reEntryNumber: number
+}
+
+/**
+ * Get the tournament name with date for a sequence of hand histories.
+ */
+export function getSequenceDisplayName(seq: SequentialHandHistories): string {
+  const first = seq.histories[0]
+  if (first.tournamentName) {
+    const dateStr = first.datetime.toISOString().slice(0, 10).replace(/-/g, '')
+    return `${first.tournamentName} (${dateStr} / Trial #${seq.reEntryNumber + 1})`
+  }
+  return `Unknown Tournament (Trial #${seq.reEntryNumber + 1})`
+}
+
+/**
+ * Generate chip history for the Hero player in a sequence.
+ */
+export function generateChipHistory(seq: SequentialHandHistories): number[] {
+  const chipHistory: number[] = [getHandHistoryInitialChips(seq.histories[0], 'Hero')]
+  for (const hand of seq.histories) {
+    chipHistory.push(chipHistory[chipHistory.length - 1] + getHandHistoryNetProfit(hand, 'Hero'))
+  }
+  return chipHistory
+}
+
+/**
+ * Generate sequences of hand histories from a list of hands.
+ * Groups hands by tournament and splits on busts (chip count = 0).
+ */
+export function generateSequences(histories: HandHistory[]): SequentialHandHistories[] {
+  // Sort by tournament ID and datetime
+  const sorted = [...histories].sort((a, b) => {
+    const tidA = a.tournamentId ?? 0
+    const tidB = b.tournamentId ?? 0
+    if (tidA !== tidB) return tidA - tidB
+    return a.datetime.getTime() - b.datetime.getTime()
+  })
+
+  const result: SequentialHandHistories[] = []
+  let currentTourneyId: number | null = null
+  let currentList: HandHistory[] = []
+  let resetCount = 0
+
+  for (const hand of sorted) {
+    const tid = hand.tournamentId
+
+    // New tournament
+    if (tid !== currentTourneyId) {
+      if (currentList.length > 0) {
+        result.push({ histories: currentList, reEntryNumber: resetCount })
+      }
+      currentTourneyId = tid
+      currentList = []
+      resetCount = 0
+    }
+
+    currentList.push(hand)
+
+    // Check if Hero busted (chips = 0 after this hand)
+    const initialChips = getHandHistoryInitialChips(hand, 'Hero')
+    const netProfit = getHandHistoryNetProfit(hand, 'Hero')
+    if (initialChips + netProfit === 0) {
+      result.push({ histories: currentList, reEntryNumber: resetCount })
+      currentList = []
+      resetCount += 1
+    }
+  }
+
+  // Don't forget the last sequence
+  if (currentList.length > 0) {
+    result.push({ histories: currentList, reEntryNumber: resetCount })
+  }
+
+  return result
+}
+
 // ============================================================================
 // Parse Result Container
 // ============================================================================

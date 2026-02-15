@@ -12,6 +12,8 @@ use statrs::distribution::{ContinuousCDF, Normal};
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 #[cfg(feature = "wasm")]
+use wasm_bindgen::JsCast;
+#[cfg(feature = "wasm")]
 use wasm_bindgen::JsValue;
 
 use crate::card::{Card, Hand, HandRank};
@@ -306,6 +308,54 @@ impl EquityResult {
 #[cfg(feature = "wasm")]
 #[wasm_bindgen]
 impl EquityResult {
+    /// Create a new EquityResult by calculating equities.
+    /// `hands` is an array of card string pairs, e.g., [["As", "Kh"], ["Qd", "Jc"]]
+    /// `community` is an array of card strings, e.g., ["2c", "3d", "4h"]
+    #[wasm_bindgen(constructor)]
+    pub fn new_wasm(
+        hands: js_sys::Array,
+        community: js_sys::Array,
+    ) -> Result<EquityResult, JsValue> {
+        // Parse hands
+        let mut cards_people: Vec<Hand> = Vec::new();
+        for hand in hands.iter() {
+            let hand_arr: js_sys::Array = hand
+                .dyn_into()
+                .map_err(|_| JsValue::from_str("Each hand must be an array"))?;
+            if hand_arr.length() != 2 {
+                return Err(JsValue::from_str("Each hand must have exactly 2 cards"));
+            }
+            let card1_str: String = hand_arr
+                .get(0)
+                .as_string()
+                .ok_or_else(|| JsValue::from_str("Card must be a string"))?;
+            let card2_str: String = hand_arr
+                .get(1)
+                .as_string()
+                .ok_or_else(|| JsValue::from_str("Card must be a string"))?;
+            let card1 = Card::try_from(card1_str.as_str())
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+            let card2 = Card::try_from(card2_str.as_str())
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+            cards_people.push((card1, card2));
+        }
+
+        // Parse community cards
+        let mut cards_community: Vec<Card> = Vec::new();
+        for card in community.iter() {
+            let card_str: String = card
+                .as_string()
+                .ok_or_else(|| JsValue::from_str("Community card must be a string"))?;
+            let card =
+                Card::try_from(card_str.as_str()).map_err(|e| JsValue::from_str(&e.to_string()))?;
+            cards_community.push(card);
+        }
+
+        // Calculate equity (non-parallel for WASM single-threaded environment)
+        Self::new(cards_people, cards_community, false)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
     /// Get the equity of the given player index (0-based).
     #[wasm_bindgen(js_name = getEquity)]
     pub fn get_equity_wasm(&self, player_index: usize) -> Result<f64, JsValue> {
