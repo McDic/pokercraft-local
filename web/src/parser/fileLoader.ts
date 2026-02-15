@@ -8,6 +8,7 @@ import type { TournamentSummary, HandHistory, ParseResult } from '../types'
 import { CurrencyRateConverter } from './utils'
 import { parseTournamentSummary, isTournamentSummaryFile } from './tournamentParser'
 import { parseHandHistory, isHandHistoryFile } from './handHistoryParser'
+import { yieldToBrowser } from '../utils'
 
 export interface LoadedFile {
   name: string
@@ -92,20 +93,6 @@ function parseFileContent(
   }
 
   return { tournaments, handHistories }
-}
-
-/**
- * Yield to browser for UI updates
- */
-function yieldToBrowser(): Promise<void> {
-  // Use double RAF + setTimeout to ensure state updates are flushed
-  return new Promise(resolve => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setTimeout(resolve, 0)
-      })
-    })
-  })
 }
 
 /**

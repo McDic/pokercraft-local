@@ -7,6 +7,7 @@ import Plot from 'react-plotly.js'
 import type { Data, Layout } from 'plotly.js-dist-min'
 import type { HandHistory } from '../types'
 import type { AllInHandData } from '../visualization/handHistory/allInEquityAsync'
+import { yieldToBrowser } from '../utils'
 
 interface ChartData {
   traces: Data[]
@@ -28,17 +29,6 @@ interface ChartsState {
 // Global cache for equity results (persists across re-renders)
 const equityCache = new Map<string, AllInHandData>()
 let cachedLuckScore = 0
-
-async function yieldToBrowser(): Promise<void> {
-  // Use double RAF + setTimeout to ensure React state updates are flushed and rendered
-  return new Promise(resolve => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setTimeout(resolve, 0)
-      })
-    })
-  })
-}
 
 export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
   const [state, setState] = useState<ChartsState>({

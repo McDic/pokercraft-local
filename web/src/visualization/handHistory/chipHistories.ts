@@ -10,23 +10,11 @@ import {
   generateChipHistory,
   getSequenceDisplayName,
 } from '../../types'
+import { yieldToBrowser } from '../../utils'
 
 export interface ChipHistoriesData {
   traces: Data[]
   layout: Partial<Layout>
-}
-
-/**
- * Yield to browser for UI updates
- */
-function yieldToBrowser(): Promise<void> {
-  return new Promise(resolve => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setTimeout(resolve, 0)
-      })
-    })
-  })
 }
 
 /**

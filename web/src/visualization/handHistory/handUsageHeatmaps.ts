@@ -9,6 +9,7 @@ import {
   getHandHistoryOffsetFromButton,
   getHandHistoryPreflopPassiveFolded,
 } from '../../types'
+import { yieldToBrowser } from '../../utils'
 
 export interface HandUsageHeatmapsData {
   traces: Data[]
@@ -142,19 +143,6 @@ function getRangeUsage(matrix: HandMatrix, minVPIP = 0): number {
   }
 
   return rangeWeight / totalWeight
-}
-
-/**
- * Yield to browser for UI updates
- */
-function yieldToBrowser(): Promise<void> {
-  return new Promise(resolve => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setTimeout(resolve, 0)
-      })
-    })
-  })
 }
 
 /**

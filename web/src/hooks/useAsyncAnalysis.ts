@@ -8,6 +8,7 @@ import type { TournamentSummary, HandHistory } from '../types'
 import { loadAndParseFiles, CurrencyRateConverter } from '../parser'
 import { simulate } from '../wasm/pokercraft_wasm'
 import { collectRelativeReturns, type BankrollResult } from '../visualization'
+import { yieldToBrowser } from '../utils'
 
 export interface AnalysisProgress {
   stage: 'idle' | 'parsing' | 'charts' | 'bankroll' | 'complete'
@@ -72,15 +73,6 @@ export function useAsyncAnalysis() {
       progress: { stage, message, percentage },
     }))
   }, [])
-
-  // Yield to browser for UI updates (double RAF + setTimeout for reliable state flush)
-  const yieldToBrowser = () => new Promise<void>(resolve => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setTimeout(resolve, 0)
-      })
-    })
-  })
 
   const parseFiles = useCallback(async (files: FileList | File[], allowFreerolls = false) => {
     abortRef.current = false
@@ -207,14 +199,7 @@ async function runBankrollSimulationAsync(
     const initialCapital = initialCapitals[i]
     setProgress('bankroll', `Simulating ${initialCapital} buy-ins...`, ((i + 1) / initialCapitals.length) * 100)
 
-    // Yield to browser (double RAF + setTimeout for reliable state flush)
-    await new Promise<void>(resolve => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setTimeout(resolve, 0)
-        })
-      })
-    })
+    await yieldToBrowser()
 
     try {
       const result = simulate(

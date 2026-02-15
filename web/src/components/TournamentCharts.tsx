@@ -7,6 +7,7 @@ import Plot from 'react-plotly.js'
 import type { Data, Layout } from 'plotly.js-dist-min'
 import type { TournamentSummary } from '../types'
 import type { BankrollResult } from '../visualization'
+import { yieldToBrowser } from '../utils'
 
 interface ChartData {
   traces: Data[]
@@ -26,17 +27,6 @@ interface ChartsState {
   rrByRank: ChartData | null
   isComputing: boolean
   progress: { message: string; percentage: number }
-}
-
-async function yieldToBrowser(): Promise<void> {
-  // Use double RAF + setTimeout to ensure React state updates are flushed and rendered
-  return new Promise(resolve => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setTimeout(resolve, 0)
-      })
-    })
-  })
 }
 
 export function TournamentCharts({ tournaments, bankrollResults }: TournamentChartsProps) {
