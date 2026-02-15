@@ -185,9 +185,10 @@ export function getHistoricalPerformanceData(
       roworder: 'top to bottom',
     },
     xaxis: {
-      rangeslider: { visible: true },
-      title: { text: 'Tournament #' },
-    },
+      // No title - shared across all subplots, self-explanatory
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      unifiedhovertitle: { text: 'Tourney #%{x}' } as any,
+    } as Partial<Layout['xaxis']>,
     yaxis: {
       title: { text: 'Net Profit & Rake' },
       tickformat: '$',
@@ -217,7 +218,8 @@ export function getHistoricalPerformanceData(
       xanchor: 'center',
       x: 0.5,
       yanchor: 'top',
-      y: -0.05,
+      y: -0.02,
+      groupclick: 'toggleitem',
     },
     shapes: [
       // Break-even line on profit chart
@@ -241,6 +243,17 @@ export function getHistoricalPerformanceData(
         y0: netProfit[netProfit.length - 1],
         y1: netProfit[netProfit.length - 1],
         line: { color: 'rgba(0,0,255,0.3)', dash: 'dash' },
+      },
+      // Max drawdown line
+      {
+        type: 'line',
+        xref: 'paper',
+        x0: 0,
+        x1: 1,
+        yref: 'y',
+        y0: maxDrawdown[maxDrawdown.length - 1],
+        y1: maxDrawdown[maxDrawdown.length - 1],
+        line: { color: 'rgba(171,99,250,0.5)', dash: 'dash' },
       },
       // Buy-in threshold lines
       {
@@ -272,6 +285,79 @@ export function getHistoricalPerformanceData(
         y0: 100,
         y1: 100,
         line: { color: 'rgba(0,0,0,0.3)', dash: 'dash' },
+      },
+    ],
+    annotations: [
+      // Break-even label (right side, below line)
+      {
+        text: '<b>Break-even</b>',
+        xref: 'paper',
+        x: 1,
+        xanchor: 'right',
+        yref: 'y',
+        y: 0,
+        yanchor: 'top',
+        showarrow: false,
+        font: { color: 'rgba(255,0,0,0.5)', size: 14 },
+      },
+      // Current net profit label (left side, above line)
+      {
+        text: '<b>Current Net Profit</b>',
+        xref: 'paper',
+        x: 0,
+        xanchor: 'left',
+        yref: 'y',
+        y: netProfit[netProfit.length - 1],
+        yanchor: 'bottom',
+        showarrow: false,
+        font: { color: 'rgba(0,0,255,0.5)', size: 14 },
+      },
+      // Max drawdown label (left side, above line)
+      {
+        text: '<b>Max Drawdown</b>',
+        xref: 'paper',
+        x: 0,
+        xanchor: 'left',
+        yref: 'y',
+        y: maxDrawdown[maxDrawdown.length - 1],
+        yanchor: 'bottom',
+        showarrow: false,
+        font: { color: 'rgba(171,99,250,0.7)', size: 14 },
+      },
+      // Buy-in threshold labels (left side, below line)
+      // Note: y3 is log scale, so y values need to be in log10
+      {
+        text: '<b>Micro/Low</b>',
+        xref: 'paper',
+        x: 0,
+        xanchor: 'left',
+        yref: 'y3',
+        y: Math.log10(5),
+        yanchor: 'top',
+        showarrow: false,
+        font: { color: 'rgba(0,0,0,0.5)', size: 12 },
+      },
+      {
+        text: '<b>Low/Mid</b>',
+        xref: 'paper',
+        x: 0,
+        xanchor: 'left',
+        yref: 'y3',
+        y: Math.log10(20),
+        yanchor: 'top',
+        showarrow: false,
+        font: { color: 'rgba(0,0,0,0.5)', size: 12 },
+      },
+      {
+        text: '<b>Mid/High</b>',
+        xref: 'paper',
+        x: 0,
+        xanchor: 'left',
+        yref: 'y3',
+        y: Math.log10(100),
+        yanchor: 'top',
+        showarrow: false,
+        font: { color: 'rgba(0,0,0,0.5)', size: 12 },
       },
     ],
   }
