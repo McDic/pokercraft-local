@@ -16,6 +16,7 @@ import { useAnalysisWorker } from './hooks/useAnalysisWorker'
 
 function App() {
   const [activeTab, setActiveTab] = useState<ChartTab>('tournament')
+  const [wasmVersion, setWasmVersion] = useState('')
   const prevTournamentCountRef = useRef(0)
   const prevHandHistoryCountRef = useRef(0)
 
@@ -26,10 +27,19 @@ function App() {
     handHistories,
     bankrollResults,
     errors,
-    wasmVersion,
     parseFiles,
     runAnalysis,
   } = useAnalysisWorker()
+
+  // Load WASM version on mount
+  useEffect(() => {
+    import('./wasm/pokercraft_wasm').then(async (wasm) => {
+      await wasm.default()
+      setWasmVersion(wasm.version())
+    }).catch(() => {
+      // WASM load failed
+    })
+  }, [])
 
   // Auto-run analysis when new unique data is added
   useEffect(() => {
