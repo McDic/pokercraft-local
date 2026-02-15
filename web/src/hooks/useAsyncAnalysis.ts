@@ -73,9 +73,13 @@ export function useAsyncAnalysis() {
     }))
   }, [])
 
-  // Yield to browser for UI updates
+  // Yield to browser for UI updates (double RAF + setTimeout for reliable state flush)
   const yieldToBrowser = () => new Promise<void>(resolve => {
-    requestAnimationFrame(() => resolve())
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setTimeout(resolve, 0)
+      })
+    })
   })
 
   const parseFiles = useCallback(async (files: FileList | File[], allowFreerolls = false) => {
@@ -203,8 +207,14 @@ async function runBankrollSimulationAsync(
     const initialCapital = initialCapitals[i]
     setProgress('bankroll', `Simulating ${initialCapital} buy-ins...`, ((i + 1) / initialCapitals.length) * 100)
 
-    // Yield to browser
-    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+    // Yield to browser (double RAF + setTimeout for reliable state flush)
+    await new Promise<void>(resolve => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setTimeout(resolve, 0)
+        })
+      })
+    })
 
     try {
       const result = simulate(

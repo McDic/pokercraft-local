@@ -145,9 +145,22 @@ function getRangeUsage(matrix: HandMatrix, minVPIP = 0): number {
 }
 
 /**
- * Generate hand usage heatmaps chart data
+ * Yield to browser for UI updates
  */
-export function getHandUsageHeatmapsData(handHistories: HandHistory[]): HandUsageHeatmapsData {
+function yieldToBrowser(): Promise<void> {
+  return new Promise(resolve => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setTimeout(resolve, 0)
+      })
+    })
+  })
+}
+
+/**
+ * Generate hand usage heatmaps chart data (async for large datasets)
+ */
+export async function getHandUsageHeatmapsData(handHistories: HandHistory[]): Promise<HandUsageHeatmapsData> {
   // Create matrices for each position
   const matrices: Map<number | null, HandMatrix> = new Map([
     [-5, createEmptyMatrix()], // UTG
@@ -162,7 +175,8 @@ export function getHandUsageHeatmapsData(handHistories: HandHistory[]): HandUsag
   ])
 
   // Process hand histories
-  for (const hh of handHistories) {
+  for (let i = 0; i < handHistories.length; i++) {
+    const hh = handHistories[i]
     const heroCards = hh.knownCards.get('Hero')
     if (!heroCards) continue
 
@@ -191,6 +205,11 @@ export function getHandUsageHeatmapsData(handHistories: HandHistory[]): HandUsag
         matrix[row][col].prefold++
         allMatrix[row][col].prefold++
       }
+    }
+
+    // Yield every 1000 hands to keep UI responsive
+    if ((i + 1) % 1000 === 0) {
+      await yieldToBrowser()
     }
   }
 

@@ -39,13 +39,13 @@ function createMockHandHistory(overrides: Partial<HandHistory> = {}): HandHistor
 }
 
 describe('chipHistories', () => {
-  it('should return only danger line for empty input', () => {
-    const result = getChipHistoriesData([])
+  it('should return only danger line for empty input', async () => {
+    const result = await getChipHistoriesData([])
     // Should only have the danger line trace when no data
     expect(result.traces.length).toBeLessThanOrEqual(1)
   })
 
-  it('should generate traces for hand histories', () => {
+  it('should generate traces for hand histories', async () => {
     const hh1 = createMockHandHistory({
       id: 'TM00001',
       wons: new Map([['Hero', 50]]),
@@ -65,7 +65,7 @@ describe('chipHistories', () => {
       { playerId: 'Hero', action: 'call', amount: 30, isAllIn: false },
     ]
 
-    const result = getChipHistoriesData([hh1, hh2])
+    const result = await getChipHistoriesData([hh1, hh2])
     // Should have at least the chip history line + danger line
     expect(result.traces.length).toBeGreaterThan(0)
     expect(result.layout.title).toEqual({ text: 'Chip Histories' })
@@ -73,20 +73,20 @@ describe('chipHistories', () => {
 })
 
 describe('handUsageHeatmaps', () => {
-  it('should return empty traces for empty input', () => {
-    const result = getHandUsageHeatmapsData([])
+  it('should return empty traces for empty input', async () => {
+    const result = await getHandUsageHeatmapsData([])
     // Even with empty input, we still generate the 9 heatmaps (just with no data)
     expect(result.traces).toHaveLength(9)
   })
 
-  it('should generate heatmaps with hand data', () => {
+  it('should generate heatmaps with hand data', async () => {
     const hh = createMockHandHistory()
     hh.actionsPreflop = [
       { playerId: 'Hero', action: 'blind', amount: 20, isAllIn: false },
       { playerId: 'Hero', action: 'raise', amount: 60, isAllIn: false },
     ]
 
-    const result = getHandUsageHeatmapsData([hh])
+    const result = await getHandUsageHeatmapsData([hh])
     expect(result.traces).toHaveLength(9) // 8 positions + all
     expect(result.layout.title).toEqual({ text: 'Hand Usage by Position (VPIP Heatmaps)' })
   })

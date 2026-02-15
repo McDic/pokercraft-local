@@ -98,7 +98,14 @@ function parseFileContent(
  * Yield to browser for UI updates
  */
 function yieldToBrowser(): Promise<void> {
-  return new Promise(resolve => requestAnimationFrame(() => resolve()))
+  // Use double RAF + setTimeout to ensure state updates are flushed
+  return new Promise(resolve => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setTimeout(resolve, 0)
+      })
+    })
+  })
 }
 
 /**

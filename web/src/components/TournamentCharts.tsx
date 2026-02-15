@@ -29,7 +29,14 @@ interface ChartsState {
 }
 
 async function yieldToBrowser(): Promise<void> {
-  return new Promise(resolve => requestAnimationFrame(() => resolve()))
+  // Use double RAF + setTimeout to ensure React state updates are flushed and rendered
+  return new Promise(resolve => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setTimeout(resolve, 0)
+      })
+    })
+  })
 }
 
 export function TournamentCharts({ tournaments, bankrollResults }: TournamentChartsProps) {

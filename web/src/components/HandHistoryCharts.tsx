@@ -30,7 +30,14 @@ const equityCache = new Map<string, AllInHandData>()
 let cachedLuckScore = 0
 
 async function yieldToBrowser(): Promise<void> {
-  return new Promise(resolve => requestAnimationFrame(() => resolve()))
+  // Use double RAF + setTimeout to ensure React state updates are flushed and rendered
+  return new Promise(resolve => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setTimeout(resolve, 0)
+      })
+    })
+  })
 }
 
 export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
@@ -87,7 +94,7 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
         }))
         await yieldToBrowser()
 
-        const chipHistories = getChipHistoriesData(handHistories)
+        const chipHistories = await getChipHistoriesData(handHistories)
         if (abortRef.current) return
 
         setState(prev => ({
@@ -97,8 +104,8 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
         }))
         await yieldToBrowser()
 
-        // Hand usage heatmaps (fast - compute before equity)
-        const handUsage = getHandUsageHeatmapsData(handHistories)
+        // Hand usage heatmaps (compute before equity)
+        const handUsage = await getHandUsageHeatmapsData(handHistories)
         if (abortRef.current) return
 
         setState(prev => ({

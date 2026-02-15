@@ -17,9 +17,25 @@ export interface ChipHistoriesData {
 }
 
 /**
- * Generate chip histories chart data
+ * Yield to browser for UI updates
  */
-export function getChipHistoriesData(handHistories: HandHistory[]): ChipHistoriesData {
+function yieldToBrowser(): Promise<void> {
+  return new Promise(resolve => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setTimeout(resolve, 0)
+      })
+    })
+  })
+}
+
+/**
+ * Generate chip histories chart data (async for large datasets)
+ */
+export async function getChipHistoriesData(
+  handHistories: HandHistory[],
+  onProgress?: (current: number, total: number) => void
+): Promise<ChipHistoriesData> {
   const sequences = generateSequences(handHistories)
   const traces: Data[] = []
 
@@ -29,6 +45,7 @@ export function getChipHistoriesData(handHistories: HandHistory[]): ChipHistorie
   const deathThresholds = [3 / 4, 3 / 5, 1 / 2, 2 / 5, 1 / 3, 1 / 4, 1 / 5, 1 / 8, 1 / 10]
   const deathThresholdCount: Map<number, number> = new Map(deathThresholds.map(t => [t, 0]))
   let totalTourneys = 0
+  let processedCount = 0
 
   for (const seq of sequences) {
     if (seq.histories[0].tournamentId === null) continue
@@ -94,6 +111,13 @@ export function getChipHistoriesData(handHistories: HandHistory[]): ChipHistorie
       name: getSequenceDisplayName(seq),
       hovertemplate: 'Hand #%{x}<br>Stack: %{y:.2f}x initial<extra></extra>',
     } as Data)
+
+    // Yield every 50 tournaments to keep UI responsive
+    processedCount++
+    if (processedCount % 50 === 0) {
+      onProgress?.(processedCount, sequences.length)
+      await yieldToBrowser()
+    }
   }
 
   // Add danger line
