@@ -1,6 +1,6 @@
 /**
  * Async version of All-in Equity calculation
- * Yields to browser to keep UI responsive
+ * Uses Web Worker to run WASM off the main thread
  */
 
 import type { Data, Layout } from 'plotly.js-dist-min'
@@ -9,7 +9,10 @@ import {
   getHandHistoryAllInedStreet,
   getHandHistoryShowdownPlayers,
 } from '../../types'
-import { EquityResult, LuckCalculator } from '../../wasm/pokercraft_wasm'
+import type {
+  EquityWorkerInput,
+  EquityWorkerOutput,
+} from '../../workers/equityWorker'
 
 export interface AllInHandData {
   handId: string
@@ -23,12 +26,6 @@ export interface AllInHandData {
 export interface AllInEquityData {
   traces: Data[]
   layout: Partial<Layout>
-}
-
-const YIELD_EVERY = 10 // Yield after every N equity calculations
-
-async function yieldToBrowser(): Promise<void> {
-  return new Promise(resolve => requestAnimationFrame(() => resolve()))
 }
 
 function getCommunityAtStreet(h: HandHistory, street: HandStage): string[] {
@@ -66,15 +63,17 @@ function getActualResult(h: HandHistory): number {
 }
 
 interface EligibleHand {
-  hand: HandHistory
+  handId: string
+  tournamentId: number | null
   allInStreet: HandStage
   heroCards: [string, string]
   opponents: string[][]
   communityAtAllIn: string[]
+  actualResult: number
 }
 
 /**
- * Filter eligible hands first (fast), then calculate equity async
+ * Filter eligible hands (fast, runs on main thread)
  */
 function filterEligibleHands(handHistories: HandHistory[]): EligibleHand[] {
   const eligible: EligibleHand[] = []
@@ -108,11 +107,13 @@ function filterEligibleHands(handHistories: HandHistory[]): EligibleHand[] {
     const communityAtAllIn = getCommunityAtStreet(h, allInStreet)
 
     eligible.push({
-      hand: h,
+      handId: h.id,
+      tournamentId: h.tournamentId,
       allInStreet,
       heroCards: [heroCards[0], heroCards[1]],
       opponents,
       communityAtAllIn,
+      actualResult: getActualResult(h),
     })
   }
 
@@ -120,62 +121,68 @@ function filterEligibleHands(handHistories: HandHistory[]): EligibleHand[] {
 }
 
 /**
- * Async version that yields to browser during equity calculations
+ * Calculate equity using Web Worker (runs WASM off main thread)
  */
 export async function collectAllInDataAsync(
   handHistories: HandHistory[],
   onProgress?: (current: number, total: number) => void
-): Promise<AllInHandData[]> {
-  // First pass: filter eligible hands (fast)
+): Promise<{ data: AllInHandData[]; luckScore: number }> {
+  // Filter eligible hands on main thread (fast)
   const eligible = filterEligibleHands(handHistories)
 
   if (eligible.length === 0) {
-    return []
+    return { data: [], luckScore: 0 }
   }
 
   onProgress?.(0, eligible.length)
 
-  const result: AllInHandData[] = []
-  let processed = 0
+  return new Promise((resolve, reject) => {
+    // Create worker
+    const worker = new Worker(
+      new URL('../../workers/equityWorker.ts', import.meta.url),
+      { type: 'module' }
+    )
 
-  for (const e of eligible) {
-    try {
-      const hands = [e.heroCards, ...e.opponents]
-      const equityResult = new EquityResult(hands, e.communityAtAllIn)
-      const equity = equityResult.getEquity(0)
-      equityResult.free()
+    worker.onmessage = (event: MessageEvent<EquityWorkerOutput>) => {
+      const msg = event.data
 
-      const actualResult = getActualResult(e.hand)
-
-      result.push({
-        handId: e.hand.id,
-        tournamentId: e.hand.tournamentId,
-        allInStreet: e.allInStreet,
-        equity,
-        actualResult,
-        communityAtAllIn: e.communityAtAllIn,
-      })
-    } catch {
-      // Equity calculation failed, skip
+      if (msg.type === 'progress') {
+        onProgress?.(msg.current, msg.total)
+      } else if (msg.type === 'result') {
+        worker.terminate()
+        resolve({
+          data: msg.data.map(d => ({
+            ...d,
+            allInStreet: d.allInStreet as HandStage,
+          })),
+          luckScore: msg.luckScore,
+        })
+      } else if (msg.type === 'error') {
+        worker.terminate()
+        reject(new Error(msg.message))
+      }
     }
 
-    processed++
-
-    // Yield every N calculations
-    if (processed % YIELD_EVERY === 0) {
-      onProgress?.(processed, eligible.length)
-      await yieldToBrowser()
+    worker.onerror = (error) => {
+      worker.terminate()
+      reject(error)
     }
-  }
 
-  onProgress?.(eligible.length, eligible.length)
-  return result
+    // Send hands to worker
+    worker.postMessage({
+      type: 'calculate',
+      hands: eligible,
+    } as EquityWorkerInput)
+  })
 }
 
 /**
  * Create the chart from pre-computed all-in data
  */
-export function createAllInEquityChart(allInData: AllInHandData[]): AllInEquityData {
+export function createAllInEquityChart(
+  allInData: AllInHandData[],
+  luckScore: number
+): AllInEquityData {
   if (allInData.length === 0) {
     return {
       traces: [],
@@ -195,24 +202,6 @@ export function createAllInEquityChart(allInData: AllInHandData[]): AllInEquityD
       },
     }
   }
-
-  // Calculate luck score
-  const luckCalc = new LuckCalculator()
-  for (const data of allInData) {
-    try {
-      luckCalc.addResult(data.equity, data.actualResult)
-    } catch {
-      // Skip invalid results
-    }
-  }
-
-  let luckScore = 0
-  try {
-    luckScore = luckCalc.luckScore()
-  } catch {
-    // Luck calculation failed
-  }
-  luckCalc.free()
 
   // Create histogram bins
   const bins = 20

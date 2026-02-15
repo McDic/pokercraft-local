@@ -86,8 +86,8 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
         }))
         await yieldToBrowser()
 
-        // All-in equity (async with progress)
-        const allInData = await collectAllInDataAsync(
+        // All-in equity (runs in Web Worker, fully off main thread)
+        const { data: allInData, luckScore } = await collectAllInDataAsync(
           handHistories,
           (current, total) => {
             if (!abortRef.current) {
@@ -104,7 +104,7 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
         )
         if (abortRef.current) return
 
-        const allInEquity = createAllInEquityChart(allInData)
+        const allInEquity = createAllInEquityChart(allInData, luckScore)
 
         setState(prev => ({
           ...prev,
