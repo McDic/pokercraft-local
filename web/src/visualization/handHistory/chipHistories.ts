@@ -4,7 +4,7 @@
  */
 
 import type { Data, Layout } from 'plotly.js-dist-min'
-import type { HandHistory, SequentialHandHistories } from '../../types'
+import type { HandHistory } from '../../types'
 import {
   generateSequences,
   generateChipHistory,

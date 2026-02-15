@@ -220,7 +220,7 @@ export function getHandUsageHeatmapsData(handHistories: HandHistory[]): HandUsag
     traces.push({
       type: 'heatmap',
       z: z,
-      text: texts,
+      text: texts as unknown as string[],
       texttemplate: '%{text}',
       showscale: false,
       colorscale: [
