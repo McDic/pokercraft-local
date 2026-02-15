@@ -83,7 +83,7 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
         // Chip histories (always recompute - fast enough)
         setState(prev => ({
           ...prev,
-          progress: { message: 'Generating chip histories...', percentage: 15 },
+          progress: { message: 'Generating chip histories...', percentage: 10 },
         }))
         await yieldToBrowser()
 
@@ -93,6 +93,17 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
         setState(prev => ({
           ...prev,
           chipHistories,
+          progress: { message: 'Generating hand usage heatmaps...', percentage: 15 },
+        }))
+        await yieldToBrowser()
+
+        // Hand usage heatmaps (fast - compute before equity)
+        const handUsage = getHandUsageHeatmapsData(handHistories)
+        if (abortRef.current) return
+
+        setState(prev => ({
+          ...prev,
+          handUsage,
           progress: { message: 'Checking equity cache...', percentage: 20 },
         }))
         await yieldToBrowser()
@@ -115,7 +126,7 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
             uncachedHands,
             (current, total) => {
               if (!abortRef.current) {
-                const pct = 25 + Math.floor((current / total) * 50)
+                const pct = 25 + Math.floor((current / total) * 70)
                 setState(prev => ({
                   ...prev,
                   progress: {
@@ -151,23 +162,12 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
 
         const allInEquity = createAllInEquityChart(allCachedData, cachedLuckScore)
 
-        setState(prev => ({
-          ...prev,
-          allInEquity,
-          progress: { message: 'Generating hand usage heatmaps...', percentage: 80 },
-        }))
-        await yieldToBrowser()
-
-        // Hand usage heatmaps
-        const handUsage = getHandUsageHeatmapsData(handHistories)
-        if (abortRef.current) return
-
         // Update computed set
         lastComputedRef.current = currentIds
 
         setState(prev => ({
           ...prev,
-          handUsage,
+          allInEquity,
           isComputing: false,
           progress: { message: 'Complete', percentage: 100 },
         }))
@@ -222,18 +222,6 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
         </section>
       )}
 
-      {state.allInEquity && state.allInEquity.traces.length > 0 && (
-        <section className="chart-section">
-          <Plot
-            data={state.allInEquity.traces}
-            layout={{ ...state.allInEquity.layout, autosize: true }}
-            useResizeHandler
-            style={{ width: '100%', height: '700px' }}
-            config={{ responsive: true }}
-          />
-        </section>
-      )}
-
       {state.handUsage && state.handUsage.traces.length > 0 && (
         <section className="chart-section">
           <Plot
@@ -241,6 +229,18 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
             layout={{ ...state.handUsage.layout, autosize: true }}
             useResizeHandler
             style={{ width: '100%', height: '900px' }}
+            config={{ responsive: true }}
+          />
+        </section>
+      )}
+
+      {state.allInEquity && state.allInEquity.traces.length > 0 && (
+        <section className="chart-section">
+          <Plot
+            data={state.allInEquity.traces}
+            layout={{ ...state.allInEquity.layout, autosize: true }}
+            useResizeHandler
+            style={{ width: '100%', height: '700px' }}
             config={{ responsive: true }}
           />
         </section>
