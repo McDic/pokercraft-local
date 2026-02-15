@@ -35,66 +35,73 @@ export function getRREHeatmapData(tournaments: TournamentSummary[]): RREHeatmapD
   const timeOfDay = data.map(d => d.timeOfDay)
   const rreValues = data.map(d => d.rre)
 
+  // Shared colorscale (white to black)
+  const colorscale: [number, string][] = [
+    [0, 'rgba(255, 255, 255, 0.6)'],
+    [1, 'rgba(0, 0, 0, 0.6)'],
+  ]
+
+  // Common histogram2d options
+  const commonOptions = {
+    ybins: { size: 0.5, start: -3 },
+    histfunc: 'sum' as const,
+    coloraxis: 'coloraxis',
+  }
+
   const traces: Data[] = []
 
-  // Histogram2d: RRE by Buy-In (use scatter for simplicity)
+  // Histogram2d: RRE by Buy-In
   traces.push({
-    type: 'scatter',
+    type: 'histogram2d',
     x: log2BuyIn,
     y: log2RRE,
-    mode: 'markers',
-    marker: {
-      size: 8,
-      color: rreValues,
-      colorscale: [[0, 'rgba(255,255,255,0.6)'], [1, 'rgba(0,0,0,0.6)']],
-    },
+    z: rreValues,
     name: 'RRE by Buy-In',
-    hovertemplate: 'Log2(RRE) = %{y:.2f}<br>Log2(Buy-In) = %{x:.2f}<br>RRE: %{marker.color:.3f}<extra></extra>',
+    hovertemplate: 'Log2(RRE) = [%{y}]<br>Log2(Buy-In) = [%{x}]<br>Sum RRE: %{z:.3f}<extra></extra>',
     xaxis: 'x',
     yaxis: 'y',
+    ...commonOptions,
   } as Data)
 
   // Histogram2d: RRE by Total Entries
   traces.push({
-    type: 'scatter',
+    type: 'histogram2d',
     x: log2Entries,
     y: log2RRE,
-    mode: 'markers',
-    marker: {
-      size: 8,
-      color: rreValues,
-      colorscale: [[0, 'rgba(255,255,255,0.6)'], [1, 'rgba(0,0,0,0.6)']],
-    },
+    z: rreValues,
+    xbins: { start: 1.0, size: 1.0 },
     name: 'RRE by Entries',
-    hovertemplate: 'Log2(RRE) = %{y:.2f}<br>Log2(Entries) = %{x:.2f}<br>RRE: %{marker.color:.3f}<extra></extra>',
+    hovertemplate: 'Log2(RRE) = [%{y}]<br>Log2(Entries) = [%{x}]<br>Sum RRE: %{z:.3f}<extra></extra>',
     xaxis: 'x2',
     yaxis: 'y',
+    ...commonOptions,
   } as Data)
 
   // Histogram2d: RRE by Time of Day
   traces.push({
-    type: 'scatter',
+    type: 'histogram2d',
     x: timeOfDay,
     y: log2RRE,
-    mode: 'markers',
-    marker: {
-      size: 8,
-      color: rreValues,
-      colorscale: [[0, 'rgba(255,255,255,0.6)'], [1, 'rgba(0,0,0,0.6)']],
-    },
+    z: rreValues,
+    xbins: { start: 0.0, size: 120, end: 1440 }, // 2-hour bins, 24 hours
     name: 'RRE by Time',
-    hovertemplate: 'Log2(RRE) = %{y:.2f}<br>Time = %{x} mins<br>RRE: %{marker.color:.3f}<extra></extra>',
+    hovertemplate: 'Log2(RRE) = [%{y}]<br>Time = [%{x}] mins<br>Sum RRE: %{z:.3f}<extra></extra>',
     xaxis: 'x3',
     yaxis: 'y',
+    ...commonOptions,
   } as Data)
 
   // Marginal histogram
   traces.push({
     type: 'histogram',
+    x: rreValues,
     y: log2RRE,
+    histfunc: 'sum',
     orientation: 'h',
+    ybins: { size: 0.5, start: -3 },
     marker: { color: 'rgba(70,70,70,0.35)' },
     name: 'Marginal RRE',
+    hovertemplate: 'Log2(RRE) = [%{y}]<br>Sum RRE: %{x:.3f}<extra></extra>',
     xaxis: 'x4',
     yaxis: 'y',
   } as Data)
@@ -107,32 +114,76 @@ export function getRREHeatmapData(tournaments: TournamentSummary[]): RREHeatmapD
       columns: 4,
       pattern: 'independent',
     },
+    // Column widths ratio 2:2:2:1 (matching Python version)
     xaxis: {
       title: { text: 'Log2(Buy-In)' },
-      domain: [0, 0.22],
+      domain: [0, 0.27],
+      fixedrange: true,
+      zeroline: false,
     },
     xaxis2: {
       title: { text: 'Log2(Entries)' },
-      domain: [0.26, 0.48],
+      domain: [0.29, 0.56],
+      fixedrange: true,
+      zeroline: false,
     },
     xaxis3: {
       title: { text: 'Time of Day (mins)' },
-      domain: [0.52, 0.74],
+      domain: [0.58, 0.85],
+      fixedrange: true,
+      zeroline: false,
     },
     xaxis4: {
       title: { text: 'Marginal' },
-      domain: [0.78, 1],
+      domain: [0.87, 1],
+      fixedrange: true,
+      zeroline: false,
     },
     yaxis: {
       title: { text: 'Log2(RRE)' },
+      fixedrange: true,
+    },
+    coloraxis: {
+      colorscale: colorscale,
     },
     shapes: [
+      // Vertical dividers between heatmaps
+      {
+        type: 'line',
+        xref: 'paper',
+        x0: 0.28,
+        x1: 0.28,
+        yref: 'paper',
+        y0: 0,
+        y1: 1,
+        line: { color: 'rgba(0,0,0,0.3)', width: 1 },
+      },
+      {
+        type: 'line',
+        xref: 'paper',
+        x0: 0.57,
+        x1: 0.57,
+        yref: 'paper',
+        y0: 0,
+        y1: 1,
+        line: { color: 'rgba(0,0,0,0.3)', width: 1 },
+      },
+      {
+        type: 'line',
+        xref: 'paper',
+        x0: 0.86,
+        x1: 0.86,
+        yref: 'paper',
+        y0: 0,
+        y1: 1,
+        line: { color: 'rgba(0,0,0,0.3)', width: 1 },
+      },
       // Break-even line (Log2(1) = 0)
       {
         type: 'line',
         xref: 'paper',
         x0: 0,
-        x1: 0.74,
+        x1: 0.85,
         yref: 'y',
         y0: 0,
         y1: 0,
@@ -143,7 +194,7 @@ export function getRREHeatmapData(tournaments: TournamentSummary[]): RREHeatmapD
         type: 'line',
         xref: 'paper',
         x0: 0,
-        x1: 0.74,
+        x1: 0.85,
         yref: 'y',
         y0: 2,
         y1: 2,
@@ -154,7 +205,7 @@ export function getRREHeatmapData(tournaments: TournamentSummary[]): RREHeatmapD
         type: 'line',
         xref: 'paper',
         x0: 0,
-        x1: 0.74,
+        x1: 0.85,
         yref: 'y',
         y0: 5,
         y1: 5,
@@ -162,9 +213,9 @@ export function getRREHeatmapData(tournaments: TournamentSummary[]): RREHeatmapD
       },
     ],
     annotations: [
-      { x: 0, y: 0, xref: 'paper', yref: 'y', text: 'Break-even', showarrow: false, xanchor: 'left' },
-      { x: 0, y: 2, xref: 'paper', yref: 'y', text: 'Good run (4x)', showarrow: false, xanchor: 'left' },
-      { x: 0, y: 5, xref: 'paper', yref: 'y', text: 'Deep run (32x)', showarrow: false, xanchor: 'left' },
+      { x: 0, y: 0, xref: 'paper', yref: 'y', text: 'Break-even', showarrow: false, xanchor: 'left', yanchor: 'bottom' },
+      { x: 0, y: 2, xref: 'paper', yref: 'y', text: 'Good run (4x)', showarrow: false, xanchor: 'left', yanchor: 'bottom' },
+      { x: 0, y: 5, xref: 'paper', yref: 'y', text: 'Deep run (32x)', showarrow: false, xanchor: 'left', yanchor: 'bottom' },
     ],
   }
 
