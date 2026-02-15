@@ -251,6 +251,38 @@
   color: #666;
 }
 
+/* Chart Loading State */
+.chart-loading {
+  padding: 2rem;
+  text-align: center;
+  background: #1a1a1a;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.chart-loading .progress-bar {
+  width: 100%;
+  max-width: 500px;
+  height: 8px;
+  background: #333;
+  border-radius: 4px;
+  margin: 0 auto 1rem auto;
+  overflow: hidden;
+}
+
+.chart-loading .progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #646cff, #535bf2);
+  border-radius: 4px;
+  transition: width 0.15s ease;
+}
+
+.chart-loading .progress-message {
+  color: #888;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
 /* Loading State */
 .loading-screen {
   display: flex;
