@@ -1,0 +1,20 @@
+[package]
+name = "pokercraft-cli"
+version.workspace = true
+edition.workspace = true
+description = "CLI tools for pokercraft"
+publish.workspace = true
+
+[[bin]]
+name = "generate_preflop_cache"
+path = "src/bin/generate_preflop_cache.rs"
+
+[[bin]]
+name = "benchmark_equity"
+path = "src/bin/benchmark_equity.rs"
+
+[dependencies]
+pokercraft-core.workspace = true
+clap.workspace = true
+itertools.workspace = true
+rayon.workspace = true

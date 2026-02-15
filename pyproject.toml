@@ -51,6 +51,7 @@ ignore_missing_imports = true
 bindings = "pyo3"
 features = ["pyo3/extension-module"]
 module-name = "pokercraft_local.rust"
+manifest-path = "crates/python/Cargo.toml"
 include = [
     "pokercraft_local/translation_values.json",
     "pokercraft_local/hu_preflop_cache.txt.gz",
