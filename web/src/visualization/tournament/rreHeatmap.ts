@@ -61,7 +61,7 @@ export function getRREHeatmapData(tournaments: TournamentSummary[]): RREHeatmapD
     xaxis: 'x',
     yaxis: 'y',
     ...commonOptions,
-  } as Data)
+  } as unknown as Data)
 
   // Histogram2d: RRE by Total Entries
   traces.push({
@@ -75,7 +75,7 @@ export function getRREHeatmapData(tournaments: TournamentSummary[]): RREHeatmapD
     xaxis: 'x2',
     yaxis: 'y',
     ...commonOptions,
-  } as Data)
+  } as unknown as Data)
 
   // Histogram2d: RRE by Time of Day
   traces.push({
@@ -89,7 +89,7 @@ export function getRREHeatmapData(tournaments: TournamentSummary[]): RREHeatmapD
     xaxis: 'x3',
     yaxis: 'y',
     ...commonOptions,
-  } as Data)
+  } as unknown as Data)
 
   // Marginal histogram
   traces.push({
@@ -104,9 +104,9 @@ export function getRREHeatmapData(tournaments: TournamentSummary[]): RREHeatmapD
     hovertemplate: 'Log2(RRE) = [%{y}]<br>Sum RRE: %{x:.3f}<extra></extra>',
     xaxis: 'x4',
     yaxis: 'y',
-  } as Data)
+  } as unknown as Data)
 
-  const layout: Partial<Layout> = {
+  const layout = {
     title: { text: 'RRE (Relative Return of Entry) Distribution' },
     height: 500,
     grid: {
@@ -219,5 +219,5 @@ export function getRREHeatmapData(tournaments: TournamentSummary[]): RREHeatmapD
     ],
   }
 
-  return { traces, layout }
+  return { traces, layout: layout as Partial<Layout> }
 }
