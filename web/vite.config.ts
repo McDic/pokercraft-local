@@ -18,9 +18,9 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.0.0'),
     __GIT_HASH__: JSON.stringify(getGitHash()),
   },
-  // Base URL for GitHub Pages deployment
-  // Change this to match your repo name: /<repo-name>/
-  base: '/pokercraft-local/',
+  // Base URL for custom domain (pokercraft.mcdic.net)
+  // Use '/' for custom domains, '/<repo-name>/' for github.io URLs
+  base: '/',
   build: {
     // Output directory
     outDir: 'dist',
