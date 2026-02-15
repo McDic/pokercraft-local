@@ -1,16 +1,34 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import Plot from 'react-plotly.js'
 import './App.css'
 
-// Import WASM module
-import init, { Card, CardNumber, CardShape, LuckCalculator, simulate, version } from './wasm/pokercraft_wasm'
+// WASM
+import init, { simulate, version } from './wasm/pokercraft_wasm'
+
+// Parser
+import { loadAndParseFiles, CurrencyRateConverter } from './parser'
+import type { TournamentSummary } from './types'
+
+// Visualization
+import {
+  getHistoricalPerformanceData,
+  getRREHeatmapData,
+  getPrizePiesData,
+  getRRByRankData,
+  collectRelativeReturns,
+  getBankrollAnalysisData,
+  type BankrollResult,
+} from './visualization'
 
 function App() {
   const [wasmReady, setWasmReady] = useState(false)
   const [wasmVersion, setWasmVersion] = useState('')
-  const [cardDemo, setCardDemo] = useState('')
-  const [luckDemo, setLuckDemo] = useState('')
-  const [simulateDemo, setSimulateDemo] = useState('')
+  const [tournaments, setTournaments] = useState<TournamentSummary[]>([])
+  const [errors, setErrors] = useState<string[]>([])
+  const [loading, setLoading] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
 
+  // Initialize WASM
   useEffect(() => {
     init().then(() => {
       setWasmReady(true)
@@ -18,83 +36,206 @@ function App() {
     })
   }, [])
 
-  const runCardDemo = () => {
+  // File handling
+  const handleFiles = useCallback(async (files: FileList | File[]) => {
+    setLoading(true)
+    setErrors([])
+
     try {
-      const card = new Card('As')
-      const info = `Card: ${card.toString()}, Shape: ${CardShape[card.shape]}, Number: ${CardNumber[card.number]}`
-      card.free()
-      setCardDemo(info)
+      const rateConverter = new CurrencyRateConverter()
+      const result = await loadAndParseFiles(files, rateConverter, false)
+
+      // Sort tournaments by start time
+      const sorted = [...result.tournaments].sort(
+        (a, b) => a.startTime.getTime() - b.startTime.getTime()
+      )
+
+      setTournaments(sorted)
+      setErrors(result.errors)
     } catch (e) {
-      setCardDemo(`Error: ${e}`)
+      setErrors([e instanceof Error ? e.message : String(e)])
+    } finally {
+      setLoading(false)
     }
-  }
+  }, [])
 
-  const runLuckDemo = () => {
-    try {
-      const calc = new LuckCalculator()
-      // Simulate some poker hands: equity vs actual result
-      calc.addResult(0.8, 1.0) // 80% favorite, won
-      calc.addResult(0.3, 0.0) // 30% underdog, lost
-      calc.addResult(0.5, 1.0) // 50-50, won
-      calc.addResult(0.7, 1.0) // 70% favorite, won
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      setDragOver(false)
+      if (e.dataTransfer.files.length > 0) {
+        handleFiles(e.dataTransfer.files)
+      }
+    },
+    [handleFiles]
+  )
 
-      const score = calc.luckScore()
-      calc.free()
-      setLuckDemo(`Luck Score: ${score.toFixed(4)} (positive = running good)`)
-    } catch (e) {
-      setLuckDemo(`Error: ${e}`)
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(true)
+  }, [])
+
+  const handleDragLeave = useCallback(() => {
+    setDragOver(false)
+  }, [])
+
+  const handleFileInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files.length > 0) {
+        handleFiles(e.target.files)
+      }
+    },
+    [handleFiles]
+  )
+
+  // Run bankroll simulation
+  const runBankrollAnalysis = useCallback((): BankrollResult[] => {
+    if (!wasmReady || tournaments.length === 0) return []
+
+    const relativeReturns = collectRelativeReturns(tournaments)
+    if (relativeReturns.length === 0) return []
+
+    const initialCapitals = [10, 20, 50, 100, 200, 500]
+    const maxIterations = Math.max(40000, tournaments.length * 10)
+    const results: BankrollResult[] = []
+
+    for (const initialCapital of initialCapitals) {
+      try {
+        const result = simulate(
+          initialCapital,
+          new Float64Array(relativeReturns),
+          maxIterations,
+          0.0,
+          25000
+        )
+        results.push({
+          initialCapital,
+          bankruptcyRate: result.bankruptcyRate,
+          survivalRate: result.survivalRate,
+        })
+        result.free()
+      } catch {
+        // Simulation failed for this capital level
+      }
     }
-  }
 
-  const runSimulateDemo = () => {
-    try {
-      // Simulate bankroll with:
-      // - Initial capital: 100 units
-      // - Returns: mix of wins (+10) and losses (-5)
-      // - 1000 iterations per simulation
-      // - Exit at 2x profit
-      // - Run 1000 simulations
-      const returns = new Float64Array([10, 10, 10, -5, -5, -5, -5, 15, -10, 5])
-      const result = simulate(100, returns, 1000, 2.0, 1000)
-
-      const info = `Simulations: ${result.length}
-Bankruptcy Rate: ${(result.bankruptcyRate * 100).toFixed(2)}%
-Survival Rate: ${(result.survivalRate * 100).toFixed(2)}%
-Profitable Rate: ${(result.profitableRate * 100).toFixed(2)}%`
-
-      result.free()
-      setSimulateDemo(info)
-    } catch (e) {
-      setSimulateDemo(`Error: ${e}`)
-    }
-  }
+    return results
+  }, [wasmReady, tournaments])
 
   if (!wasmReady) {
-    return <div>Loading WASM module...</div>
+    return <div className="loading">Loading WASM module...</div>
   }
+
+  // Generate chart data
+  const historicalData = tournaments.length > 0 ? getHistoricalPerformanceData(tournaments) : null
+  const rreData = tournaments.length > 0 ? getRREHeatmapData(tournaments) : null
+  const prizePiesData = tournaments.length > 0 ? getPrizePiesData(tournaments) : null
+  const rrByRankData = tournaments.length > 0 ? getRRByRankData(tournaments) : null
+  const bankrollResults = runBankrollAnalysis()
+  const bankrollData = bankrollResults.length > 0 ? getBankrollAnalysisData(bankrollResults) : null
 
   return (
     <div className="app">
-      <h1>Pokercraft Local - Web</h1>
-      <p>WASM Version: {wasmVersion}</p>
+      <header className="header">
+        <h1>Pokercraft Local - Web</h1>
+        <p className="version">WASM v{wasmVersion}</p>
+      </header>
 
-      <div className="demo-section">
-        <h2>Card Demo</h2>
-        <button onClick={runCardDemo}>Create Ace of Spades</button>
-        {cardDemo && <pre>{cardDemo}</pre>}
-      </div>
+      {/* File Upload */}
+      <section
+        className={`upload-zone ${dragOver ? 'drag-over' : ''}`}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+      >
+        <p>Drag & drop tournament files here (.txt or .zip)</p>
+        <p>or</p>
+        <input
+          type="file"
+          multiple
+          accept=".txt,.zip"
+          onChange={handleFileInput}
+          id="file-input"
+        />
+        <label htmlFor="file-input" className="file-label">
+          Choose Files
+        </label>
+      </section>
 
-      <div className="demo-section">
-        <h2>Luck Calculator Demo</h2>
-        <button onClick={runLuckDemo}>Calculate Luck Score</button>
-        {luckDemo && <pre>{luckDemo}</pre>}
-      </div>
+      {loading && <div className="loading">Parsing files...</div>}
 
-      <div className="demo-section">
-        <h2>Bankroll Simulation Demo</h2>
-        <button onClick={runSimulateDemo}>Run Simulation</button>
-        {simulateDemo && <pre>{simulateDemo}</pre>}
-      </div>
+      {errors.length > 0 && (
+        <div className="errors">
+          <h3>Errors:</h3>
+          <ul>
+            {errors.map((err, i) => (
+              <li key={i}>{err}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {tournaments.length > 0 && (
+        <div className="stats">
+          <p>Loaded {tournaments.length} tournaments</p>
+        </div>
+      )}
+
+      {/* Charts */}
+      {historicalData && (
+        <section className="chart-section">
+          <Plot
+            data={historicalData.traces}
+            layout={{ ...historicalData.layout, autosize: true }}
+            useResizeHandler
+            style={{ width: '100%', height: '800px' }}
+          />
+        </section>
+      )}
+
+      {rreData && (
+        <section className="chart-section">
+          <Plot
+            data={rreData.traces}
+            layout={{ ...rreData.layout, autosize: true }}
+            useResizeHandler
+            style={{ width: '100%', height: '500px' }}
+          />
+        </section>
+      )}
+
+      {bankrollData && (
+        <section className="chart-section">
+          <Plot
+            data={bankrollData.traces}
+            layout={{ ...bankrollData.layout, autosize: true }}
+            useResizeHandler
+            style={{ width: '100%', height: '400px' }}
+          />
+        </section>
+      )}
+
+      {prizePiesData && (
+        <section className="chart-section">
+          <Plot
+            data={prizePiesData.traces}
+            layout={{ ...prizePiesData.layout, autosize: true }}
+            useResizeHandler
+            style={{ width: '100%', height: '800px' }}
+          />
+        </section>
+      )}
+
+      {rrByRankData && (
+        <section className="chart-section">
+          <Plot
+            data={rrByRankData.traces}
+            layout={{ ...rrByRankData.layout, autosize: true }}
+            useResizeHandler
+            style={{ width: '100%', height: '500px' }}
+          />
+        </section>
+      )}
     </div>
   )
 }
