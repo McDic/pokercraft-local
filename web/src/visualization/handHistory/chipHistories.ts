@@ -45,12 +45,20 @@ export function getChipHistoriesData(handHistories: HandHistory[]): ChipHistorie
       maxChipsSoFar.push(runningMax)
     }
 
+    // Precompute suffix maximums (max from position i to end) - O(n) instead of O(n²)
+    const suffixMax: number[] = new Array(chipHistoryRaw.length)
+    let suffixRunningMax = -Infinity
+    for (let i = chipHistoryRaw.length - 1; i >= 0; i--) {
+      suffixRunningMax = Math.max(suffixRunningMax, chipHistoryRaw[i])
+      suffixMax[i] = suffixRunningMax
+    }
+
     for (const threshold of deathThresholds) {
       let passedThreshold = true
       for (let i = 0; i < chipHistoryRaw.length; i++) {
         if (chipHistoryRaw[i] <= threshold * maxChipsSoFar[i]) {
-          // Check if they ever recovered above this point
-          const futureMax = Math.max(...chipHistoryRaw.slice(i))
+          // Check if they ever recovered above this point (O(1) lookup)
+          const futureMax = suffixMax[i]
           if (futureMax > chipHistoryRaw[i]) {
             passedThreshold = false
             break

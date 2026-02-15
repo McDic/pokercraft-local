@@ -84,7 +84,7 @@ export function useAsyncAnalysis() {
     setState(prev => ({
       ...prev,
       isLoading: true,
-      progress: { stage: 'parsing', message: 'Parsing files...', percentage: 0 },
+      progress: { stage: 'parsing', message: 'Loading files...', percentage: 0 },
       // Don't clear errors - accumulate them
     }))
 
@@ -92,11 +92,24 @@ export function useAsyncAnalysis() {
 
     try {
       const rateConverter = new CurrencyRateConverter()
-      const result = await loadAndParseFiles(files, rateConverter, allowFreerolls)
+      const result = await loadAndParseFiles(
+        files,
+        rateConverter,
+        allowFreerolls,
+        (current, total, stage) => {
+          if (stage === 'loading') {
+            const pct = Math.floor((current / total) * 40)
+            setProgress('parsing', `Loading files: ${current}/${total}...`, pct)
+          } else {
+            const pct = 40 + Math.floor((current / total) * 40)
+            setProgress('parsing', `Parsing files: ${current}/${total}...`, pct)
+          }
+        }
+      )
 
       if (abortRef.current) return
 
-      setProgress('parsing', 'Merging data...', 80)
+      setProgress('parsing', 'Merging data...', 85)
       await yieldToBrowser()
 
       // Merge with existing data, deduplicating

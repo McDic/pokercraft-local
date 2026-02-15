@@ -95,25 +95,55 @@ function parseFileContent(
 }
 
 /**
- * Load and parse files directly
+ * Yield to browser for UI updates
+ */
+function yieldToBrowser(): Promise<void> {
+  return new Promise(resolve => requestAnimationFrame(() => resolve()))
+}
+
+/**
+ * Load and parse files directly with progress reporting
  */
 export async function loadAndParseFiles(
   files: FileList | File[],
   rateConverter: CurrencyRateConverter,
-  allowFreerolls: boolean = false
+  allowFreerolls: boolean = false,
+  onProgress?: (current: number, total: number, stage: 'loading' | 'parsing') => void
 ): Promise<ParseResult> {
-  const loaded = await loadFiles(files)
+  const fileArray = Array.from(files)
+  const loaded: LoadedFile[] = []
+
+  // Load files with progress
+  for (let i = 0; i < fileArray.length; i++) {
+    const file = fileArray[i]
+    const fileLoaded = await loadFile(file)
+    loaded.push(...fileLoaded)
+
+    // Yield every 10 files or at the end
+    if ((i + 1) % 10 === 0 || i === fileArray.length - 1) {
+      onProgress?.(i + 1, fileArray.length, 'loading')
+      await yieldToBrowser()
+    }
+  }
 
   const tournaments: TournamentSummary[] = []
   const handHistories: HandHistory[] = []
   const errors: string[] = []
 
-  for (const { name, content } of loaded) {
+  // Parse files with progress
+  for (let i = 0; i < loaded.length; i++) {
+    const { name, content } = loaded[i]
     const result = parseFileContent(name, content, rateConverter, allowFreerolls)
     tournaments.push(...result.tournaments)
     handHistories.push(...result.handHistories)
     if (result.error) {
       errors.push(`${name}: ${result.error}`)
+    }
+
+    // Yield every 50 files or at the end
+    if ((i + 1) % 50 === 0 || i === loaded.length - 1) {
+      onProgress?.(i + 1, loaded.length, 'parsing')
+      await yieldToBrowser()
     }
   }
 

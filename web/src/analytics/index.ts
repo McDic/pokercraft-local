@@ -42,19 +42,21 @@ export function cummin(arr: number[]): number[] {
 }
 
 /**
- * Rolling sum with a given window size
+ * Rolling sum with a given window size (O(n) sliding window)
  */
 export function rollingSum(arr: number[], windowSize: number): (number | null)[] {
   const result: (number | null)[] = []
+  let windowSum = 0
+
   for (let i = 0; i < arr.length; i++) {
+    windowSum += arr[i]
+    if (i >= windowSize) {
+      windowSum -= arr[i - windowSize]
+    }
     if (i < windowSize - 1) {
       result.push(null)
     } else {
-      let sum = 0
-      for (let j = i - windowSize + 1; j <= i; j++) {
-        sum += arr[j]
-      }
-      result.push(sum)
+      result.push(windowSum)
     }
   }
   return result

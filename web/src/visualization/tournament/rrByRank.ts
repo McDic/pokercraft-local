@@ -48,7 +48,11 @@ export function getRRByRankData(tournaments: TournamentSummary[]): RRByRankData 
   const fittedX: number[] = []
   const fittedY: number[] = []
   if (!isNaN(regression.slope)) {
-    const minLog2 = Math.min(...topLog2Percentiles.filter(x => !isNaN(x)))
+    // Find min without spread (more efficient for large arrays)
+    let minLog2 = Infinity
+    for (const x of topLog2Percentiles) {
+      if (!isNaN(x) && x < minLog2) minLog2 = x
+    }
     const maxLog2 = Math.log2(1 / 8)
     for (let log2X = minLog2; log2X <= maxLog2; log2X += 0.1) {
       fittedX.push(Math.pow(2, log2X))
@@ -56,8 +60,13 @@ export function getRRByRankData(tournaments: TournamentSummary[]): RRByRankData 
     }
   }
 
-  const maxRR = Math.max(...rrValues)
-  const minPercentile = Math.min(...rankPercentiles)
+  // Calculate min/max without spread (efficient single pass)
+  let maxRR = -Infinity
+  let minPercentile = Infinity
+  for (let i = 0; i < rrValues.length; i++) {
+    if (rrValues[i] > maxRR) maxRR = rrValues[i]
+    if (rankPercentiles[i] < minPercentile) minPercentile = rankPercentiles[i]
+  }
 
   const traces: Data[] = [
     // Main scatter: RR by percentile

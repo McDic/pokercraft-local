@@ -18,6 +18,11 @@ export interface HandUsageHeatmapsData {
 // Card number order (2 lowest, A highest)
 const CARD_NUMBERS = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2']
 
+// O(1) lookup map instead of indexOf
+const CARD_NUMBER_INDEX = new Map<string, number>(
+  CARD_NUMBERS.map((c, i) => [c, i])
+)
+
 interface MatrixCell {
   prefold: number
   totalDealt: number
@@ -43,8 +48,8 @@ function getIdx2d(card1: string, card2: string): [number, number] {
   const shape2 = card2[1]
 
   const isSuited = shape1 === shape2
-  const idx1 = CARD_NUMBERS.indexOf(num1)
-  const idx2 = CARD_NUMBERS.indexOf(num2)
+  const idx1 = CARD_NUMBER_INDEX.get(num1) ?? 0
+  const idx2 = CARD_NUMBER_INDEX.get(num2) ?? 0
 
   // Ensure big card is first
   const bigIdx = Math.min(idx1, idx2)

@@ -156,21 +156,23 @@ export function getHistoricalPerformanceData(
     } as Data)
   }
 
-  // Calculate y-axis ranges
-  const minProfitableRolling = Math.min(
-    ...windowSizes.flatMap(ws => profitableRolling[ws].filter((v): v is number => v !== null))
+  // Calculate y-axis ranges (single pass for each metric)
+  const allProfitableValues = windowSizes.flatMap(ws =>
+    profitableRolling[ws].filter((v): v is number => v !== null)
   )
-  const maxProfitableRolling = Math.max(
-    ...windowSizes.flatMap(ws => profitableRolling[ws].filter((v): v is number => v !== null))
-  )
-  const minAvgBuyIn = Math.min(
+  const minProfitableRolling = allProfitableValues.length > 0
+    ? Math.min(...allProfitableValues)
+    : 0
+  const maxProfitableRolling = allProfitableValues.length > 0
+    ? Math.max(...allProfitableValues)
+    : 1
+
+  const allAvgBuyInValues = [
     ...avgBuyInExpanding,
     ...windowSizes.flatMap(ws => avgBuyInRolling[ws].filter((v): v is number => v !== null))
-  )
-  const maxAvgBuyIn = Math.max(
-    ...avgBuyInExpanding,
-    ...windowSizes.flatMap(ws => avgBuyInRolling[ws].filter((v): v is number => v !== null))
-  )
+  ]
+  const minAvgBuyIn = Math.min(...allAvgBuyInValues)
+  const maxAvgBuyIn = Math.max(...allAvgBuyInValues)
 
   const layout: Partial<Layout> = {
     title: { text: 'Historical Performance' },
