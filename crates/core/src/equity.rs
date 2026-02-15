@@ -543,6 +543,97 @@ impl HUPreflopEquityCache {
     }
 }
 
+#[cfg(feature = "wasm")]
+impl HUPreflopEquityCache {
+    /// Create a `HUPreflopEquityCache` from gzip-compressed cache bytes.
+    pub fn from_gzip_bytes(bytes: &[u8]) -> Result<Self, PokercraftLocalError> {
+        let decoder = GzDecoder::new(bytes);
+        let reader = std::io::BufReader::new(decoder);
+        let mut cache: HashMap<(Hand, Hand), (u64, u64, u64)> = HashMap::new();
+
+        for (i, line) in reader.lines().enumerate() {
+            let line: String = line?;
+            let parts = line.trim().split_whitespace().collect::<Vec<_>>();
+            if parts.len() != 7 {
+                return Err(PokercraftLocalError::GeneralError(format!(
+                    "Invalid format in cache line {}: {}",
+                    i + 1,
+                    line
+                )));
+            } else if parts[1] != "vs" || parts[3] != "=" {
+                return Err(PokercraftLocalError::GeneralError(format!(
+                    "Invalid format in cache line {}: {}",
+                    i + 1,
+                    line
+                )));
+            } else if parts[0].len() != 4 || parts[2].len() != 4 {
+                return Err(PokercraftLocalError::GeneralError(format!(
+                    "Invalid hand format in cache line {}: {}",
+                    i + 1,
+                    line
+                )));
+            }
+
+            let hand1_win_res = parts[4].parse::<u64>();
+            let hand2_win_res = parts[5].parse::<u64>();
+            let tie_res = parts[6].parse::<u64>();
+            if let (Ok(hand1_win), Ok(hand2_win), Ok(tie)) = (hand1_win_res, hand2_win_res, tie_res)
+            {
+                let hand1 = (
+                    Card::try_from(&parts[0][0..2])?,
+                    Card::try_from(&parts[0][2..4])?,
+                );
+                let hand2 = (
+                    Card::try_from(&parts[2][0..2])?,
+                    Card::try_from(&parts[2][2..4])?,
+                );
+                cache.insert((hand1, hand2), (hand1_win, hand2_win, tie));
+            } else {
+                return Err(PokercraftLocalError::GeneralError(format!(
+                    "Invalid win/tie counts in cache line {}: {}",
+                    i + 1,
+                    line
+                )));
+            }
+        }
+        Ok(Self { cache })
+    }
+}
+
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+impl HUPreflopEquityCache {
+    /// Create a HUPreflopEquityCache from gzip-compressed bytes (Uint8Array).
+    #[wasm_bindgen(constructor)]
+    pub fn new_wasm(bytes: &[u8]) -> Result<HUPreflopEquityCache, JsValue> {
+        Self::from_gzip_bytes(bytes).map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Get the equity for player 1 given two hands.
+    /// Returns the equity as a float between 0.0 and 1.0.
+    /// Handles all suit symmetries automatically.
+    #[wasm_bindgen(js_name = getEquity)]
+    pub fn get_equity_wasm(
+        &self,
+        hand1_card1: &str,
+        hand1_card2: &str,
+        hand2_card1: &str,
+        hand2_card2: &str,
+    ) -> Result<f64, JsValue> {
+        let h1c1 = Card::try_from(hand1_card1).map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let h1c2 = Card::try_from(hand1_card2).map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let h2c1 = Card::try_from(hand2_card1).map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let h2c2 = Card::try_from(hand2_card2).map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        let (win1, win2, tie) = self
+            .get_winlose((h1c1, h1c2), (h2c1, h2c2))
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        let total = (win1 + win2 + tie) as f64;
+        Ok((win1 as f64 + tie as f64 * 0.5) / total)
+    }
+}
+
 /// Luck calculator using equity values and results.
 /// Results have two `f64` values: equity (0.0 ~ 1.0) and win/lose (0.0 ~ 1.0).
 /// Win/lose is represented as `1.0` for win and `0.0` for lose.
