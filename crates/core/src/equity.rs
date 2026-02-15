@@ -9,6 +9,10 @@ use pyo3::prelude::*;
 use rayon::prelude::*;
 use rustfft::{num_complex::Complex, FftPlanner};
 use statrs::distribution::{ContinuousCDF, Normal};
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::*;
+#[cfg(feature = "wasm")]
+use wasm_bindgen::JsValue;
 
 use crate::card::{Card, Hand, HandRank};
 use crate::errors::PokercraftLocalError;
@@ -16,6 +20,7 @@ use crate::utils::{FixedSizedCombinationIterator, IterWrapper};
 
 /// Result of single equity calculation.
 #[cfg_attr(feature = "python", pyclass)]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(Debug, Clone)]
 pub struct EquityResult {
     /// `wins[i][c]` is number of `i`-th player wins
@@ -298,8 +303,29 @@ impl EquityResult {
     }
 }
 
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+impl EquityResult {
+    /// Get the equity of the given player index (0-based).
+    #[wasm_bindgen(js_name = getEquity)]
+    pub fn get_equity_wasm(&self, player_index: usize) -> Result<f64, JsValue> {
+        self.get_equity(player_index)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Check if the given player index (0-based) has never lost in all scenarios.
+    #[wasm_bindgen(js_name = neverLost)]
+    pub fn never_lost_wasm(&self, player_index: usize) -> Result<bool, JsValue> {
+        if player_index >= self.wins.len() {
+            return Err(JsValue::from_str("Player index out of range"));
+        }
+        Ok(self.loses[player_index] == 0)
+    }
+}
+
 /// Preflop equity cache for heads-up situations.
 #[cfg_attr(feature = "python", pyclass)]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct HUPreflopEquityCache {
     /// `{(card_a1, card_a2), (card_b1, card_b2)): (P1 win, P2 win, tie)}`
     cache: HashMap<(Hand, Hand), (u64, u64, u64)>,
@@ -472,6 +498,7 @@ impl HUPreflopEquityCache {
 /// Win/lose is represented as `1.0` for win and `0.0` for lose.
 /// If there are ties, use fractional values (e.g., `0.5` for a two-way tie).
 #[cfg_attr(feature = "python", pyclass)]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(Debug, Clone)]
 pub struct LuckCalculator {
     results: Vec<(f64, f64)>, // (equity, winlose: 0.0 ~ 1.0)
@@ -677,6 +704,32 @@ impl LuckCalculator {
             None => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                 "No results added; Cannot calculate tail p-values",
             )),
+        }
+    }
+}
+
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+impl LuckCalculator {
+    /// Create a new empty LuckCalculator.
+    #[wasm_bindgen(constructor)]
+    pub fn new_wasm() -> Self {
+        Self::new()
+    }
+
+    /// Add a new result to the calculator.
+    #[wasm_bindgen(js_name = addResult)]
+    pub fn add_result_wasm(&mut self, equity: f64, actual: f64) -> Result<(), JsValue> {
+        self.add_result(equity, actual)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Calculate the Luck-score of the results.
+    #[wasm_bindgen(js_name = luckScore)]
+    pub fn luck_score_wasm(&self) -> Result<f64, JsValue> {
+        match self.luck_score() {
+            Some(luck) => Ok(luck),
+            None => Err(JsValue::from_str("Cannot calculate Luck-score")),
         }
     }
 }

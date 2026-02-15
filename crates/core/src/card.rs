@@ -4,6 +4,10 @@ use itertools::Itertools;
 
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::*;
+#[cfg(feature = "wasm")]
+use wasm_bindgen::JsValue;
 
 use crate::{errors::PokercraftLocalError, utils::FixedSizedCombinationIterator};
 
@@ -12,6 +16,7 @@ pub const NUM_OF_NUMBERS: usize = 13;
 
 /// Card shapes (suits) in a standard deck of playing cards.
 #[cfg_attr(feature = "python", pyclass(eq))]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum CardShape {
     Spade,
@@ -87,6 +92,7 @@ impl TryFrom<char> for CardShape {
 
 /// Card numbers (ranks) in a standard deck of playing cards.
 #[cfg_attr(feature = "python", pyclass(eq))]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
 pub enum CardNumber {
     Two = 2,
@@ -234,6 +240,7 @@ impl TryFrom<char> for CardNumber {
 
 /// A playing card in a standard deck of 52 cards.
 #[cfg_attr(feature = "python", pyclass(eq))]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(PartialEq, Eq, Copy, Clone, Hash, Debug, Default)]
 pub struct Card {
     pub shape: CardShape,
@@ -295,6 +302,34 @@ impl Card {
 
     fn __repr__(&self) -> PyResult<String> {
         Ok(format!("Card(\"{}\")", self))
+    }
+}
+
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+impl Card {
+    /// Create a new Card from a string (e.g., "As" for Ace of Spades).
+    #[wasm_bindgen(constructor)]
+    pub fn new_wasm(value: &str) -> Result<Card, JsValue> {
+        Card::try_from(value).map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Get the card's string representation.
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string_wasm(&self) -> String {
+        format!("{}", self)
+    }
+
+    /// Get the shape of this card.
+    #[wasm_bindgen(getter)]
+    pub fn shape(&self) -> CardShape {
+        self.shape
+    }
+
+    /// Get the number of this card.
+    #[wasm_bindgen(getter)]
+    pub fn number(&self) -> CardNumber {
+        self.number
     }
 }
 

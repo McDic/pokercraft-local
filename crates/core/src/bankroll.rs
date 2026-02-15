@@ -4,6 +4,10 @@
 use pyo3::exceptions::PyValueError;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::*;
+#[cfg(feature = "wasm")]
+use wasm_bindgen::JsValue;
 
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
@@ -12,6 +16,7 @@ use crate::errors::PokercraftLocalError;
 
 /// Represents a bankruptcy metric.
 #[cfg_attr(feature = "python", pyclass)]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct BankruptcyMetric {
     /// Holds `(relative_return, iteration)` tuples.
     /// (Relative return = final capital / initial capital)
@@ -99,6 +104,34 @@ impl BankruptcyMetric {
 
     #[getter]
     fn profitable_rate(&self) -> f64 {
+        self.get_profitable_rate()
+    }
+}
+
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+impl BankruptcyMetric {
+    /// Get the number of simulations performed.
+    #[wasm_bindgen(getter, js_name = length)]
+    pub fn len_wasm(&self) -> usize {
+        self.simulated_results.len()
+    }
+
+    /// Get the bankruptcy rate.
+    #[wasm_bindgen(getter, js_name = bankruptcyRate)]
+    pub fn bankruptcy_rate_wasm(&self) -> f64 {
+        self.get_bankruptcy_rate()
+    }
+
+    /// Get the survival rate.
+    #[wasm_bindgen(getter, js_name = survivalRate)]
+    pub fn survival_rate_wasm(&self) -> f64 {
+        self.get_survival_rate()
+    }
+
+    /// Get the profitable rate.
+    #[wasm_bindgen(getter, js_name = profitableRate)]
+    pub fn profitable_rate_wasm(&self) -> f64 {
         self.get_profitable_rate()
     }
 }
@@ -195,6 +228,27 @@ pub fn simulate(
             .collect::<Vec<_>>(),
     );
     Ok(metric)
+}
+
+/// Simulate the bankruptcy metric (WASM interface).
+/// Note: Uses sequential iteration since rayon doesn't work in WASM without special setup.
+#[cfg(feature = "wasm")]
+#[wasm_bindgen(js_name = simulate)]
+pub fn simulate_wasm(
+    initial_capital: f64,
+    relative_return_results: Vec<f64>,
+    max_iteration: u32,
+    profit_exit_multiplier: f64,
+    simulation_count: u32,
+) -> Result<BankruptcyMetric, JsValue> {
+    simulate_core(
+        initial_capital,
+        relative_return_results,
+        max_iteration,
+        profit_exit_multiplier,
+        simulation_count,
+    )
+    .map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
 /// Simple Monte Carlo simulation loop;

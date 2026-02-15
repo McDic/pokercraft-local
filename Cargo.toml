@@ -3,7 +3,8 @@ resolver = "2"
 members = [
     "crates/core",
     "crates/python",
-    "crates/cli",  # CLI tools (formerly in pokercraft_local_rust/bin)
+    "crates/cli",
+    "crates/wasm",
 ]
 
 # Shared workspace settings
