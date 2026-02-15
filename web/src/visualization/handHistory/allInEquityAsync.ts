@@ -161,6 +161,11 @@ export async function collectAllInDataAsync(
     onProgress?.(total, eligible.length)
   }
 
+  // Track stats across all workers
+  let totalCacheHits = 0
+  let totalCacheMisses = 0
+  let totalFullCalcs = 0
+
   // Spawn workers and collect results
   const workerPromises = chunks.map((chunk, workerIndex) => {
     return new Promise<AllInHandData[]>((resolve, reject) => {
@@ -177,6 +182,12 @@ export async function collectAllInDataAsync(
           updateProgress()
         } else if (msg.type === 'result') {
           worker.terminate()
+          // Aggregate stats
+          if (msg.stats) {
+            totalCacheHits += msg.stats.cacheHits
+            totalCacheMisses += msg.stats.cacheMisses
+            totalFullCalcs += msg.stats.fullCalcs
+          }
           resolve(msg.data.map(d => ({
             ...d,
             allInStreet: d.allInStreet as HandStage,
@@ -202,6 +213,15 @@ export async function collectAllInDataAsync(
   // Wait for all workers to complete
   const results = await Promise.all(workerPromises)
   const allData = results.flat()
+
+  // Log aggregated cache stats
+  console.log(`[Equity] All-in calculation complete:`, {
+    totalHands: allData.length,
+    cacheHits: totalCacheHits,
+    cacheMisses: totalCacheMisses,
+    fullCalcs: totalFullCalcs,
+    workers: chunks.length,
+  })
 
   // Calculate combined luck score
   const { LuckCalculator } = await import('../../wasm/pokercraft_wasm')

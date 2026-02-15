@@ -36,6 +36,11 @@ export interface EquityWorkerResult {
     communityAtAllIn: string[]
   }[]
   luckScore: number
+  stats: {
+    cacheHits: number
+    cacheMisses: number
+    fullCalcs: number
+  }
 }
 
 export interface EquityWorkerError {
@@ -58,22 +63,44 @@ async function ensureWasmInit(): Promise<void> {
 async function ensurePreflopCache(): Promise<HUPreflopEquityCache | null> {
   if (preflopCache) return preflopCache
 
-  try {
-    // Fetch the preflop cache file
-    const response = await fetch('/hu_preflop_cache.txt.gz')
-    if (!response.ok) {
-      console.warn('Failed to load preflop cache:', response.status)
-      return null
+  // Try multiple possible paths (dev vs production, with/without base path)
+  // Using .bin extension to prevent browser auto-decompression of gzip
+  const possiblePaths = [
+    '/pokercraft-local/hu_preflop_cache.bin',  // With base path
+    '/hu_preflop_cache.bin',                    // Without base path
+  ]
+
+  for (const path of possiblePaths) {
+    try {
+      const cacheUrl = new URL(path, self.location.origin).href
+      console.log('Trying preflop cache from:', cacheUrl)
+
+      const response = await fetch(cacheUrl)
+      if (!response.ok) {
+        console.log('Not found at', path, '- trying next...')
+        continue
+      }
+
+      const bytes = new Uint8Array(await response.arrayBuffer())
+      console.log('Preflop cache bytes loaded:', bytes.length)
+
+      preflopCache = new HUPreflopEquityCache(bytes)
+      console.log('Preflop cache initialized successfully from:', path)
+      return preflopCache
+    } catch (error) {
+      console.log('Failed at', path, ':', error)
+      continue
     }
-    const bytes = new Uint8Array(await response.arrayBuffer())
-    preflopCache = new HUPreflopEquityCache(bytes)
-    console.log('Preflop cache loaded successfully')
-    return preflopCache
-  } catch (error) {
-    console.warn('Failed to load preflop cache:', error)
-    return null
   }
+
+  console.warn('Failed to load preflop cache from any path')
+  return null
 }
+
+// Track cache usage stats
+let cacheHits = 0
+let cacheMisses = 0
+let fullCalcs = 0
 
 /**
  * Calculate equity for a single hand
@@ -98,13 +125,17 @@ function calculateEquity(
         opponents[0][0],
         opponents[0][1]
       )
+      cacheHits++
       return equity
-    } catch {
+    } catch (e) {
+      cacheMisses++
+      console.warn('Cache lookup failed:', heroCards, 'vs', opponents[0], e)
       // Fall through to full calculation
     }
   }
 
   // Full calculation
+  fullCalcs++
   try {
     const allHands = [heroCards, ...opponents]
     const equityResult = new EquityResult(allHands, communityAtAllIn)
@@ -177,6 +208,11 @@ self.onmessage = async (event: MessageEvent<EquityWorkerInput>) => {
       type: 'result',
       data: results,
       luckScore,
+      stats: {
+        cacheHits,
+        cacheMisses,
+        fullCalcs,
+      },
     } as EquityWorkerResult)
   } catch (error) {
     self.postMessage({
