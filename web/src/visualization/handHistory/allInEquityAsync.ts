@@ -121,7 +121,7 @@ function filterEligibleHands(handHistories: HandHistory[]): EligibleHand[] {
 }
 
 /**
- * Calculate equity using Web Worker (runs WASM off main thread)
+ * Calculate equity using multiple parallel Web Workers
  */
 export async function collectAllInDataAsync(
   handHistories: HandHistory[],
@@ -134,46 +134,94 @@ export async function collectAllInDataAsync(
     return { data: [], luckScore: 0 }
   }
 
+  // Determine number of workers (use available cores, max 8)
+  const numWorkers = Math.min(
+    navigator.hardwareConcurrency || 4,
+    8,
+    eligible.length // Don't spawn more workers than hands
+  )
+
   onProgress?.(0, eligible.length)
 
-  return new Promise((resolve, reject) => {
-    // Create worker
-    const worker = new Worker(
-      new URL('../../workers/equityWorker.ts', import.meta.url),
-      { type: 'module' }
-    )
+  // Split hands across workers
+  const chunksPerWorker = Math.ceil(eligible.length / numWorkers)
+  const chunks: EligibleHand[][] = []
+  for (let i = 0; i < numWorkers; i++) {
+    const start = i * chunksPerWorker
+    const end = Math.min(start + chunksPerWorker, eligible.length)
+    if (start < eligible.length) {
+      chunks.push(eligible.slice(start, end))
+    }
+  }
 
-    worker.onmessage = (event: MessageEvent<EquityWorkerOutput>) => {
-      const msg = event.data
+  // Track progress across all workers
+  const progressPerWorker = new Array(chunks.length).fill(0)
+  const updateProgress = () => {
+    const total = progressPerWorker.reduce((a, b) => a + b, 0)
+    onProgress?.(total, eligible.length)
+  }
 
-      if (msg.type === 'progress') {
-        onProgress?.(msg.current, msg.total)
-      } else if (msg.type === 'result') {
-        worker.terminate()
-        resolve({
-          data: msg.data.map(d => ({
+  // Spawn workers and collect results
+  const workerPromises = chunks.map((chunk, workerIndex) => {
+    return new Promise<AllInHandData[]>((resolve, reject) => {
+      const worker = new Worker(
+        new URL('../../workers/equityWorker.ts', import.meta.url),
+        { type: 'module' }
+      )
+
+      worker.onmessage = (event: MessageEvent<EquityWorkerOutput>) => {
+        const msg = event.data
+
+        if (msg.type === 'progress') {
+          progressPerWorker[workerIndex] = msg.current
+          updateProgress()
+        } else if (msg.type === 'result') {
+          worker.terminate()
+          resolve(msg.data.map(d => ({
             ...d,
             allInStreet: d.allInStreet as HandStage,
-          })),
-          luckScore: msg.luckScore,
-        })
-      } else if (msg.type === 'error') {
-        worker.terminate()
-        reject(new Error(msg.message))
+          })))
+        } else if (msg.type === 'error') {
+          worker.terminate()
+          reject(new Error(msg.message))
+        }
       }
-    }
 
-    worker.onerror = (error) => {
-      worker.terminate()
-      reject(error)
-    }
+      worker.onerror = (error) => {
+        worker.terminate()
+        reject(error)
+      }
 
-    // Send hands to worker
-    worker.postMessage({
-      type: 'calculate',
-      hands: eligible,
-    } as EquityWorkerInput)
+      worker.postMessage({
+        type: 'calculate',
+        hands: chunk,
+      } as EquityWorkerInput)
+    })
   })
+
+  // Wait for all workers to complete
+  const results = await Promise.all(workerPromises)
+  const allData = results.flat()
+
+  // Calculate combined luck score
+  const { LuckCalculator } = await import('../../wasm/pokercraft_wasm')
+  const luckCalc = new LuckCalculator()
+  for (const data of allData) {
+    try {
+      luckCalc.addResult(data.equity, data.actualResult)
+    } catch {
+      // Skip invalid
+    }
+  }
+  let luckScore = 0
+  try {
+    luckScore = luckCalc.luckScore()
+  } catch {
+    // Failed
+  }
+  luckCalc.free()
+
+  return { data: allData, luckScore }
 }
 
 /**
