@@ -224,8 +224,9 @@ export async function collectAllInDataAsync(
   })
 
   // Calculate combined luck score
-  const { LuckCalculator } = await import('../../wasm/pokercraft_wasm')
-  const luckCalc = new LuckCalculator()
+  const wasmModule = await import('../../wasm/pokercraft_wasm')
+  await wasmModule.default()  // Initialize WASM
+  const luckCalc = new wasmModule.LuckCalculator()
   for (const data of allData) {
     try {
       luckCalc.addResult(data.equity, data.actualResult)
@@ -291,6 +292,9 @@ export function createAllInEquityChart(
 
   const binCenters = Array.from({ length: bins }, (_, i) => (i + 0.5) * binSize)
   const binWidths = Array.from({ length: bins }, () => binSize * 0.9)
+  const binRanges = Array.from({ length: bins }, (_, i) =>
+    `${(i * binSize * 100).toFixed(1)}% ~ ${((i + 1) * binSize * 100).toFixed(1)}%`
+  )
 
   const OPACITY_GREEN = 'rgba(52,203,59,0.8)'
   const OPACITY_YELLOW = 'rgba(204,198,53,0.8)'
@@ -307,9 +311,10 @@ export function createAllInEquityChart(
       x: binCenters,
       y: winCounts,
       width: binWidths,
+      customdata: binRanges,
       name: 'Hero Won',
       marker: { color: OPACITY_GREEN },
-      hovertemplate: 'Equity: %{x:.0%}<br>Won: %{y}<extra></extra>',
+      hovertemplate: 'Equity: %{customdata}<br>Won: %{y}<extra></extra>',
       legendgroup: 'won',
     } as Data,
     {
@@ -317,9 +322,10 @@ export function createAllInEquityChart(
       x: binCenters,
       y: chopCounts,
       width: binWidths,
+      customdata: binRanges,
       name: 'Chopped',
       marker: { color: OPACITY_YELLOW },
-      hovertemplate: 'Equity: %{x:.0%}<br>Chopped: %{y}<extra></extra>',
+      hovertemplate: 'Equity: %{customdata}<br>Chopped: %{y}<extra></extra>',
       legendgroup: 'chop',
       base: winCounts,
     } as Data,
@@ -328,9 +334,10 @@ export function createAllInEquityChart(
       x: binCenters,
       y: loseCounts,
       width: binWidths,
+      customdata: binRanges,
       name: 'Hero Lost',
       marker: { color: OPACITY_RED },
-      hovertemplate: 'Equity: %{x:.0%}<br>Lost: %{y}<extra></extra>',
+      hovertemplate: 'Equity: %{customdata}<br>Lost: %{y}<extra></extra>',
       legendgroup: 'lost',
       base: winCounts.map((w, i) => w + chopCounts[i]),
     } as Data,
@@ -339,9 +346,10 @@ export function createAllInEquityChart(
       x: binCenters,
       y: winPcts,
       width: binWidths,
+      customdata: binRanges,
       name: 'Hero Won',
       marker: { color: OPACITY_GREEN },
-      hovertemplate: 'Equity: %{x:.0%}<br>Win Rate: %{y:.0%}<extra></extra>',
+      hovertemplate: 'Equity: %{customdata}<br>Win Rate: %{y:.2%}<extra></extra>',
       legendgroup: 'won',
       showlegend: false,
       xaxis: 'x2',
@@ -353,9 +361,10 @@ export function createAllInEquityChart(
       x: binCenters,
       y: chopPcts,
       width: binWidths,
+      customdata: binRanges,
       name: 'Chopped',
       marker: { color: OPACITY_YELLOW },
-      hovertemplate: 'Equity: %{x:.0%}<br>Chop Rate: %{y:.0%}<extra></extra>',
+      hovertemplate: 'Equity: %{customdata}<br>Chop Rate: %{y:.2%}<extra></extra>',
       legendgroup: 'chop',
       showlegend: false,
       xaxis: 'x2',
@@ -367,9 +376,10 @@ export function createAllInEquityChart(
       x: binCenters,
       y: losePcts,
       width: binWidths,
+      customdata: binRanges,
       name: 'Hero Lost',
       marker: { color: OPACITY_RED },
-      hovertemplate: 'Equity: %{x:.0%}<br>Loss Rate: %{y:.0%}<extra></extra>',
+      hovertemplate: 'Equity: %{customdata}<br>Loss Rate: %{y:.2%}<extra></extra>',
       legendgroup: 'lost',
       showlegend: false,
       xaxis: 'x2',
@@ -397,7 +407,7 @@ export function createAllInEquityChart(
     },
     yaxis: {
       title: { text: 'Count' },
-      domain: [0.55, 1],
+      domain: [0.58, 1],
       anchor: 'x',
     },
     xaxis2: {
@@ -411,7 +421,7 @@ export function createAllInEquityChart(
       title: { text: 'Win/Chop/Loss Rate' },
       tickformat: '.0%',
       range: [0, 1],
-      domain: [0, 0.45],
+      domain: [0, 0.42],
       anchor: 'x2',
     },
     legend: {
@@ -419,7 +429,7 @@ export function createAllInEquityChart(
       xanchor: 'center',
       x: 0.5,
       yanchor: 'top',
-      y: -0.08,
+      y: -0.15,
     },
     annotations: [
       {

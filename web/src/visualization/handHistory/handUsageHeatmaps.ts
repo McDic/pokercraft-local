@@ -235,11 +235,7 @@ export async function getHandUsageHeatmapsData(handHistories: HandHistory[]): Pr
       text: texts as unknown as string[],
       texttemplate: '%{text}',
       showscale: false,
-      colorscale: [
-        [0, 'rgb(255, 100, 100)'],
-        [0.5, 'rgb(255, 255, 150)'],
-        [1, 'rgb(100, 255, 100)'],
-      ],
+      colorscale: 'YlGnBu',
       zmin: 0,
       zmax: 1,
       hovertemplate: '%{text}<br>VPIP: %{z:.1%}<extra></extra>',
@@ -272,7 +268,7 @@ export async function getHandUsageHeatmapsData(handHistories: HandHistory[]): Pr
       const matrix = matrices.get(posConfig[2])!
       const vpip = aggregateVPIP(matrix)
       const rangeUsage = getRangeUsage(matrix, 0.1)
-      const axisTitle = `${posConfig[3]} (${(vpip * 100).toFixed(0)}% / ${(rangeUsage * 100).toFixed(0)}%)`
+      const axisTitle = `${posConfig[3]} (VPIP ${(vpip * 100).toFixed(1)}%, Range ${(rangeUsage * 100).toFixed(1)}%)`
 
       ;(layout as Record<string, unknown>)[`xaxis${idx === 1 ? '' : idx}`] = {
         domain: xDomain,
