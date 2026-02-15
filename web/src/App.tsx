@@ -16,7 +16,8 @@ import { useAnalysisWorker } from './hooks/useAnalysisWorker'
 
 function App() {
   const [activeTab, setActiveTab] = useState<ChartTab>('tournament')
-  const prevDataLengthRef = useRef({ tournaments: 0, handHistories: 0 })
+  const prevTournamentCountRef = useRef(0)
+  const prevHandHistoryCountRef = useRef(0)
 
   const {
     isLoading,
@@ -30,20 +31,14 @@ function App() {
     runAnalysis,
   } = useAnalysisWorker()
 
-  // Auto-run analysis when new data is parsed
+  // Auto-run analysis when new unique data is added
   useEffect(() => {
-    const prevTournaments = prevDataLengthRef.current.tournaments
-    const prevHH = prevDataLengthRef.current.handHistories
+    const hasTournamentChanges = tournaments.length !== prevTournamentCountRef.current
+    const hasHandHistoryChanges = handHistories.length !== prevHandHistoryCountRef.current
 
-    // Check if new data was added
-    if (
-      (tournaments.length > prevTournaments || handHistories.length > prevHH) &&
-      !isLoading
-    ) {
-      prevDataLengthRef.current = {
-        tournaments: tournaments.length,
-        handHistories: handHistories.length,
-      }
+    if ((hasTournamentChanges || hasHandHistoryChanges) && !isLoading) {
+      prevTournamentCountRef.current = tournaments.length
+      prevHandHistoryCountRef.current = handHistories.length
       runAnalysis()
     }
   }, [tournaments.length, handHistories.length, isLoading, runAnalysis])

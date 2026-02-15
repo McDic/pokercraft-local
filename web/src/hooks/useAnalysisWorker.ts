@@ -31,6 +31,30 @@ export interface AnalysisState {
   wasmVersion: string
 }
 
+/**
+ * Merge tournaments, deduplicating by tournament ID
+ */
+function mergeTournaments(
+  existing: TournamentSummary[],
+  newItems: TournamentSummary[]
+): TournamentSummary[] {
+  const existingIds = new Set(existing.map(t => t.id))
+  const uniqueNew = newItems.filter(t => !existingIds.has(t.id))
+  return [...existing, ...uniqueNew]
+}
+
+/**
+ * Merge hand histories, deduplicating by hand ID
+ */
+function mergeHandHistories(
+  existing: HandHistory[],
+  newItems: HandHistory[]
+): HandHistory[] {
+  const existingIds = new Set(existing.map(h => h.id))
+  const uniqueNew = newItems.filter(h => !existingIds.has(h.id))
+  return [...existing, ...uniqueNew]
+}
+
 export interface UseAnalysisWorkerReturn extends AnalysisState {
   parseFiles: (files: FileList | File[], allowFreerolls?: boolean) => void
   runAnalysis: () => void
@@ -85,23 +109,29 @@ export function useAnalysisWorker(): UseAnalysisWorkerReturn {
             errors: [...prev.errors, result.error!],
           }))
         } else if (result.parseResult) {
-          // Parse result
-          const sorted = [...result.parseResult.tournaments].sort(
-            (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
-          )
-          const sortedHH = [...result.parseResult.handHistories].sort(
-            (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
-          )
+          // Parse result - merge with existing data, deduplicating by ID
+          setState(prev => {
+            const mergedTournaments = mergeTournaments(prev.tournaments, result.parseResult!.tournaments)
+            const mergedHH = mergeHandHistories(prev.handHistories, result.parseResult!.handHistories)
 
-          setState(prev => ({
-            ...prev,
-            isLoading: false,
-            progress: null,
-            tournaments: sorted,
-            handHistories: sortedHH,
-            errors: result.parseResult!.errors,
-            wasmVersion: result.wasmVersion || prev.wasmVersion,
-          }))
+            // Sort by time
+            mergedTournaments.sort(
+              (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+            )
+            mergedHH.sort(
+              (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
+            )
+
+            return {
+              ...prev,
+              isLoading: false,
+              progress: null,
+              tournaments: mergedTournaments,
+              handHistories: mergedHH,
+              errors: [...prev.errors, ...result.parseResult!.errors],
+              wasmVersion: result.wasmVersion || prev.wasmVersion,
+            }
+          })
         } else {
           // Analysis result
           setState(prev => ({

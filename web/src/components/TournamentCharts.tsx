@@ -47,7 +47,7 @@ export function TournamentCharts({ tournaments, bankrollResults }: TournamentCha
   useEffect(() => {
     if (tournaments.length === 0) return
 
-    // Skip if no new data
+    // Skip if data hasn't changed (same counts means no new unique data was added)
     if (
       tournaments.length === lastTournamentCountRef.current &&
       bankrollResults.length === lastBankrollCountRef.current
