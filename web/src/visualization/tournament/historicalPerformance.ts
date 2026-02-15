@@ -185,10 +185,17 @@ export function getHistoricalPerformanceData(
       roworder: 'top to bottom',
     },
     xaxis: {
-      // No title - shared across all subplots, self-explanatory
+      showticklabels: false,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       unifiedhovertitle: { text: 'Tourney #%{x}' } as any,
     } as Partial<Layout['xaxis']>,
+    xaxis2: {
+      showticklabels: false,
+    },
+    xaxis3: {
+      // Show tick labels only on bottom chart
+      showticklabels: true,
+    },
     yaxis: {
       title: { text: 'Net Profit & Rake' },
       tickformat: '$',
