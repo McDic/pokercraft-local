@@ -7,6 +7,9 @@ interface HeaderProps {
 }
 
 export function Header({ wasmVersion }: HeaderProps) {
+  const appVersion = __APP_VERSION__
+  const gitHash = __GIT_HASH__
+
   return (
     <header className="header">
       <div className="header-content">
@@ -22,9 +25,11 @@ export function Header({ wasmVersion }: HeaderProps) {
         >
           GitHub
         </a>
-        {wasmVersion && (
-          <span className="version">WASM v{wasmVersion}</span>
-        )}
+        <span className="version">
+          v{appVersion}
+          {gitHash && gitHash !== 'unknown' && ` (${gitHash})`}
+          {wasmVersion && ` | WASM v${wasmVersion}`}
+        </span>
       </div>
     </header>
   )
