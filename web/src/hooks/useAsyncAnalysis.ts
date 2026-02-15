@@ -1,6 +1,6 @@
 /**
  * Hook for async analysis with progress tracking
- * Uses requestAnimationFrame to keep UI responsive
+ * Accumulates data across multiple file uploads and caches results
  */
 
 import { useState, useCallback, useRef } from 'react'
@@ -28,6 +28,30 @@ const initialProgress: AnalysisProgress = {
   stage: 'idle',
   message: '',
   percentage: 0,
+}
+
+/**
+ * Merge new items with existing, deduplicating by ID
+ */
+function mergeById<T extends { id: string }>(
+  existing: T[],
+  newItems: T[]
+): T[] {
+  const existingIds = new Set(existing.map(item => item.id))
+  const uniqueNew = newItems.filter(item => !existingIds.has(item.id))
+  return [...existing, ...uniqueNew]
+}
+
+/**
+ * Merge tournaments, deduplicating by tournament ID
+ */
+function mergeTournaments(
+  existing: TournamentSummary[],
+  newItems: TournamentSummary[]
+): TournamentSummary[] {
+  const existingIds = new Set(existing.map(t => t.id))
+  const uniqueNew = newItems.filter(t => !existingIds.has(t.id))
+  return [...existing, ...uniqueNew]
 }
 
 export function useAsyncAnalysis() {
@@ -61,7 +85,7 @@ export function useAsyncAnalysis() {
       ...prev,
       isLoading: true,
       progress: { stage: 'parsing', message: 'Parsing files...', percentage: 0 },
-      errors: [],
+      // Don't clear errors - accumulate them
     }))
 
     await yieldToBrowser()
@@ -72,42 +96,43 @@ export function useAsyncAnalysis() {
 
       if (abortRef.current) return
 
-      // Sort tournaments by start time
-      const sortedTournaments = [...result.tournaments].sort(
-        (a, b) => a.startTime.getTime() - b.startTime.getTime()
-      )
-
-      // Sort hand histories by datetime
-      const sortedHH = [...result.handHistories].sort(
-        (a, b) => a.datetime.getTime() - b.datetime.getTime()
-      )
-
-      setProgress('parsing', 'Parsing complete', 100)
+      setProgress('parsing', 'Merging data...', 80)
       await yieldToBrowser()
 
-      setState(prev => ({
-        ...prev,
-        tournaments: sortedTournaments,
-        handHistories: sortedHH,
-        errors: result.errors,
-      }))
+      // Merge with existing data, deduplicating
+      setState(prev => {
+        const mergedTournaments = mergeTournaments(prev.tournaments, result.tournaments)
+          .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
 
-      // Run bankroll simulation if we have tournaments
-      if (sortedTournaments.length > 0) {
-        setProgress('bankroll', 'Running bankroll simulation...', 0)
-        await yieldToBrowser()
+        const mergedHH = mergeById(prev.handHistories, result.handHistories)
+          .sort((a, b) => a.datetime.getTime() - b.datetime.getTime())
 
-        const bankrollResults = await runBankrollSimulation(sortedTournaments, setProgress, abortRef)
+        const newTournamentCount = mergedTournaments.length - prev.tournaments.length
+        const newHHCount = mergedHH.length - prev.handHistories.length
 
-        if (!abortRef.current) {
-          setState(prev => ({
-            ...prev,
-            bankrollResults,
-          }))
+        return {
+          ...prev,
+          tournaments: mergedTournaments,
+          handHistories: mergedHH,
+          errors: [...prev.errors, ...result.errors],
+          progress: {
+            stage: 'parsing',
+            message: `Added ${newTournamentCount} tournaments, ${newHHCount} hand histories`,
+            percentage: 100,
+          },
         }
-      }
+      })
 
-      setProgress('complete', 'Analysis complete', 100)
+      await yieldToBrowser()
+
+      // Run bankroll simulation with ALL tournaments
+      setState(prev => {
+        if (prev.tournaments.length > 0) {
+          // Trigger bankroll simulation
+          runBankrollSimulationAsync(prev.tournaments, setProgress, abortRef, setState)
+        }
+        return prev
+      })
 
     } catch (error) {
       setState(prev => ({
@@ -141,13 +166,19 @@ export function useAsyncAnalysis() {
   }
 }
 
-async function runBankrollSimulation(
+async function runBankrollSimulationAsync(
   tournaments: TournamentSummary[],
   setProgress: (stage: AnalysisProgress['stage'], message: string, percentage: number) => void,
-  abortRef: React.MutableRefObject<boolean>
-): Promise<BankrollResult[]> {
+  abortRef: React.MutableRefObject<boolean>,
+  setState: React.Dispatch<React.SetStateAction<AnalysisState>>
+): Promise<void> {
+  setProgress('bankroll', 'Running bankroll simulation...', 0)
+
   const relativeReturns = collectRelativeReturns(tournaments)
-  if (relativeReturns.length === 0) return []
+  if (relativeReturns.length === 0) {
+    setProgress('complete', 'Analysis complete', 100)
+    return
+  }
 
   const initialCapitals = [10, 20, 50, 100, 200, 500]
   const maxIterations = Math.max(40000, tournaments.length * 10)
@@ -181,5 +212,11 @@ async function runBankrollSimulation(
     }
   }
 
-  return results
+  if (!abortRef.current) {
+    setState(prev => ({
+      ...prev,
+      bankrollResults: results,
+    }))
+    setProgress('complete', 'Analysis complete', 100)
+  }
 }

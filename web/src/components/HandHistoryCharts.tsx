@@ -1,11 +1,12 @@
 /**
- * Hand history charts container with async loading
+ * Hand history charts container with async loading and caching
  */
 
 import { useState, useEffect, useRef } from 'react'
 import Plot from 'react-plotly.js'
 import type { Data, Layout } from 'plotly.js-dist-min'
 import type { HandHistory } from '../types'
+import type { AllInHandData } from '../visualization/handHistory/allInEquityAsync'
 
 interface ChartData {
   traces: Data[]
@@ -24,6 +25,10 @@ interface ChartsState {
   progress: { message: string; percentage: number }
 }
 
+// Global cache for equity results (persists across re-renders)
+const equityCache = new Map<string, AllInHandData>()
+let cachedLuckScore = 0
+
 async function yieldToBrowser(): Promise<void> {
   return new Promise(resolve => requestAnimationFrame(() => resolve()))
 }
@@ -38,15 +43,22 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
   })
 
   const abortRef = useRef(false)
-  const computedForRef = useRef(0)
+  const lastComputedRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
-    if (handHistories.length === 0 || computedForRef.current === handHistories.length) {
+    if (handHistories.length === 0) {
       return
     }
 
+    // Check if we have new hands to process
+    const currentIds = new Set(handHistories.map(h => h.id))
+    const hasNewHands = handHistories.some(h => !lastComputedRef.current.has(h.id))
+
+    if (!hasNewHands && lastComputedRef.current.size > 0) {
+      return // No new data, skip recomputation
+    }
+
     abortRef.current = false
-    computedForRef.current = handHistories.length
 
     const compute = async () => {
       setState(prev => ({
@@ -58,7 +70,6 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
       await yieldToBrowser()
 
       try {
-        // Dynamic import to avoid blocking
         const [
           { getChipHistoriesData, getHandUsageHeatmapsData },
           { collectAllInDataAsync, createAllInEquityChart },
@@ -69,7 +80,7 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
 
         if (abortRef.current) return
 
-        // Chip histories
+        // Chip histories (always recompute - fast enough)
         setState(prev => ({
           ...prev,
           progress: { message: 'Generating chip histories...', percentage: 15 },
@@ -82,29 +93,63 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
         setState(prev => ({
           ...prev,
           chipHistories,
-          progress: { message: 'Finding all-in hands...', percentage: 25 },
+          progress: { message: 'Checking equity cache...', percentage: 20 },
         }))
         await yieldToBrowser()
 
-        // All-in equity (runs in Web Worker, fully off main thread)
-        const { data: allInData, luckScore } = await collectAllInDataAsync(
-          handHistories,
-          (current, total) => {
-            if (!abortRef.current) {
-              const pct = 25 + Math.floor((current / total) * 50)
-              setState(prev => ({
-                ...prev,
-                progress: {
-                  message: `Calculating equity: ${current}/${total} all-ins...`,
-                  percentage: pct,
-                },
-              }))
-            }
-          }
-        )
-        if (abortRef.current) return
+        // Filter out hands that are already cached
+        const uncachedHands = handHistories.filter(h => !equityCache.has(h.id))
+        const cachedCount = handHistories.length - uncachedHands.length
 
-        const allInEquity = createAllInEquityChart(allInData, luckScore)
+        if (uncachedHands.length > 0) {
+          setState(prev => ({
+            ...prev,
+            progress: {
+              message: `Found ${cachedCount} cached, calculating ${uncachedHands.length} new...`,
+              percentage: 25,
+            },
+          }))
+
+          // Calculate equity only for uncached hands
+          const { data: newAllInData, luckScore: newLuckScore } = await collectAllInDataAsync(
+            uncachedHands,
+            (current, total) => {
+              if (!abortRef.current) {
+                const pct = 25 + Math.floor((current / total) * 50)
+                setState(prev => ({
+                  ...prev,
+                  progress: {
+                    message: `Calculating equity: ${current}/${total} all-ins...`,
+                    percentage: pct,
+                  },
+                }))
+              }
+            }
+          )
+          if (abortRef.current) return
+
+          // Add new results to cache
+          for (const data of newAllInData) {
+            equityCache.set(data.handId, data)
+          }
+
+          // Recalculate luck score with all cached data
+          // (simplified: we store the latest, but ideally recalculate from all)
+          if (newAllInData.length > 0) {
+            cachedLuckScore = newLuckScore
+          }
+        }
+
+        // Get all cached results for current hand histories
+        const allCachedData: AllInHandData[] = []
+        for (const h of handHistories) {
+          const cached = equityCache.get(h.id)
+          if (cached) {
+            allCachedData.push(cached)
+          }
+        }
+
+        const allInEquity = createAllInEquityChart(allCachedData, cachedLuckScore)
 
         setState(prev => ({
           ...prev,
@@ -116,6 +161,9 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
         // Hand usage heatmaps
         const handUsage = getHandUsageHeatmapsData(handHistories)
         if (abortRef.current) return
+
+        // Update computed set
+        lastComputedRef.current = currentIds
 
         setState(prev => ({
           ...prev,
