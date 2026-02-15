@@ -1,0 +1,350 @@
+/* ============================================
+   Pokercraft Local - Web App Styles
+   ============================================ */
+
+/* Base Layout */
+.app {
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 1rem 2rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #333;
+}
+
+.header-content h1 {
+  font-size: 1.75rem;
+  margin: 0;
+  color: #fff;
+}
+
+.header-content .subtitle {
+  color: #888;
+  font-size: 0.875rem;
+}
+
+.header .version {
+  color: #666;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  background: #222;
+  border-radius: 4px;
+}
+
+.header-links {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header .github-link {
+  color: #888;
+  font-size: 0.875rem;
+  text-decoration: none;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid #444;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.header .github-link:hover {
+  color: #fff;
+  border-color: #666;
+  background: #333;
+}
+
+/* File Uploader */
+.file-uploader {
+  margin-bottom: 2rem;
+}
+
+.upload-zone {
+  border: 2px dashed #444;
+  border-radius: 12px;
+  padding: 2.5rem;
+  text-align: center;
+  transition: all 0.2s ease;
+  background: #1a1a1a;
+}
+
+.upload-zone.drag-over {
+  border-color: #646cff;
+  background: rgba(100, 108, 255, 0.1);
+}
+
+.upload-zone.loading {
+  border-style: solid;
+  border-color: #333;
+}
+
+.upload-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.upload-primary {
+  font-size: 1.125rem;
+  color: #ddd;
+  margin: 0 0 0.5rem 0;
+}
+
+.upload-secondary {
+  color: #888;
+  font-size: 0.875rem;
+  margin: 0 0 1.5rem 0;
+}
+
+.upload-zone input[type="file"] {
+  display: none;
+}
+
+.file-button {
+  display: inline-block;
+  padding: 0.75rem 2rem;
+  background: #646cff;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.file-button:hover {
+  background: #535bf2;
+}
+
+/* Progress */
+.progress-container {
+  padding: 1rem 0;
+}
+
+.progress-bar {
+  width: 100%;
+  max-width: 400px;
+  height: 8px;
+  background: #333;
+  border-radius: 4px;
+  margin: 0 auto 1rem auto;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #646cff, #535bf2);
+  border-radius: 4px;
+  transition: width 0.2s ease;
+}
+
+.progress-message {
+  color: #888;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+/* Stats Bar */
+.stats-bar {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  padding: 1rem;
+  background: rgba(100, 200, 100, 0.1);
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+
+.stats-bar .stat {
+  color: #64c864;
+  font-size: 0.9rem;
+}
+
+.stats-bar .stat strong {
+  color: #8eff8e;
+}
+
+/* Chart Tabs */
+.chart-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem;
+  background: #1a1a1a;
+  border-radius: 12px;
+}
+
+.chart-tabs .tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1rem;
+}
+
+.chart-tabs .tab:hover:not(.disabled) {
+  background: #252525;
+  color: #ddd;
+}
+
+.chart-tabs .tab.active {
+  background: #333;
+  color: #fff;
+}
+
+.chart-tabs .tab.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.chart-tabs .tab-icon {
+  font-size: 1.25rem;
+}
+
+.chart-tabs .tab-count {
+  background: #444;
+  padding: 0.125rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+}
+
+.chart-tabs .tab.active .tab-count {
+  background: #646cff;
+}
+
+/* Charts Container */
+.charts-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.chart-section {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+/* Errors */
+.errors {
+  background: rgba(255, 100, 100, 0.1);
+  border: 1px solid rgba(255, 100, 100, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.errors h3 {
+  color: #ff6464;
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+}
+
+.errors ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.errors li {
+  color: #ff9999;
+  font-size: 0.875rem;
+}
+
+/* No Data State */
+.no-data {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #666;
+}
+
+/* Chart Loading State */
+.chart-loading {
+  padding: 2rem;
+  text-align: center;
+  background: #1a1a1a;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.chart-loading .progress-bar {
+  width: 100%;
+  max-width: 500px;
+  height: 8px;
+  background: #333;
+  border-radius: 4px;
+  margin: 0 auto 1rem auto;
+  overflow: hidden;
+}
+
+.chart-loading .progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #646cff, #535bf2);
+  border-radius: 4px;
+  transition: width 0.15s ease;
+}
+
+.chart-loading .progress-message {
+  color: #888;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+/* Loading State */
+.loading-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: #888;
+}
+
+/* Plotly overrides for dark theme */
+.js-plotly-plot .plotly .modebar {
+  background: transparent !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .app {
+    padding: 0.5rem;
+  }
+
+  .header {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+
+  .upload-zone {
+    padding: 1.5rem;
+  }
+
+  .chart-tabs {
+    flex-direction: column;
+  }
+
+  .chart-tabs .tab {
+    justify-content: flex-start;
+  }
+
+  .stats-bar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}

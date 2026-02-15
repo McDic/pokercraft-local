@@ -1,0 +1,37 @@
+[package]
+name = "pokercraft-core"
+version.workspace = true
+edition.workspace = true
+description = "Core poker analysis library - shared between Python and WASM targets"
+publish.workspace = true
+
+[lib]
+name = "pokercraft_core"
+crate-type = ["rlib", "cdylib"]
+
+[features]
+default = []
+# Enable Python bindings via PyO3
+python = ["dep:pyo3"]
+# Enable WASM bindings via wasm-bindgen
+wasm = ["dep:wasm-bindgen", "dep:js-sys", "dep:serde", "dep:serde-wasm-bindgen"]
+
+[dependencies]
+# Core dependencies (always included)
+flate2.workspace = true
+itertools.workspace = true
+once_cell.workspace = true
+rand.workspace = true
+rayon.workspace = true
+rustfft.workspace = true
+statrs.workspace = true
+thiserror.workspace = true
+
+# Python bindings (optional)
+pyo3 = { workspace = true, optional = true }
+
+# WASM bindings (optional)
+wasm-bindgen = { workspace = true, optional = true }
+js-sys = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde-wasm-bindgen = { workspace = true, optional = true }

@@ -1,0 +1,18 @@
+[package]
+name = "pokercraft-python"
+version.workspace = true
+edition.workspace = true
+description = "Python bindings for pokercraft-core via PyO3"
+publish.workspace = true
+
+[lib]
+name = "pokercraft_local_rust"
+crate-type = ["cdylib"]
+
+[dependencies]
+pokercraft-core = { workspace = true, features = ["python"] }
+pyo3.workspace = true
+
+[features]
+extension-module = ["pyo3/extension-module"]
+default = ["extension-module"]
