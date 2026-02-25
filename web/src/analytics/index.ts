@@ -44,7 +44,7 @@ export function cummin(arr: number[]): number[] {
 /**
  * Rolling sum with a given window size (O(n) sliding window)
  */
-export function rollingSum(arr: number[], windowSize: number): (number | null)[] {
+function rollingSum(arr: number[], windowSize: number): (number | null)[] {
   const result: (number | null)[] = []
   let windowSum = 0
 
@@ -68,13 +68,6 @@ export function rollingSum(arr: number[], windowSize: number): (number | null)[]
 export function rollingMean(arr: number[], windowSize: number): (number | null)[] {
   const sums = rollingSum(arr, windowSize)
   return sums.map(s => (s !== null ? s / windowSize : null))
-}
-
-/**
- * Expanding sum (cumulative sum for each position)
- */
-export function expandingSum(arr: number[]): number[] {
-  return cumsum(arr)
 }
 
 /**
