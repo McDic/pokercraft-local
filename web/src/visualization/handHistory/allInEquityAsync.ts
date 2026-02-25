@@ -392,21 +392,25 @@ export function createAllInEquityChart(
       pattern: 'independent',
     },
     xaxis: {
-      title: { text: 'Hero Equity at All-in' },
       tickformat: '.0%',
       range: [0, 1],
+      fixedrange: true,
       domain: [0, 1],
       anchor: 'y',
+      matches: 'x2',
     },
     yaxis: {
       title: { text: 'Count' },
+      fixedrange: true,
       domain: [0.58, 1],
       anchor: 'x',
+      zeroline: false,
     },
     xaxis2: {
       title: { text: 'Hero Equity at All-in' },
       tickformat: '.0%',
       range: [0, 1],
+      fixedrange: true,
       domain: [0, 1],
       anchor: 'y2',
     },
@@ -414,6 +418,7 @@ export function createAllInEquityChart(
       title: { text: 'Win/Chop/Loss Rate' },
       tickformat: '.0%',
       range: [0, 1],
+      fixedrange: true,
       domain: [0, 0.42],
       anchor: 'x2',
     },
@@ -426,7 +431,7 @@ export function createAllInEquityChart(
     },
     annotations: [
       {
-        text: `${allInData.length} all-ins | Luck Score: ${luckScore.toFixed(2)} (${luckPercentile.toFixed(1)}th percentile)`,
+        text: `${allInData.length} all-ins | Luck Score: ${luckScore.toFixed(2)} (Top ${luckPercentile.toFixed(1)}%)`,
         xref: 'paper',
         yref: 'paper',
         x: 0.5,
