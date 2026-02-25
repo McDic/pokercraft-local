@@ -2,11 +2,12 @@
  * Hand history charts container with async loading and caching
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import Plot from 'react-plotly.js'
 import type { Data, Layout } from 'plotly.js-dist-min'
 import type { HandHistory } from '../types'
 import type { AllInHandData } from '../visualization/handHistory/allInEquityAsync'
+import type { ExportChart } from '../export/htmlExport'
 import { yieldToBrowser } from '../utils'
 
 interface ChartData {
@@ -26,11 +27,16 @@ interface ChartsState {
   progress: { message: string; percentage: number }
 }
 
+export interface HandHistoryChartsRef {
+  getChartData: () => ExportChart[]
+}
+
 // Global cache for equity results (persists across re-renders)
 const equityCache = new Map<string, AllInHandData>()
 let cachedLuckScore = 0
 
-export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
+export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryChartsProps>(
+  function HandHistoryCharts({ handHistories }, ref) {
   const [state, setState] = useState<ChartsState>({
     chipHistories: null,
     allInEquity: null,
@@ -41,6 +47,16 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
 
   const computeIdRef = useRef(0)
   const lastComputedRef = useRef<Set<string>>(new Set())
+
+  useImperativeHandle(ref, () => ({
+    getChartData() {
+      const charts: ExportChart[] = []
+      if (state.chipHistories) charts.push({ name: 'Chip Histories', ...state.chipHistories })
+      if (state.handUsage) charts.push({ name: 'Hand Usage Heatmaps', ...state.handUsage })
+      if (state.allInEquity) charts.push({ name: 'All-In Equity', ...state.allInEquity })
+      return charts
+    },
+  }))
 
   useEffect(() => {
     if (handHistories.length === 0) {
@@ -247,4 +263,4 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
       )}
     </div>
   )
-}
+})

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 
 // Components
@@ -8,16 +8,23 @@ import {
   ChartTabs,
   type ChartTab,
   TournamentCharts,
+  type TournamentChartsRef,
   HandHistoryCharts,
+  type HandHistoryChartsRef,
 } from './components'
 
 // Hooks
 import { useAnalysisWorker } from './hooks/useAnalysisWorker'
 
+// Export
+import { generateExportHTML, downloadHTML } from './export/htmlExport'
+
 function App() {
   const [activeTab, setActiveTab] = useState<ChartTab>('tournament')
   const [wasmVersion, setWasmVersion] = useState('')
   const prevTournamentCountRef = useRef(0)
+  const tournamentChartsRef = useRef<TournamentChartsRef>(null)
+  const handHistoryChartsRef = useRef<HandHistoryChartsRef>(null)
 
   const {
     isLoading,
@@ -51,6 +58,15 @@ function App() {
     }
   }, [tournaments.length, isLoading, runAnalysis])
 
+  const handleExport = useCallback(() => {
+    const tournamentCharts = tournamentChartsRef.current?.getChartData() ?? []
+    const handHistoryCharts = handHistoryChartsRef.current?.getChartData() ?? []
+    if (tournamentCharts.length === 0 && handHistoryCharts.length === 0) return
+    const html = generateExportHTML(tournamentCharts, handHistoryCharts)
+    const timestamp = new Date().toISOString().slice(0, 10)
+    downloadHTML(html, `pokercraft-export-${timestamp}.html`)
+  }, [])
+
   // Auto-switch tab when data changes
   useEffect(() => {
     if (tournaments.length === 0 && handHistories.length > 0) {
@@ -62,7 +78,10 @@ function App() {
 
   return (
     <div className="app">
-      <Header wasmVersion={wasmVersion} />
+      <Header
+        wasmVersion={wasmVersion}
+        onExport={tournaments.length > 0 || handHistories.length > 0 ? handleExport : undefined}
+      />
 
       <FileUploader
         onFilesSelected={parseFiles}
@@ -95,13 +114,14 @@ function App() {
           Tradeoff: higher memory usage from persistent Plotly DOM nodes. */}
       <div style={{ display: activeTab === 'tournament' ? 'block' : 'none' }}>
         <TournamentCharts
+          ref={tournamentChartsRef}
           tournaments={tournaments}
           bankrollResults={bankrollResults}
         />
       </div>
 
       <div style={{ display: activeTab === 'handHistory' ? 'block' : 'none' }}>
-        <HandHistoryCharts handHistories={handHistories} />
+        <HandHistoryCharts ref={handHistoryChartsRef} handHistories={handHistories} />
       </div>
     </div>
   )

@@ -2,11 +2,12 @@
  * Tournament summary charts container with async loading
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import Plot from 'react-plotly.js'
 import type { Data, Layout } from 'plotly.js-dist-min'
 import type { TournamentSummary } from '../types'
 import type { BankrollWorkerResult } from '../workers/analysisWorker'
+import type { ExportChart } from '../export/htmlExport'
 import { yieldToBrowser } from '../utils'
 
 interface ChartData {
@@ -29,7 +30,12 @@ interface ChartsState {
   progress: { message: string; percentage: number }
 }
 
-export function TournamentCharts({ tournaments, bankrollResults }: TournamentChartsProps) {
+export interface TournamentChartsRef {
+  getChartData: () => ExportChart[]
+}
+
+export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentChartsProps>(
+  function TournamentCharts({ tournaments, bankrollResults }, ref) {
   const [state, setState] = useState<ChartsState>({
     historical: null,
     rre: null,
@@ -43,6 +49,18 @@ export function TournamentCharts({ tournaments, bankrollResults }: TournamentCha
   const abortRef = useRef(false)
   const lastTournamentCountRef = useRef(0)
   const lastBankrollCountRef = useRef(0)
+
+  useImperativeHandle(ref, () => ({
+    getChartData() {
+      const charts: ExportChart[] = []
+      if (state.historical) charts.push({ name: 'Historical Performance', ...state.historical })
+      if (state.rre) charts.push({ name: 'RRE Distribution', ...state.rre })
+      if (state.bankroll) charts.push({ name: 'Bankroll Analysis', ...state.bankroll })
+      if (state.prizePies) charts.push({ name: 'Prize Distribution', ...state.prizePies })
+      if (state.rrByRank) charts.push({ name: 'RR by Rank', ...state.rrByRank })
+      return charts
+    },
+  }))
 
   useEffect(() => {
     if (tournaments.length === 0) return
@@ -252,4 +270,4 @@ export function TournamentCharts({ tournaments, bankrollResults }: TournamentCha
       )}
     </div>
   )
-}
+})
