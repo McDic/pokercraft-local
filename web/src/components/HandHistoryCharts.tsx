@@ -39,7 +39,7 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
     progress: { message: '', percentage: 0 },
   })
 
-  const abortRef = useRef(false)
+  const computeIdRef = useRef(0)
   const lastComputedRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -55,7 +55,12 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
       return // No new data, skip recomputation
     }
 
-    abortRef.current = false
+    // Mark current IDs immediately to prevent duplicate computations
+    // from re-renders with the same data
+    lastComputedRef.current = currentIds
+
+    const thisComputeId = ++computeIdRef.current
+    const isStale = () => computeIdRef.current !== thisComputeId
 
     const compute = async () => {
       setState(prev => ({
@@ -75,7 +80,7 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
           import('../visualization/handHistory/allInEquityAsync'),
         ])
 
-        if (abortRef.current) return
+        if (isStale()) return
 
         // Chip histories (always recompute - fast enough)
         setState(prev => ({
@@ -85,7 +90,7 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
         await yieldToBrowser()
 
         const chipHistories = await getChipHistoriesData(handHistories)
-        if (abortRef.current) return
+        if (isStale()) return
 
         setState(prev => ({
           ...prev,
@@ -96,7 +101,7 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
 
         // Hand usage heatmaps (compute before equity)
         const handUsage = await getHandUsageHeatmapsData(handHistories)
-        if (abortRef.current) return
+        if (isStale()) return
 
         setState(prev => ({
           ...prev,
@@ -122,7 +127,7 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
           const { data: newAllInData, luckScore: newLuckScore } = await collectAllInDataAsync(
             uncachedHands,
             (current, total) => {
-              if (!abortRef.current) {
+              if (!isStale()) {
                 const pct = 25 + Math.floor((current / total) * 70)
                 setState(prev => ({
                   ...prev,
@@ -134,7 +139,7 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
               }
             }
           )
-          if (abortRef.current) return
+          if (isStale()) return
 
           // Add new results to cache
           for (const data of newAllInData) {
@@ -159,9 +164,6 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
 
         const allInEquity = createAllInEquityChart(allCachedData, cachedLuckScore)
 
-        // Update computed set
-        lastComputedRef.current = currentIds
-
         setState(prev => ({
           ...prev,
           allInEquity,
@@ -170,6 +172,7 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
         }))
       } catch (error) {
         console.error('Chart generation failed:', error)
+        lastComputedRef.current = new Set() // Allow retry on next render
         setState(prev => ({
           ...prev,
           isComputing: false,
@@ -181,7 +184,7 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
     compute()
 
     return () => {
-      abortRef.current = true
+      computeIdRef.current++ // Invalidate this computation
     }
   }, [handHistories])
 

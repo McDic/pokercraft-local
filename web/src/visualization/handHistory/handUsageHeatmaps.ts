@@ -274,12 +274,14 @@ export async function getHandUsageHeatmapsData(handHistories: HandHistory[]): Pr
         domain: xDomain,
         showticklabels: false,
         showgrid: false,
+        zeroline: false,
         title: { text: axisTitle, font: { size: 11 } },
       }
       ;(layout as Record<string, unknown>)[`yaxis${idx === 1 ? '' : idx}`] = {
         domain: yDomain,
         showticklabels: false,
         showgrid: false,
+        zeroline: false,
         autorange: 'reversed',
       }
     }

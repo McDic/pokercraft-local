@@ -18,7 +18,6 @@ function App() {
   const [activeTab, setActiveTab] = useState<ChartTab>('tournament')
   const [wasmVersion, setWasmVersion] = useState('')
   const prevTournamentCountRef = useRef(0)
-  const prevHandHistoryCountRef = useRef(0)
 
   const {
     isLoading,
@@ -41,17 +40,16 @@ function App() {
     })
   }, [])
 
-  // Auto-run analysis when new unique data is added
+  // Auto-run analysis when new tournament data is added
+  // (Hand history analysis is handled independently by HandHistoryCharts)
   useEffect(() => {
     const hasTournamentChanges = tournaments.length !== prevTournamentCountRef.current
-    const hasHandHistoryChanges = handHistories.length !== prevHandHistoryCountRef.current
 
-    if ((hasTournamentChanges || hasHandHistoryChanges) && !isLoading) {
+    if (hasTournamentChanges && !isLoading && tournaments.length > 0) {
       prevTournamentCountRef.current = tournaments.length
-      prevHandHistoryCountRef.current = handHistories.length
       runAnalysis()
     }
-  }, [tournaments.length, handHistories.length, isLoading, runAnalysis])
+  }, [tournaments.length, isLoading, runAnalysis])
 
   // Auto-switch tab when data changes
   useEffect(() => {
@@ -92,16 +90,19 @@ function App() {
         handHistoryCount={handHistories.length}
       />
 
-      {activeTab === 'tournament' && (
+      {/* Keep both chart trees mounted (display:none) instead of conditional rendering
+          to preserve computation state and progress bars across tab switches.
+          Tradeoff: higher memory usage from persistent Plotly DOM nodes. */}
+      <div style={{ display: activeTab === 'tournament' ? 'block' : 'none' }}>
         <TournamentCharts
           tournaments={tournaments}
           bankrollResults={bankrollResults}
         />
-      )}
+      </div>
 
-      {activeTab === 'handHistory' && (
+      <div style={{ display: activeTab === 'handHistory' ? 'block' : 'none' }}>
         <HandHistoryCharts handHistories={handHistories} />
-      )}
+      </div>
     </div>
   )
 }

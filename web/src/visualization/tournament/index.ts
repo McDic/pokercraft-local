@@ -17,14 +17,10 @@ export type { RREHeatmapData } from './rreHeatmap'
 
 export {
   getBankrollAnalysisData,
-  analyzeBankroll,
-  collectRelativeReturns,
-  runBankrollSimulation,
 } from './bankrollAnalysis'
 export type {
   BankrollAnalysisOptions,
   BankrollAnalysisData,
-  BankrollResult,
 } from './bankrollAnalysis'
 
 export { getPrizePiesData } from './prizePies'

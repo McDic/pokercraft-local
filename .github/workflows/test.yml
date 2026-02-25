@@ -6,9 +6,27 @@ on:
       - "**"
     tags-ignore:
       - "**"
+    paths:
+      - "crates/**"
+      - "pokercraft_local/**"
+      - "python_tests/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "requirements*.txt"
+      - "pyproject.toml"
+      - ".github/workflows/test.yml"
   pull_request:
     branches:
       - "**"
+    paths:
+      - "crates/**"
+      - "pokercraft_local/**"
+      - "python_tests/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "requirements*.txt"
+      - "pyproject.toml"
+      - ".github/workflows/test.yml"
   workflow_dispatch:
 
 jobs:

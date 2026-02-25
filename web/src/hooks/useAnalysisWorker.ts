@@ -185,9 +185,11 @@ export function useAnalysisWorker(): UseAnalysisWorkerReturn {
     } as WorkerMessage)
   }, [])
 
+  // Only run bankroll simulation for tournaments.
+  // Hand history equity is handled independently by HandHistoryCharts.
   const runAnalysis = useCallback(() => {
     if (!workerRef.current) return
-    if (state.tournaments.length === 0 && state.handHistories.length === 0) return
+    if (state.tournaments.length === 0) return
 
     setState(prev => ({
       ...prev,
@@ -204,9 +206,8 @@ export function useAnalysisWorker(): UseAnalysisWorkerReturn {
     workerRef.current.postMessage({
       type: 'analyze',
       tournaments: state.tournaments,
-      handHistories: state.handHistories,
     } as WorkerMessage)
-  }, [state.tournaments, state.handHistories])
+  }, [state.tournaments])
 
   const reset = useCallback(() => {
     setState(initialState)
