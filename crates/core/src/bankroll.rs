@@ -1,9 +1,5 @@
 //! A module for bankroll analysis.
 
-#[cfg(feature = "python")]
-use pyo3::exceptions::PyValueError;
-#[cfg(feature = "python")]
-use pyo3::prelude::*;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 #[cfg(feature = "wasm")]
@@ -15,7 +11,6 @@ use rayon::prelude::*;
 use crate::errors::PokercraftLocalError;
 
 /// Represents a bankruptcy metric.
-#[cfg_attr(feature = "python", pyclass)]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct BankruptcyMetric {
     /// Holds `(relative_return, iteration)` tuples.
@@ -84,30 +79,6 @@ impl BankruptcyMetric {
     }
 }
 
-#[cfg(feature = "python")]
-#[pymethods]
-impl BankruptcyMetric {
-    #[getter]
-    fn len_py(&self) -> usize {
-        self.len()
-    }
-
-    #[getter]
-    fn bankruptcy_rate(&self) -> f64 {
-        self.get_bankruptcy_rate()
-    }
-
-    #[getter]
-    fn survival_rate(&self) -> f64 {
-        self.get_survival_rate()
-    }
-
-    #[getter]
-    fn profitable_rate(&self) -> f64 {
-        self.get_profitable_rate()
-    }
-}
-
 #[cfg(feature = "wasm")]
 #[wasm_bindgen]
 impl BankruptcyMetric {
@@ -170,48 +141,6 @@ pub fn simulate_core(
         return Err(PokercraftLocalError::GeneralError(
             "Simulation count must be positive".to_string(),
         ));
-    }
-
-    let metric = BankruptcyMetric::new(
-        (0..simulation_count)
-            .into_par_iter()
-            .map(|_| {
-                simple_monte_carlo_loop(
-                    initial_capital,
-                    &relative_return_results,
-                    max_iteration,
-                    Some(profit_exit_multiplier),
-                )
-            })
-            .collect::<Vec<_>>(),
-    );
-    Ok(metric)
-}
-
-/// Simulate the bankruptcy metric (Python interface).
-#[cfg(feature = "python")]
-#[pyfunction]
-pub fn simulate(
-    initial_capital: f64,
-    relative_return_results: Vec<f64>,
-    max_iteration: u32,
-    profit_exit_multiplier: f64,
-    simulation_count: u32,
-) -> PyResult<BankruptcyMetric> {
-    if initial_capital <= 0.0 {
-        return Err(PyValueError::new_err("Initial capital must be positive"));
-    } else if relative_return_results.is_empty() {
-        return Err(PyValueError::new_err(
-            "Relative return results must not be empty",
-        ));
-    } else if max_iteration < 1 {
-        return Err(PyValueError::new_err("Max iteration must be positive"));
-    } else if relative_return_results.iter().sum::<f64>() < 0.0 {
-        return Err(PyValueError::new_err(
-            "Total relative returns are negative; Bankruptcy in long run is guaranteed",
-        ));
-    } else if simulation_count < 1 {
-        return Err(PyValueError::new_err("Simulation count must be positive"));
     }
 
     let metric = BankruptcyMetric::new(

@@ -4,8 +4,6 @@ use std::collections::HashMap;
 use std::io::BufRead;
 
 use flate2::read::GzDecoder;
-#[cfg(feature = "python")]
-use pyo3::prelude::*;
 use rayon::prelude::*;
 use rustfft::{num_complex::Complex, FftPlanner};
 use statrs::distribution::{ContinuousCDF, Normal};
@@ -21,7 +19,6 @@ use crate::errors::PokercraftLocalError;
 use crate::utils::{FixedSizedCombinationIterator, IterWrapper};
 
 /// Result of single equity calculation.
-#[cfg_attr(feature = "python", pyclass)]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(Debug, Clone)]
 pub struct EquityResult {
@@ -273,38 +270,6 @@ impl EquityResult {
     }
 }
 
-#[cfg(feature = "python")]
-#[pymethods]
-impl EquityResult {
-    /// Calculate the win/loss count for the given player and community cards.
-    /// `result[i][c]` represents the count of scenarios where
-    /// the `i`-th player wins with `c` other players having the same rank.
-    #[new]
-    pub fn new_py(cards_people: Vec<(Card, Card)>, cards_community: Vec<Card>) -> PyResult<Self> {
-        Self::new(cards_people, cards_community, true).map_err(|e| e.into())
-    }
-
-    /// Python-exported interface of `self.get_equity`.
-    pub fn get_equity_py(&self, player_index: usize) -> PyResult<f64> {
-        self.get_equity(player_index).map_err(|e| e.into())
-    }
-
-    /// Python-exported interface of `self.get_winloses`.
-    pub fn get_winlosses_py(&self, player_index: usize) -> PyResult<(Vec<u64>, u64)> {
-        self.get_winlosses(player_index).map_err(|e| e.into())
-    }
-
-    /// Check if the given player index (0-based) has never lost in all scenarios.
-    pub fn never_lost(&self, player_index: usize) -> PyResult<bool> {
-        if player_index >= self.wins.len() {
-            return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
-                "Player index out of range",
-            ));
-        }
-        Ok(self.loses[player_index] == 0)
-    }
-}
-
 #[cfg(feature = "wasm")]
 #[wasm_bindgen]
 impl EquityResult {
@@ -374,7 +339,6 @@ impl EquityResult {
 }
 
 /// Preflop equity cache for heads-up situations.
-#[cfg_attr(feature = "python", pyclass)]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct HUPreflopEquityCache {
     /// `{(card_a1, card_a2), (card_b1, card_b2)): (P1 win, P2 win, tie)}`
@@ -524,25 +488,6 @@ impl HUPreflopEquityCache {
     }
 }
 
-#[cfg(feature = "python")]
-#[pymethods]
-impl HUPreflopEquityCache {
-    /// Create a `HUPreflopEquityCache` from pre-computed cache file.
-    #[new]
-    pub fn new_py(path: std::path::PathBuf) -> PyResult<Self> {
-        Self::new(&path).map_err(|e| e.into())
-    }
-
-    /// Get the P1 win, P2 win, and tie counts from the cache.
-    pub fn get_winlose_py(
-        &self,
-        hand1: (Card, Card),
-        hand2: (Card, Card),
-    ) -> PyResult<(u64, u64, u64)> {
-        self.get_winlose(hand1, hand2).map_err(|e| e.into())
-    }
-}
-
 #[cfg(feature = "wasm")]
 impl HUPreflopEquityCache {
     /// Create a `HUPreflopEquityCache` from gzip-compressed cache bytes.
@@ -638,7 +583,6 @@ impl HUPreflopEquityCache {
 /// Results have two `f64` values: equity (0.0 ~ 1.0) and win/lose (0.0 ~ 1.0).
 /// Win/lose is represented as `1.0` for win and `0.0` for lose.
 /// If there are ties, use fractional values (e.g., `0.5` for a two-way tie).
-#[cfg_attr(feature = "python", pyclass)]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(Debug, Clone)]
 pub struct LuckCalculator {
@@ -808,44 +752,6 @@ impl LuckCalculator {
         let pmf = Self::poisson_binomial_pmf(&ps);
         let w_obs = self.actual_wincount();
         Some(Self::tails_from_pmf(&pmf, w_obs as usize))
-    }
-}
-
-#[cfg(feature = "python")]
-#[pymethods]
-impl LuckCalculator {
-    /// Python constructor of `LuckCalculator`.
-    #[new]
-    pub fn new_py() -> PyResult<Self> {
-        Ok(Self::new())
-    }
-
-    /// Python interface of `self.add_result`.
-    pub fn add_result_py(&mut self, equity: f64, actual: f64) -> PyResult<()> {
-        match self.add_result(equity, actual) {
-            Ok(()) => Ok(()),
-            Err(e) => Err(e.into()),
-        }
-    }
-
-    /// Python interface of `self.luck_score`.
-    pub fn luck_score_py(&self) -> PyResult<f64> {
-        match self.luck_score() {
-            Some(luck) => Ok(luck),
-            None => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                "Cannot calculate Luck-score",
-            )),
-        }
-    }
-
-    /// Python interface of `self.tails`.
-    pub fn tails_py(&self) -> PyResult<(f64, f64, f64)> {
-        match self.tails() {
-            Some(tails) => Ok(tails),
-            None => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                "No results added; Cannot calculate tail p-values",
-            )),
-        }
     }
 }
 

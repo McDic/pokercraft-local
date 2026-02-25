@@ -1,5 +1,0 @@
-# Development dependencies, but only installed in local.
-black
-flake8
-mypy
-isort
