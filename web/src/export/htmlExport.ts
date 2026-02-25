@@ -101,6 +101,8 @@ export function generateExportHTML(
 ): string {
   const timestamp = new Date().toLocaleString()
   const appVersion = __APP_VERSION__
+  const gitHash = __GIT_HASH__
+  const hashSuffix = gitHash && gitHash !== 'unknown' ? ` (${escapeHtml(gitHash)})` : ''
 
   const hasTournament = tournamentCharts.length > 0
   const hasHandHistory = handHistoryCharts.length > 0
@@ -117,7 +119,7 @@ export function generateExportHTML(
 <body>
   <div class="export-header">
     <h1>Pokercraft Local</h1>
-    <div class="meta">Exported on ${escapeHtml(timestamp)} &middot; v${escapeHtml(appVersion)}</div>
+    <div class="meta">Exported on ${escapeHtml(timestamp)} &middot; v${escapeHtml(appVersion)}${hashSuffix}</div>
   </div>
   ${
     hasTournament
