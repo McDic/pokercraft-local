@@ -2,8 +2,6 @@
 
 use itertools::Itertools;
 
-#[cfg(feature = "python")]
-use pyo3::prelude::*;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 #[cfg(feature = "wasm")]
@@ -15,7 +13,6 @@ pub const NUM_OF_SHAPES: usize = 4;
 pub const NUM_OF_NUMBERS: usize = 13;
 
 /// Card shapes (suits) in a standard deck of playing cards.
-#[cfg_attr(feature = "python", pyclass(eq))]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum CardShape {
@@ -34,14 +31,6 @@ impl CardShape {
             CardShape::Diamond,
             CardShape::Club,
         ]
-    }
-}
-
-#[cfg(feature = "python")]
-#[pymethods]
-impl CardShape {
-    fn __str__(&self) -> PyResult<String> {
-        Ok(format!("{}", self))
     }
 }
 
@@ -91,7 +80,6 @@ impl TryFrom<char> for CardShape {
 }
 
 /// Card numbers (ranks) in a standard deck of playing cards.
-#[cfg_attr(feature = "python", pyclass(eq))]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
 pub enum CardNumber {
@@ -163,19 +151,6 @@ impl CardNumber {
     }
 }
 
-#[cfg(feature = "python")]
-#[pymethods]
-impl CardNumber {
-    fn __str__(&self) -> PyResult<String> {
-        Ok(format!("{}", self))
-    }
-
-    #[staticmethod]
-    fn all_py() -> PyResult<[CardNumber; NUM_OF_NUMBERS]> {
-        Ok(CardNumber::all())
-    }
-}
-
 impl std::fmt::Display for CardNumber {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", Into::<char>::into(*self))
@@ -239,7 +214,6 @@ impl TryFrom<char> for CardNumber {
 }
 
 /// A playing card in a standard deck of 52 cards.
-#[cfg_attr(feature = "python", pyclass(eq))]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(PartialEq, Eq, Copy, Clone, Hash, Debug, Default)]
 pub struct Card {
@@ -268,42 +242,6 @@ impl Card {
 }
 
 pub type Hand = (Card, Card);
-
-#[cfg(feature = "python")]
-#[pymethods]
-impl Card {
-    #[new]
-    fn new_py(value: &str) -> PyResult<Self> {
-        if let Ok(card) = Card::try_from(value) {
-            Ok(card)
-        } else {
-            Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
-                "Invalid card string: \"{}\"",
-                value
-            )))
-        }
-    }
-
-    /// Get the number of this card.
-    #[getter]
-    fn get_number(&self) -> PyResult<CardNumber> {
-        Ok(self.number)
-    }
-
-    /// Get the shape of this card.
-    #[getter]
-    fn get_shape(&self) -> PyResult<CardShape> {
-        Ok(self.shape)
-    }
-
-    fn __str__(&self) -> PyResult<String> {
-        Ok(format!("{}", self))
-    }
-
-    fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("Card(\"{}\")", self))
-    }
-}
 
 #[cfg(feature = "wasm")]
 #[wasm_bindgen]
@@ -359,11 +297,9 @@ impl TryFrom<&str> for Card {
 }
 
 /// Represents the rank of a poker hand.
-/// Due to the complex structure, this enum is not exported to Python.
 /// `Eq` and `Ord` are intentionally not implemented for this enum,
 /// and also `PartialEq` and `PartialOrd` are manually implemented
 /// because we do not differentiate between same rank with different suits.
-#[cfg_attr(feature = "python", pyclass)]
 #[derive(Copy, Clone, Debug)]
 pub enum HandRank {
     HighCard([Card; 5]),
@@ -597,35 +533,6 @@ impl HandRank {
             }
         }
         Ok((best_card5, best_rank))
-    }
-}
-
-#[cfg(feature = "python")]
-#[pymethods]
-impl HandRank {
-    fn __richcmp__(&self, other: &Self, op: pyo3::basic::CompareOp) -> PyResult<bool> {
-        match op {
-            pyo3::basic::CompareOp::Eq => Ok(self == other),
-            pyo3::basic::CompareOp::Ne => Ok(self != other),
-            pyo3::basic::CompareOp::Lt => Ok(self < other),
-            pyo3::basic::CompareOp::Le => Ok(self <= other),
-            pyo3::basic::CompareOp::Gt => Ok(self > other),
-            pyo3::basic::CompareOp::Ge => Ok(self >= other),
-        }
-    }
-
-    /// Python-exported interface of `self.numerize`.
-    fn numerize_py(&self) -> PyResult<(u8, u64)> {
-        Ok(self.numerize())
-    }
-
-    /// Python-exported interface of `Self::find_best5`.
-    #[staticmethod]
-    pub fn find_best5_py(cards: Vec<Card>) -> PyResult<([Card; 5], HandRank)> {
-        match Self::find_best5(&cards) {
-            Ok(result) => Ok(result),
-            Err(e) => Err(e.into()),
-        }
     }
 }
 

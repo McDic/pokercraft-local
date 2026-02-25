@@ -2,31 +2,17 @@
 .direnv/
 .envrc
 
-# Caches
-**/__pycache__/
-.mypy_cache/
-
-# Playground and Data
-playground/
-output/
-data/
-
-# Dist
-dist/
-*.egg-info/
-build/
-run_gui.spec
-wheels/
-exebuild/
-
 # IDE
 .vscode/
 .idea/
 
+# Data and legacy outputs
+data/
+output/
+
 # Rust
 Cargo.lock
 target/
-maturin_sample/
 **/*.so
 
 # Open source tools to analyze

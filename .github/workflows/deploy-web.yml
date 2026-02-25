@@ -11,7 +11,7 @@ on:
       - 'crates/wasm/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
-      - 'pokercraft_local/hu_preflop_cache.txt.gz'
+      - 'web/public/hu_preflop_cache.bin'
       - '.github/workflows/deploy-web.yml'
   # Allow manual trigger
   workflow_dispatch:

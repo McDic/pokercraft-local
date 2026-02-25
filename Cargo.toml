@@ -2,7 +2,6 @@
 resolver = "2"
 members = [
     "crates/core",
-    "crates/python",
     "crates/cli",
     "crates/wasm",
 ]
@@ -26,9 +25,6 @@ thiserror = "2.0"
 
 # CLI dependencies
 clap = { version = "4.5.48", features = ["derive"] }
-
-# Python bindings
-pyo3 = "0.26"
 
 # WASM bindings
 wasm-bindgen = "0.2"

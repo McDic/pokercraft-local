@@ -3,7 +3,6 @@
 //! This crate provides core poker analysis functionality that can be compiled
 //! for multiple targets:
 //! - Native Rust library
-//! - Python extension (via PyO3) with `python` feature
 //! - WebAssembly module (via wasm-bindgen) with `wasm` feature
 
 pub mod bankroll;

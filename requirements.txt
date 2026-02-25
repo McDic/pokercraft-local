@@ -1,8 +1,0 @@
-# Dependencies for running the application.
-pandas == 2.2.*
-plotly == 6.5.*
-statsmodels == 0.14.*
-markdown == 3.7.*
-forex-python == 1.8.*
-requests == 2.32.*
-numpy == 2.3.*
