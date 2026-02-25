@@ -90,6 +90,9 @@ function App() {
         handHistoryCount={handHistories.length}
       />
 
+      {/* Keep both chart trees mounted (display:none) instead of conditional rendering
+          to preserve computation state and progress bars across tab switches.
+          Tradeoff: higher memory usage from persistent Plotly DOM nodes. */}
       <div style={{ display: activeTab === 'tournament' ? 'block' : 'none' }}>
         <TournamentCharts
           tournaments={tournaments}

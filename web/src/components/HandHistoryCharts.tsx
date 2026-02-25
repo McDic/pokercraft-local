@@ -172,6 +172,7 @@ export function HandHistoryCharts({ handHistories }: HandHistoryChartsProps) {
         }))
       } catch (error) {
         console.error('Chart generation failed:', error)
+        lastComputedRef.current = new Set() // Allow retry on next render
         setState(prev => ({
           ...prev,
           isComputing: false,

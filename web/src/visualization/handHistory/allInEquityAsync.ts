@@ -405,6 +405,7 @@ export function createAllInEquityChart(
       domain: [0.58, 1],
       anchor: 'x',
       zeroline: false,
+      showticklabels: false,
     },
     xaxis2: {
       title: { text: 'Hero Equity at All-in' },
