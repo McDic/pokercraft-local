@@ -384,7 +384,7 @@ export function createAllInEquityChart(
   const layout: Partial<Layout> = {
     title: { text: 'All-in Equity Analysis' },
     height: 700,
-    barmode: 'stack',
+    barmode: 'overlay',
     grid: {
       rows: 2,
       columns: 1,

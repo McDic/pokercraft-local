@@ -92,16 +92,16 @@ function App() {
         handHistoryCount={handHistories.length}
       />
 
-      {activeTab === 'tournament' && (
+      <div style={{ display: activeTab === 'tournament' ? 'block' : 'none' }}>
         <TournamentCharts
           tournaments={tournaments}
           bankrollResults={bankrollResults}
         />
-      )}
+      </div>
 
-      {activeTab === 'handHistory' && (
+      <div style={{ display: activeTab === 'handHistory' ? 'block' : 'none' }}>
         <HandHistoryCharts handHistories={handHistories} />
-      )}
+      </div>
     </div>
   )
 }

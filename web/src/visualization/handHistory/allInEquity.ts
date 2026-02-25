@@ -291,7 +291,7 @@ export function getAllInEquityData(handHistories: HandHistory[]): AllInEquityDat
       text: 'All-in Equity Analysis',
     },
     height: 700,
-    barmode: 'stack',
+    barmode: 'overlay',
     grid: {
       rows: 2,
       columns: 1,
