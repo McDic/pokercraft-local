@@ -4,9 +4,10 @@
 
 interface HeaderProps {
   wasmVersion: string
+  onExport?: () => void
 }
 
-export function Header({ wasmVersion }: HeaderProps) {
+export function Header({ wasmVersion, onExport }: HeaderProps) {
   const appVersion = __APP_VERSION__
   const gitHash = __GIT_HASH__
 
@@ -17,6 +18,14 @@ export function Header({ wasmVersion }: HeaderProps) {
         <span className="subtitle">Poker Analytics Dashboard</span>
       </div>
       <div className="header-links">
+        <button
+          className="export-button"
+          onClick={onExport}
+          disabled={!onExport}
+          title={onExport ? 'Export all charts as HTML' : 'Load data to enable export'}
+        >
+          Export HTML
+        </button>
         <a
           href="https://github.com/McDic/pokercraft-local"
           target="_blank"
