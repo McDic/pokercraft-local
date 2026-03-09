@@ -1,12 +1,13 @@
-# Pokercraft Local
+# ggsession
 
-This is a customized visualization tool using downloaded data from Pokercraft in GGNetwork.
+ggsession is a customized visualization tool for reviewing session data from GG Poker and Pokercraft exports.
 
-## Try it Online (Recommended)
+## Web Deployment
 
-**[Launch Pokercraft Local Web App](https://pokercraft.mcdic.net)**
+This app can be deployed to GitHub Pages from your own fork with the included workflow in
+[`/.github/workflows/deploy-web.yml`](./.github/workflows/deploy-web.yml).
 
-No installation required - runs entirely in your browser using WebAssembly. Your data stays on your device and is never uploaded anywhere.
+No installation is required for end users after deployment - it runs entirely in the browser using WebAssembly.
 
 ## Demo
 

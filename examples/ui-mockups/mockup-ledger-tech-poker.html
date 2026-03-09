@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mockup - Tech Table Ops</title>
+    <link rel="stylesheet" href="./mockups.css" />
+    <style>
+      html {
+        background: #141417;
+      }
+
+      body.tech-table {
+        color: #e9e4da;
+        background: linear-gradient(180deg, #1f1f22 0%, #19191c 38%, #141417 100%);
+      }
+
+      body.tech-table.page-shell::before {
+        background:
+          linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        background-size: 100% 100%, 100% 100%;
+      }
+
+      .tech-table .back-link,
+      .tech-table .muted,
+      .tech-table .label,
+      .tech-table th {
+        color: #9e978e;
+      }
+
+      .tech-table .eyebrow,
+      .tech-table .pill {
+        background: rgba(38, 39, 45, 0.92);
+        color: #d8d0c5;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+      }
+
+      .tech-table .summary-band,
+      .tech-table .stat-card,
+      .tech-table .table-panel,
+      .tech-table details.day-group,
+      .tech-table .note-card {
+        background: rgba(22, 22, 27, 0.88);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow:
+          0 24px 60px rgba(0, 0, 0, 0.36),
+          inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        backdrop-filter: blur(18px);
+      }
+
+      .tech-table .value,
+      .tech-table h2,
+      .tech-table h3,
+      .tech-table strong {
+        color: #f5f1e8;
+      }
+
+      .tech-table .positive {
+        color: #72ef9c;
+      }
+
+      .tech-table .negative {
+        color: #ff9b88;
+      }
+
+      .tech-table .hero p,
+      .tech-table .supporting-copy,
+      .tech-table .note-card ul {
+        color: #b1aba2;
+      }
+
+      .tech-table .value {
+        font-family: var(--font-mono);
+        letter-spacing: -0.03em;
+      }
+
+      .tech-table .table-panel table td,
+      .tech-table .table-panel table th,
+      .tech-table .day-body td,
+      .tech-table .day-body th {
+        border-bottom-color: rgba(255, 255, 255, 0.06);
+      }
+
+      .tech-table .sticky-band {
+        top: 12px;
+      }
+
+      .hud {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 18px;
+      }
+
+      .hero-ribbon {
+        display: grid;
+        gap: 10px;
+        padding: 20px 24px;
+        border-radius: 26px;
+        background:
+          linear-gradient(135deg, rgba(33, 34, 39, 0.98), rgba(18, 18, 22, 0.92)),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.04), transparent 34%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 24px 55px rgba(0, 0, 0, 0.34);
+      }
+
+      .deck-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .deck-cell {
+        padding: 14px;
+        border-radius: 18px;
+        background: rgba(28, 29, 35, 0.96);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .ops-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .ops-strip span {
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(46, 47, 54, 0.82);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        color: #c7c0b4;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body class="page-shell tech-table">
+    <main class="page">
+      <a class="back-link" href="./index.html">Zurueck zur Mockup-Uebersicht</a>
+
+      <section class="hero">
+        <div class="hero-main">
+          <span class="eyebrow">Konzept 4</span>
+          <h2>Tech Table Ops</h2>
+          <p class="lede">
+            Hier bleibt die Ledger-Logik erhalten, aber die Oberflaeche fuehlt
+            sich mehr nach Poker-Desk, HUD und Night Session an als nach einem
+            neutralen Report.
+          </p>
+        </div>
+      </section>
+
+      <section class="hud">
+        <article class="hero-ribbon">
+          <span class="label">Night Shift Console</span>
+          <h3>Sunday stack in control, one sharp deep run, clean close.</h3>
+          <div class="ops-strip">
+            <span>Table State: Stable</span>
+            <span>Volume: 14 MTTs</span>
+            <span>Heat Level: Medium</span>
+            <span>Field Edge: Positive</span>
+          </div>
+        </article>
+
+        <article class="note-card">
+          <span class="label">Table Signal</span>
+          <h3>Best read</h3>
+          <p class="supporting-copy">
+            Bounty Hunters Main plus one strong heater kept the session green
+            despite several small misses around the edges.
+          </p>
+        </article>
+      </section>
+
+      <section class="summary-band sticky-band" style="margin-top: 22px;">
+        <div class="mock-topnav">
+          <div>
+            <span class="label">Main Bus</span>
+            <h3>Week 10 / tournament operations</h3>
+          </div>
+          <div class="pill-row">
+            <span class="pill">55 tournaments indexed</span>
+            <span class="pill">7 session days</span>
+            <span class="pill">ABI $8.53</span>
+          </div>
+        </div>
+
+        <div class="deck-grid">
+          <div class="deck-cell"><div class="label">Buy-ins</div><div class="value">$469.00</div></div>
+          <div class="deck-cell"><div class="label">Rake</div><div class="value">$39.30</div></div>
+          <div class="deck-cell"><div class="label">Prize</div><div class="value">$557.60</div></div>
+          <div class="deck-cell"><div class="label">Net</div><div class="value positive">+$88.60</div></div>
+          <div class="deck-cell"><div class="label">ROI</div><div class="value positive">18.9%</div></div>
+          <div class="deck-cell"><div class="label">ITM</div><div class="value">12 / 55</div></div>
+          <div class="deck-cell"><div class="label">Best score</div><div class="value positive">2 / 412</div></div>
+          <div class="deck-cell"><div class="label">Longest grind</div><div class="value">6h 42m</div></div>
+        </div>
+      </section>
+
+      <section class="ledger-layout" style="margin-top: 22px;">
+        <details class="day-group" open>
+          <summary>
+            <div class="day-head">
+              <div class="day-title"><strong>Node 09 Mar</strong><span class="muted">14 tournaments / 4 cashes / 1 final table</span></div>
+              <div><div class="label">Buy-ins</div><div class="metric">$86.50</div></div>
+              <div><div class="label">Rake</div><div class="metric">$7.20</div></div>
+              <div class="hide-medium"><div class="label">Prize</div><div class="metric">$124.70</div></div>
+              <div class="hide-mobile"><div class="label">Net</div><div class="metric positive">+$31.00</div></div>
+              <div class="hide-mobile"><div class="label">ROI</div><div class="metric positive">35.8%</div></div>
+            </div>
+          </summary>
+          <div class="day-body">
+            <table>
+              <thead>
+                <tr><th>Slot</th><th>Event</th><th>Entry</th><th>Buy-in</th><th>Prize</th><th>Net</th><th>Rank</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>20:45</td><td>Bounty Hunters Daily Main $10.80</td><td>2 bullets</td><td>$21.60</td><td>$48.90</td><td class="positive">+$27.30</td><td>2 / 412</td></tr>
+                <tr><td>19:30</td><td>Daily Heater $25</td><td>1 bullet</td><td>$25.00</td><td>$54.70</td><td class="positive">+$29.70</td><td>11 / 289</td></tr>
+                <tr><td>20:12</td><td>Speed Racer $3.20</td><td>1 bullet</td><td>$3.20</td><td>$9.10</td><td class="positive">+$5.90</td><td>7 / 196</td></tr>
+                <tr><td>21:10</td><td>Daily Hyper Special $5.25</td><td>1 bullet</td><td>$5.25</td><td>$0.00</td><td class="negative">-$5.25</td><td>112 / 148</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details class="day-group" open>
+          <summary>
+            <div class="day-head">
+              <div class="day-title"><strong>Node 08 Mar</strong><span class="muted">9 tournaments / 1 cash / low conversion</span></div>
+              <div><div class="label">Buy-ins</div><div class="metric">$54.00</div></div>
+              <div><div class="label">Rake</div><div class="metric">$4.60</div></div>
+              <div class="hide-medium"><div class="label">Prize</div><div class="metric">$35.90</div></div>
+              <div class="hide-mobile"><div class="label">Net</div><div class="metric negative">-$18.10</div></div>
+              <div class="hide-mobile"><div class="label">ROI</div><div class="metric negative">-33.5%</div></div>
+            </div>
+          </summary>
+          <div class="day-body">
+            <table>
+              <thead>
+                <tr><th>Slot</th><th>Event</th><th>Entry</th><th>Buy-in</th><th>Prize</th><th>Net</th><th>Rank</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>20:50</td><td>Mini Main $15</td><td>1 bullet</td><td>$15.00</td><td>$35.90</td><td class="positive">+$20.90</td><td>18 / 356</td></tr>
+                <tr><td>19:10</td><td>Daily Kickoff $5.40</td><td>2 bullets</td><td>$10.80</td><td>$0.00</td><td class="negative">-$10.80</td><td>156 / 201</td></tr>
+                <tr><td>22:05</td><td>Saturday Sprint $3.20</td><td>1 bullet</td><td>$3.20</td><td>$0.00</td><td class="negative">-$3.20</td><td>91 / 133</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+    </main>
+  </body>
+</html>

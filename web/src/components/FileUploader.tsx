@@ -9,7 +9,6 @@ interface FileUploaderProps {
   onFilesSelected: (files: FileList | File[]) => void
   isLoading: boolean
   progress: AnalysisProgress | null
-  tournamentCount: number
   handHistoryCount: number
 }
 
@@ -17,7 +16,6 @@ export function FileUploader({
   onFilesSelected,
   isLoading,
   progress,
-  tournamentCount,
   handHistoryCount,
 }: FileUploaderProps) {
   const [dragOver, setDragOver] = useState(false)
@@ -46,12 +44,13 @@ export function FileUploader({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files.length > 0 && !isLoading) {
         onFilesSelected(e.target.files)
+        e.target.value = ''
       }
     },
     [onFilesSelected, isLoading]
   )
 
-  const hasData = tournamentCount > 0 || handHistoryCount > 0
+  const showStatsBar = handHistoryCount > 0
 
   return (
     <section className="file-uploader">
@@ -75,36 +74,31 @@ export function FileUploader({
           <>
             <div className="upload-icon">📁</div>
             <p className="upload-primary">
-              Drag & drop tournament files here
+              Drop Pokercraft exports here
             </p>
             <p className="upload-secondary">
-              Supports .txt and .zip files from GG Poker
+              Supports .txt and .zip files from GG Poker and Pokercraft
             </p>
-            <input
-              type="file"
-              multiple
-              accept=".txt,.zip"
-              onChange={handleFileInput}
-              id="file-input"
-              disabled={isLoading}
-            />
-            <label htmlFor="file-input" className="file-button">
-              Choose Files
+            <label className={`file-button ${isLoading ? 'is-disabled' : ''}`}>
+              <span>Import Files</span>
+              <input
+                className="file-input-overlay"
+                type="file"
+                multiple
+                accept=".txt,.zip"
+                onChange={handleFileInput}
+                disabled={isLoading}
+              />
             </label>
           </>
         )}
       </div>
 
-      {hasData && !isLoading && (
+      {showStatsBar && !isLoading && (
         <div className="stats-bar">
           <span className="stat">
-            <strong>{tournamentCount}</strong> tournaments
+            <strong>{handHistoryCount}</strong> hand histories
           </span>
-          {handHistoryCount > 0 && (
-            <span className="stat">
-              <strong>{handHistoryCount}</strong> hand histories
-            </span>
-          )}
         </div>
       )}
     </section>

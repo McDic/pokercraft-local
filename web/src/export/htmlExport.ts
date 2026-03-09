@@ -112,13 +112,13 @@ export function generateExportHTML(
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pokercraft Local - Exported Charts</title>
+  <title>ggsession - Exported Charts</title>
   <script src="${escapeHtml(PLOTLY_CDN)}"><\/script>
   <style>${THEME_CSS}</style>
 </head>
 <body>
   <div class="export-header">
-    <h1>Pokercraft Local</h1>
+    <h1>ggsession</h1>
     <div class="meta">Exported on ${escapeHtml(timestamp)} &middot; v${escapeHtml(appVersion)}${hashSuffix}</div>
   </div>
   ${
