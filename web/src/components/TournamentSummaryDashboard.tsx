@@ -250,7 +250,7 @@ export function TournamentSummaryDashboard({
   return (
     <div className="summary-dashboard">
       <section className="ledger-strip">
-        <span className="ledger-strip-label">Tournament Ledger</span>
+        <span className="ledger-strip-label">Daily Sessions</span>
         <div className="ledger-strip-stats">
           <span className="ledger-strip-stat">{overallSummary.tournamentCount} tournaments indexed</span>
           <span className="ledger-strip-stat">{sessions.length} session days</span>
@@ -261,8 +261,8 @@ export function TournamentSummaryDashboard({
       <section className="summary-band sticky-band">
         <div className="band-header">
           <div>
-            <p className="section-eyebrow">Session Rollup</p>
-            <h3>Overall totals across all loaded summaries</h3>
+            <p className="section-eyebrow">Overall Results</p>
+            <h3>Overall totals across all loaded sessions</h3>
           </div>
         </div>
 
@@ -308,8 +308,8 @@ export function TournamentSummaryDashboard({
 
       <section className="summary-panel controls-panel">
         <div>
-          <p className="section-eyebrow">Ledger Controls</p>
-          <h3>Search and session visibility</h3>
+          <p className="section-eyebrow">Search &amp; Filters</p>
+          <h3>Find sessions and tournaments</h3>
           <p className="panel-copy">
             Showing {sessionViews.reduce((count, session) => count + session.visibleTournaments.length, 0)} tournaments
             across {sessionViews.length} session days.

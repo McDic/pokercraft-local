@@ -11,7 +11,7 @@ export function Header({ onExport }: HeaderProps) {
     <header className="header">
       <div className="header-content">
         <h1>ggsession</h1>
-        <span className="subtitle">Daily sessions, session totals, and one clean tournament ledger</span>
+        <span className="subtitle">Daily sessions, session totals, and one clean tournament view</span>
       </div>
       <div className="header-links">
         {onExport && (
