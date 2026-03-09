@@ -249,24 +249,12 @@ export function TournamentSummaryDashboard({
 
   return (
     <div className="summary-dashboard">
-      <section className="ledger-hero">
-        <div className="hero-copy-block compact-hero-copy">
-          <div className="hero-copy-top">
-            <p className="section-eyebrow">Tournament Ledger</p>
-            <h2>Daily session ledger</h2>
-            <p className="summary-copy">
-              Every day grouped into one compact session view with spend, prize, rake,
-              ROI, and the tournament list below.
-            </p>
-          </div>
-          <div className="hero-ops">
-            <span className="ops-pill">{overallSummary.tournamentCount} tournaments indexed</span>
-            <span className="ops-pill">{sessions.length} session days</span>
-            <span className="ops-pill">{overallSummary.entryCount} total entries</span>
-            {handHistoryCount > 0 && (
-              <span className="ops-pill">{handHistoryCount} hand histories loaded</span>
-            )}
-          </div>
+      <section className="ledger-strip">
+        <span className="ledger-strip-label">Tournament Ledger</span>
+        <div className="ledger-strip-stats">
+          <span className="ledger-strip-stat">{overallSummary.tournamentCount} tournaments indexed</span>
+          <span className="ledger-strip-stat">{sessions.length} session days</span>
+          <span className="ledger-strip-stat">{overallSummary.entryCount} total entries</span>
         </div>
       </section>
 
