@@ -20,16 +20,20 @@ function App() {
     parseFiles,
   } = useAnalysisWorker()
 
+  const showFileUploader = isLoading || tournaments.length === 0
+
   return (
     <div className="app">
       <Header />
 
-      <FileUploader
-        onFilesSelected={parseFiles}
-        isLoading={isLoading}
-        progress={progress}
-        handHistoryCount={handHistories.length}
-      />
+      {showFileUploader && (
+        <FileUploader
+          onFilesSelected={parseFiles}
+          isLoading={isLoading}
+          progress={progress}
+          handHistoryCount={handHistories.length}
+        />
+      )}
 
       {errors.length > 0 && (
         <div className="errors">
