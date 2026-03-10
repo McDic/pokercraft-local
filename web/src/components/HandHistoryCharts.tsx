@@ -199,8 +199,11 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
 
     compute()
 
+    const cleanupComputeId = thisComputeId
     return () => {
-      computeIdRef.current++ // Invalidate this computation
+      if (computeIdRef.current === cleanupComputeId) {
+        computeIdRef.current += 1 // Invalidate this computation
+      }
     }
   }, [handHistories])
 

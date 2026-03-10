@@ -181,6 +181,11 @@
   cursor: not-allowed;
 }
 
+.ghost-button.is-disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
 .file-input-overlay {
   position: absolute;
   inset: 0;
@@ -191,6 +196,10 @@
 }
 
 .file-button.is-disabled .file-input-overlay {
+  pointer-events: none;
+}
+
+.ghost-button.is-disabled .file-input-overlay {
   pointer-events: none;
 }
 
@@ -328,6 +337,28 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.control-actions {
+  align-items: center;
+}
+
+.file-import-ghost {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.file-import-ghost span {
+  pointer-events: none;
+}
+
+.file-import-ghost .file-input-overlay {
+  cursor: pointer;
+}
+
+.file-import-ghost.is-disabled .file-input-overlay {
+  cursor: not-allowed;
 }
 
 .ops-pill,

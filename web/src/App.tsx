@@ -49,6 +49,8 @@ function App() {
       <TournamentSummaryDashboard
         tournaments={tournaments}
         handHistoryCount={handHistories.length}
+        onFilesSelected={parseFiles}
+        isLoading={isLoading}
       />
     </div>
   )

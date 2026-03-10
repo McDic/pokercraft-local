@@ -113,7 +113,7 @@ export function generateExportHTML(
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ggsession - Exported Charts</title>
-  <script src="${escapeHtml(PLOTLY_CDN)}"><\/script>
+  <script src="${escapeHtml(PLOTLY_CDN)}"></script>
   <style>${THEME_CSS}</style>
 </head>
 <body>
@@ -138,7 +138,7 @@ export function generateExportHTML(
       ${hasTournament ? buildPlotCalls(tournamentCharts, 'tournament') : ''}
       ${hasHandHistory ? buildPlotCalls(handHistoryCharts, 'hand') : ''}
     });
-  <\/script>
+  </script>
 </body>
 </html>`
 }

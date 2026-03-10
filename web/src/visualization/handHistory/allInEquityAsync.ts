@@ -161,11 +161,6 @@ export async function collectAllInDataAsync(
     onProgress?.(total, eligible.length)
   }
 
-  // Track stats across all workers
-  let totalCacheHits = 0
-  let totalCacheMisses = 0
-  let totalFullCalcs = 0
-
   // Spawn workers and collect results
   const workerPromises = chunks.map((chunk, workerIndex) => {
     return new Promise<AllInHandData[]>((resolve, reject) => {
@@ -182,12 +177,6 @@ export async function collectAllInDataAsync(
           updateProgress()
         } else if (msg.type === 'result') {
           worker.terminate()
-          // Aggregate stats
-          if (msg.stats) {
-            totalCacheHits += msg.stats.cacheHits
-            totalCacheMisses += msg.stats.cacheMisses
-            totalFullCalcs += msg.stats.fullCalcs
-          }
           resolve(msg.data.map(d => ({
             ...d,
             allInStreet: d.allInStreet as HandStage,

@@ -81,7 +81,7 @@ export function parseTournamentSummary(
         id = parseInt(idMatch[0], 10)
       }
       // Name is everything between first and last comma
-      name = parts.slice(1, -1).join(',')
+      name = parts.slice(1, -1).join(', ')
     }
 
     // Line 2: Buy-in

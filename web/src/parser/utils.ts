@@ -6,7 +6,7 @@ import { Currency, DEFAULT_USD_RATES } from '../types'
 
 // Regex patterns (ported from Python constants.py)
 export const ANY_INT = /\d+/
-export const ANY_MONEY = /[\$¥฿₫₱₩]\d(\d|(,\d))*(\.\d+)?/g
+export const ANY_MONEY = /[$¥฿₫₱₩]\d(\d|(,\d))*(\.\d+)?/g
 
 /**
  * Currency rate converter

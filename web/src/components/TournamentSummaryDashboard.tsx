@@ -1,34 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
+import type { ChangeEvent } from 'react'
 import type { TournamentSummary } from '../types'
 import { getTournamentBuyIn, getTournamentProfit } from '../types'
+import {
+  asDate,
+  getSessionKey,
+  getSessionSummaries,
+  getSessionViews,
+  summarizeTournaments,
+} from './tournamentSummaryDashboardUtils'
 
 interface TournamentSummaryDashboardProps {
   tournaments: TournamentSummary[]
   handHistoryCount: number
-}
-
-interface AggregateStats {
-  tournamentCount: number
-  entryCount: number
-  totalBuyIn: number
-  totalPrize: number
-  totalRake: number
-  netProfit: number
-  roi: number | null
-  itmCount: number
-  itmRatio: number | null
-  avgBuyIn: number | null
-  bestCash: number
-}
-
-interface SessionSummary extends AggregateStats {
-  key: string
-  label: string
-  tournaments: TournamentSummary[]
-}
-
-interface SessionView extends SessionSummary {
-  visibleTournaments: TournamentSummary[]
+  onFilesSelected?: (files: FileList | File[]) => void
+  isLoading?: boolean
 }
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
@@ -56,18 +42,6 @@ const timeFormatter = new Intl.DateTimeFormat('de-DE', {
   minute: '2-digit',
 })
 
-function asDate(value: Date | string): Date {
-  return value instanceof Date ? value : new Date(value)
-}
-
-function getSessionKey(value: Date | string): string {
-  const date = asDate(value)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
 function getSessionLabel(sessionKey: string): string {
   const [year, month, day] = sessionKey.split('-').map(Number)
   return sessionDateFormatter.format(new Date(year, month - 1, day))
@@ -91,99 +65,6 @@ function formatProfitClass(value: number): string {
   return 'neutral'
 }
 
-function summarizeTournaments(tournaments: TournamentSummary[]): AggregateStats {
-  let entryCount = 0
-  let totalBuyIn = 0
-  let totalPrize = 0
-  let totalRake = 0
-  let itmCount = 0
-  let bestCash = 0
-
-  for (const tournament of tournaments) {
-    const buyIn = getTournamentBuyIn(tournament)
-    const spent = buyIn * tournament.myEntries
-    const rakePaid = tournament.rake * tournament.myEntries
-
-    entryCount += tournament.myEntries
-    totalBuyIn += spent
-    totalPrize += tournament.myPrize
-    totalRake += rakePaid
-
-    if (tournament.myPrize > 0) {
-      itmCount += 1
-      bestCash = Math.max(bestCash, tournament.myPrize)
-    }
-  }
-
-  const tournamentCount = tournaments.length
-  const netProfit = totalPrize - totalBuyIn
-
-  return {
-    tournamentCount,
-    entryCount,
-    totalBuyIn,
-    totalPrize,
-    totalRake,
-    netProfit,
-    roi: totalBuyIn > 0 ? netProfit / totalBuyIn : null,
-    itmCount,
-    itmRatio: tournamentCount > 0 ? itmCount / tournamentCount : null,
-    avgBuyIn: entryCount > 0 ? totalBuyIn / entryCount : null,
-    bestCash,
-  }
-}
-
-function getSessionSummaries(tournaments: TournamentSummary[]): SessionSummary[] {
-  const grouped = new Map<string, TournamentSummary[]>()
-
-  for (const tournament of tournaments) {
-    const key = getSessionKey(tournament.startTime)
-    const sessionTournaments = grouped.get(key) ?? []
-    sessionTournaments.push(tournament)
-    grouped.set(key, sessionTournaments)
-  }
-
-  return Array.from(grouped.entries())
-    .sort(([left], [right]) => right.localeCompare(left))
-    .map(([key, sessionTournaments]) => ({
-      key,
-      label: getSessionLabel(key),
-      tournaments: [...sessionTournaments].sort(
-        (a, b) => asDate(b.startTime).getTime() - asDate(a.startTime).getTime()
-      ),
-      ...summarizeTournaments(sessionTournaments),
-    }))
-}
-
-function getVisibleTournaments(
-  tournaments: TournamentSummary[],
-  searchQuery: string
-): TournamentSummary[] {
-  const normalizedQuery = searchQuery.trim().toLowerCase()
-
-  return [...tournaments]
-    .sort((a, b) => asDate(b.startTime).getTime() - asDate(a.startTime).getTime())
-    .filter(tournament => {
-      if (!normalizedQuery) {
-        return true
-      }
-
-      return (
-        tournament.name.toLowerCase().includes(normalizedQuery) ||
-        String(tournament.id).includes(normalizedQuery)
-      )
-    })
-}
-
-function getSessionViews(sessions: SessionSummary[], searchQuery: string): SessionView[] {
-  return sessions
-    .map(session => ({
-      ...session,
-      visibleTournaments: getVisibleTournaments(session.tournaments, searchQuery),
-    }))
-    .filter(session => session.visibleTournaments.length > 0)
-}
-
 function areSameKeys(left: string[], right: string[]): boolean {
   return (
     left.length === right.length &&
@@ -191,12 +72,23 @@ function areSameKeys(left: string[], right: string[]): boolean {
   )
 }
 
+function getExpandedSessionKeys(selectedKeys: string[], visibleKeys: string[]): string[] {
+  const keptKeys = selectedKeys.filter(key => visibleKeys.includes(key))
+  if (keptKeys.length > 0) {
+    return keptKeys
+  }
+
+  return visibleKeys.slice(0, Math.min(2, visibleKeys.length))
+}
+
 export function TournamentSummaryDashboard({
   tournaments,
   handHistoryCount,
+  onFilesSelected,
+  isLoading = false,
 }: TournamentSummaryDashboardProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [expandedSessionKeys, setExpandedSessionKeys] = useState<string[]>([])
+  const [selectedExpandedSessionKeys, setSelectedExpandedSessionKeys] = useState<string[]>([])
   const hasTournaments = tournaments.length > 0
   const overallSummary = hasTournaments
     ? summarizeTournaments(tournaments)
@@ -204,35 +96,40 @@ export function TournamentSummaryDashboard({
   const sessions = hasTournaments ? getSessionSummaries(tournaments) : []
   const sessionViews = hasTournaments ? getSessionViews(sessions, searchQuery) : []
   const visibleSessionKeys = sessionViews.map(session => session.key)
-  const visibleSessionSignature = visibleSessionKeys.join('|')
-
-  useEffect(() => {
-    setExpandedSessionKeys(previous => {
-      const keptKeys = previous.filter(key => visibleSessionKeys.includes(key))
-      if (keptKeys.length > 0) {
-        return areSameKeys(previous, keptKeys) ? previous : keptKeys
-      }
-
-      const fallbackKeys = visibleSessionKeys.slice(0, Math.min(2, visibleSessionKeys.length))
-      return areSameKeys(previous, fallbackKeys) ? previous : fallbackKeys
-    })
-  }, [searchQuery, tournaments, visibleSessionSignature])
+  const expandedSessionKeys = getExpandedSessionKeys(selectedExpandedSessionKeys, visibleSessionKeys)
 
   const toggleSession = (sessionKey: string) => {
-    setExpandedSessionKeys(previous => (
-      previous.includes(sessionKey)
-        ? previous.filter(key => key !== sessionKey)
-        : [...previous, sessionKey]
-    ))
+    setSelectedExpandedSessionKeys(previous => {
+      const currentKeys = getExpandedSessionKeys(previous, visibleSessionKeys)
+      const nextKeys = currentKeys.includes(sessionKey)
+        ? currentKeys.filter(key => key !== sessionKey)
+        : [...currentKeys, sessionKey]
+
+      return areSameKeys(previous, nextKeys) ? previous : nextKeys
+    })
   }
 
   const expandAllSessions = () => {
-    setExpandedSessionKeys(sessionViews.map(session => session.key))
+    setSelectedExpandedSessionKeys(sessionViews.map(session => session.key))
   }
 
   const collapseAllSessions = () => {
-    setExpandedSessionKeys([])
+    setSelectedExpandedSessionKeys([])
   }
+
+  const handleAdditionalFileInput = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      if (!onFilesSelected || isLoading) {
+        return
+      }
+
+      if (event.target.files && event.target.files.length > 0) {
+        onFilesSelected(event.target.files)
+        event.target.value = ''
+      }
+    },
+    [isLoading, onFilesSelected]
+  )
 
   if (!hasTournaments) {
     return (
@@ -327,6 +224,19 @@ export function TournamentSummaryDashboard({
         </label>
 
         <div className="control-actions">
+          {onFilesSelected && (
+            <label className={`ghost-button file-import-ghost ${isLoading ? 'is-disabled' : ''}`}>
+              <span>Add files</span>
+              <input
+                className="file-input-overlay"
+                type="file"
+                multiple
+                accept=".txt,.zip"
+                onChange={handleAdditionalFileInput}
+                disabled={isLoading}
+              />
+            </label>
+          )}
           <button type="button" className="ghost-button" onClick={expandAllSessions}>
             Expand all
           </button>
@@ -339,6 +249,7 @@ export function TournamentSummaryDashboard({
       <section className="session-groups">
         {sessionViews.map(session => {
           const isExpanded = expandedSessionKeys.includes(session.key)
+          const sessionSummary = session.isFiltered ? session.visibleSummary : session
 
           return (
             <article
@@ -352,11 +263,11 @@ export function TournamentSummaryDashboard({
               >
                 <div className="session-head">
                   <div className="session-title">
-                    <strong>{session.label}</strong>
+                    <strong>{getSessionLabel(session.key)}</strong>
                     <span>
-                      {session.tournamentCount} tournaments, {session.entryCount} entries, {session.itmCount} cashes
+                      {sessionSummary.tournamentCount} tournaments, {sessionSummary.entryCount} entries, {sessionSummary.itmCount} cashes
                     </span>
-                    {session.visibleTournaments.length !== session.tournamentCount && (
+                    {session.isFiltered && (
                       <span className="session-filter-note">
                         {session.visibleTournaments.length} matching current search
                       </span>
@@ -365,26 +276,26 @@ export function TournamentSummaryDashboard({
 
                   <div className="session-metric-block">
                     <span className="label">Buy-ins</span>
-                    <strong>{formatCurrency(session.totalBuyIn)}</strong>
+                    <strong>{formatCurrency(sessionSummary.totalBuyIn)}</strong>
                   </div>
                   <div className="session-metric-block">
                     <span className="label">Rake</span>
-                    <strong>{formatCurrency(session.totalRake)}</strong>
+                    <strong>{formatCurrency(sessionSummary.totalRake)}</strong>
                   </div>
                   <div className="session-metric-block hide-medium">
                     <span className="label">Prize</span>
-                    <strong>{formatCurrency(session.totalPrize)}</strong>
+                    <strong>{formatCurrency(sessionSummary.totalPrize)}</strong>
                   </div>
                   <div className="session-metric-block">
                     <span className="label">Net</span>
-                    <strong className={formatProfitClass(session.netProfit)}>
-                      {formatCurrency(session.netProfit)}
+                    <strong className={formatProfitClass(sessionSummary.netProfit)}>
+                      {formatCurrency(sessionSummary.netProfit)}
                     </strong>
                   </div>
                   <div className="session-metric-block hide-mobile">
                     <span className="label">ROI</span>
-                    <strong className={formatProfitClass(session.roi ?? 0)}>
-                      {formatPercent(session.roi)}
+                    <strong className={formatProfitClass(sessionSummary.roi ?? 0)}>
+                      {formatPercent(sessionSummary.roi)}
                     </strong>
                   </div>
                 </div>
@@ -393,9 +304,9 @@ export function TournamentSummaryDashboard({
               {isExpanded && (
                 <div className="session-body">
                   <div className="session-note-bar">
-                    <span className="pill">Entries {session.entryCount}</span>
-                    <span className="pill">Cashes {session.itmCount}</span>
-                    <span className="pill">Best cash {formatCurrency(session.bestCash)}</span>
+                    <span className="pill">Entries {sessionSummary.entryCount}</span>
+                    <span className="pill">Cashes {sessionSummary.itmCount}</span>
+                    <span className="pill">Best cash {formatCurrency(sessionSummary.bestCash)}</span>
                   </div>
 
                   <div className="table-wrapper ledger-table-wrapper">

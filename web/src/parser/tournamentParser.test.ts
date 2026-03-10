@@ -154,4 +154,24 @@ You received a total of ¥3,000
     expect(result.totalPrizePool).toBeCloseTo(10000 / 7.25, 2)
     expect(result.myPrize).toBeCloseTo(3000 / 7.25, 2)
   })
+
+  it('preserves readable spaces for tournament names with internal commas', () => {
+    const commaNameSummary = `
+Tournament #123456789, GGMasters Bounty Warm-Up 25, $100K GTD, Hold'em No Limit
+Buy-in: $21.60
+100 Players
+Total Prize Pool: $2,000
+Tournament started 2025/08/01 12:00:00
+10th : Hero, $43.20
+
+You received a total of $43.20
+`.trim()
+
+    const result = parseTournamentSummary(commaNameSummary, rateConverter)
+
+    expect(result).not.toBeNull()
+    if (!result) return
+
+    expect(result.name).toBe('GGMasters Bounty Warm-Up 25, $100K GTD')
+  })
 })
