@@ -31,28 +31,44 @@ export interface AnalysisState {
   wasmVersion: string
 }
 
+type MergeableItem = {
+  id: string | number
+}
+
+function dedupeById<T extends MergeableItem>(items: T[]): T[] {
+  const seenIds = new Set<string | number>()
+  const uniqueItems: T[] = []
+
+  for (const item of items) {
+    if (seenIds.has(item.id)) {
+      continue
+    }
+
+    seenIds.add(item.id)
+    uniqueItems.push(item)
+  }
+
+  return uniqueItems
+}
+
 /**
  * Merge tournaments, deduplicating by tournament ID
  */
-function mergeTournaments(
+export function mergeTournaments(
   existing: TournamentSummary[],
   newItems: TournamentSummary[]
 ): TournamentSummary[] {
-  const existingIds = new Set(existing.map(t => t.id))
-  const uniqueNew = newItems.filter(t => !existingIds.has(t.id))
-  return [...existing, ...uniqueNew]
+  return dedupeById([...existing, ...newItems])
 }
 
 /**
  * Merge hand histories, deduplicating by hand ID
  */
-function mergeHandHistories(
+export function mergeHandHistories(
   existing: HandHistory[],
   newItems: HandHistory[]
 ): HandHistory[] {
-  const existingIds = new Set(existing.map(h => h.id))
-  const uniqueNew = newItems.filter(h => !existingIds.has(h.id))
-  return [...existing, ...uniqueNew]
+  return dedupeById([...existing, ...newItems])
 }
 
 export interface UseAnalysisWorkerReturn extends AnalysisState {

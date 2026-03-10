@@ -296,7 +296,7 @@ export function TournamentSummaryDashboard({
             <strong className="deck-value">{formatCurrency(overallSummary.avgBuyIn ?? 0)}</strong>
           </article>
           <article className="deck-cell">
-            <span className="label">ITM</span>
+            <span className="label">Cash Rate</span>
             <strong className="deck-value">{formatPercent(overallSummary.itmRatio)}</strong>
           </article>
           <article className="deck-cell">
