@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mockup - Brand Console</title>
+    <link rel="stylesheet" href="./mockups.css" />
+    <style>
+      html { background: #141417; }
+
+      body {
+        background:
+          radial-gradient(circle at top right, rgba(215, 208, 198, 0.05), transparent 20rem),
+          linear-gradient(180deg, #202126 0%, #17181c 42%, #141417 100%);
+        color: #f3ede4;
+      }
+
+      body.page-shell::before {
+        background:
+          radial-gradient(circle at 20% 16%, rgba(255, 255, 255, 0.05), transparent 24rem),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+      }
+
+      .hero-shell,
+      .summary-band,
+      .note-card,
+      .table-panel {
+        background: linear-gradient(180deg, rgba(31, 32, 38, 0.96), rgba(21, 22, 27, 0.94));
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
+      }
+
+      .hero-shell {
+        display: grid;
+        grid-template-columns: 1.4fr 0.8fr;
+        gap: 18px;
+        padding: 22px;
+        border-radius: 26px;
+      }
+
+      .hero-brand {
+        display: grid;
+        gap: 14px;
+        align-content: start;
+      }
+
+      .brand-logo {
+        width: min(430px, 100%);
+        height: auto;
+        display: block;
+      }
+
+      .hero-copy {
+        color: #b7afa2;
+        max-width: 46ch;
+        line-height: 1.6;
+      }
+
+      .hero-metrics,
+      .signal-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .signal-card {
+        padding: 16px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .signal-card strong,
+      .metric,
+      .value,
+      h3 {
+        color: #f3ede4;
+      }
+
+      .metric {
+        font-family: Consolas, "SFMono-Regular", monospace;
+        font-size: 1.15rem;
+      }
+
+      .pill {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(255, 255, 255, 0.08);
+        color: #d7d0c6;
+      }
+
+      @media (max-width: 980px) {
+        .hero-shell {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body class="page-shell">
+    <main class="page">
+      <a class="back-link" href="./index.html">Zurueck zur Mockup-Uebersicht</a>
+
+      <section class="hero-shell">
+        <div class="hero-brand">
+          <span class="eyebrow">Concept B</span>
+          <img class="brand-logo" src="../../images/gs_head_klein_t.png" alt="ggsession" />
+          <p class="hero-copy">
+            Das Logo sitzt hier in einer kompakten Console-Zone. Rechts daneben
+            steht nur das Wichtigste fuer den schnellen Blick vor dem Scrollen.
+          </p>
+          <div class="pill-row">
+            <span class="pill">100 tournaments indexed</span>
+            <span class="pill">87 session days</span>
+            <span class="pill">243 total entries</span>
+          </div>
+        </div>
+
+        <div class="hero-metrics">
+          <article class="signal-card">
+            <span class="label">Overall Results</span>
+            <div class="metric">$701.05 net</div>
+          </article>
+          <article class="signal-card">
+            <span class="label">Best cash</span>
+            <div class="metric">$1,890.00</div>
+          </article>
+          <article class="signal-card">
+            <span class="label">ABI / ROI</span>
+            <div class="metric">$15.91 / 18.1%</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="summary-band" style="margin-top: 22px;">
+        <div class="mock-topnav">
+          <div>
+            <span class="label">Search &amp; Filters</span>
+            <h3>Console-style top zone with quick signal cards</h3>
+          </div>
+          <div class="pill-row">
+            <span class="pill">Today 6 tournaments</span>
+            <span class="pill">2 cashes</span>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mockup - Brand Strip</title>
+    <link rel="stylesheet" href="./mockups.css" />
+    <style>
+      html { background: #141417; }
+
+      body {
+        background: linear-gradient(180deg, #1f1f22 0%, #18191d 40%, #141417 100%);
+        color: #f3ede4;
+      }
+
+      body.page-shell::before {
+        background:
+          linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        background-size: 100% 100%, 100% 100%;
+      }
+
+      .brand-panel,
+      .summary-band,
+      .table-panel {
+        background: linear-gradient(180deg, rgba(31, 32, 38, 0.96), rgba(21, 22, 27, 0.94));
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
+      }
+
+      .brand-panel {
+        display: grid;
+        gap: 18px;
+        padding: 18px 22px;
+        border-radius: 24px;
+      }
+
+      .brand-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        flex-wrap: wrap;
+      }
+
+      .brand-logo {
+        width: min(420px, 100%);
+        height: auto;
+        display: block;
+      }
+
+      .brand-caption {
+        color: #b7afa2;
+        font-size: 0.98rem;
+      }
+
+      .top-pills,
+      .quick-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .pill {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(255, 255, 255, 0.08);
+        color: #d7d0c6;
+      }
+
+      .quick-strip .pill strong,
+      .value,
+      h3,
+      strong {
+        color: #f3ede4;
+      }
+
+      .grid-4 .stat-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .value {
+        font-family: Consolas, "SFMono-Regular", monospace;
+        letter-spacing: -0.03em;
+      }
+    </style>
+  </head>
+  <body class="page-shell">
+    <main class="page">
+      <a class="back-link" href="./index.html">Zurueck zur Mockup-Uebersicht</a>
+
+      <section class="brand-panel">
+        <div class="brand-row">
+          <div>
+            <img class="brand-logo" src="../../images/gs_head_klein_t.png" alt="ggsession" />
+            <div class="brand-caption">Daily sessions, session totals, and one clean tournament view</div>
+          </div>
+          <div class="top-pills">
+            <span class="pill">Search &amp; Filters</span>
+            <span class="pill">Export</span>
+          </div>
+        </div>
+
+        <div class="quick-strip">
+          <span class="pill">100 tournaments indexed</span>
+          <span class="pill">87 session days</span>
+          <span class="pill">243 total entries</span>
+        </div>
+      </section>
+
+      <section class="summary-band" style="margin-top: 22px;">
+        <div class="grid-4">
+          <article class="stat-card"><span class="label">Buy-ins</span><div class="value">$3,866.85</div></article>
+          <article class="stat-card"><span class="label">Rake</span><div class="value">$309.35</div></article>
+          <article class="stat-card"><span class="label">Net</span><div class="value positive">$701.05</div></article>
+          <article class="stat-card"><span class="label">ROI</span><div class="value positive">18.1%</div></article>
+        </div>
+      </section>
+
+      <section class="table-panel" style="margin-top: 22px;">
+        <div class="mock-topnav">
+          <div>
+            <span class="label">Daily Sessions</span>
+            <h3>Compact brand strip above the action</h3>
+          </div>
+          <div class="pill-row">
+            <span class="pill">Best cash $1,890.00</span>
+            <span class="pill">ABI $15.91</span>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

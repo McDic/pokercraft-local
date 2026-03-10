@@ -60,9 +60,20 @@
   color: var(--text-primary);
 }
 
+.header-content {
+  display: grid;
+  gap: 10px;
+}
+
+.brand-mark {
+  display: block;
+  width: min(480px, 100%);
+  height: auto;
+  object-fit: contain;
+}
+
 .header-content .subtitle {
   display: inline-block;
-  margin-top: 8px;
   color: var(--text-secondary);
   font-size: 0.98rem;
 }
@@ -636,6 +647,10 @@
 
   .header {
     flex-direction: column;
+  }
+
+  .brand-mark {
+    width: min(360px, 100%);
   }
 
   .signal-grid,

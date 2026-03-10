@@ -10,7 +10,11 @@ export function Header({ onExport }: HeaderProps) {
   return (
     <header className="header">
       <div className="header-content">
-        <h1>ggsession</h1>
+        <img
+          className="brand-mark"
+          src={`${import.meta.env.BASE_URL}gs_header.png`}
+          alt="ggsession"
+        />
         <span className="subtitle">Daily sessions, session totals, and one clean tournament view</span>
       </div>
       <div className="header-links">

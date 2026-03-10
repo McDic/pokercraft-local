@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mockup - Brand Inline</title>
+    <link rel="stylesheet" href="./mockups.css" />
+    <style>
+      html { background: #141417; }
+
+      body {
+        background: linear-gradient(180deg, #1e1f24 0%, #17181d 42%, #141417 100%);
+        color: #f3ede4;
+      }
+
+      .inline-header,
+      .summary-band,
+      .table-panel {
+        background: linear-gradient(180deg, rgba(31, 32, 38, 0.96), rgba(21, 22, 27, 0.94));
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
+      }
+
+      .inline-header {
+        display: grid;
+        gap: 14px;
+        padding: 18px 22px;
+        border-radius: 24px;
+      }
+
+      .inline-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        flex-wrap: wrap;
+      }
+
+      .brand-logo {
+        width: min(360px, 100%);
+        height: auto;
+        display: block;
+      }
+
+      .mini-note {
+        color: #b7afa2;
+        font-size: 0.92rem;
+      }
+
+      .stat-line {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .stat-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: #d7d0c6;
+        font-size: 0.82rem;
+      }
+
+      .stat-chip strong {
+        color: #f3ede4;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .summary-cell {
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        display: grid;
+        gap: 6px;
+      }
+
+      .summary-cell strong {
+        color: #f3ede4;
+        font-family: Consolas, "SFMono-Regular", monospace;
+        font-size: 1.08rem;
+      }
+
+      @media (max-width: 980px) {
+        .summary-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body class="page-shell">
+    <main class="page">
+      <a class="back-link" href="./index.html">Zurueck zur Mockup-Uebersicht</a>
+
+      <section class="inline-header">
+        <div class="inline-row">
+          <img class="brand-logo" src="../../images/gs_head_klein_t.png" alt="ggsession" />
+          <div class="mini-note">The brand sits in one tight row so the data starts earlier.</div>
+        </div>
+
+        <div class="stat-line">
+          <span class="stat-chip"><strong>100</strong> tournaments indexed</span>
+          <span class="stat-chip"><strong>87</strong> session days</span>
+          <span class="stat-chip"><strong>243</strong> total entries</span>
+          <span class="stat-chip"><strong>18.1%</strong> ROI</span>
+        </div>
+      </section>
+
+      <section class="summary-band" style="margin-top: 22px;">
+        <div class="mock-topnav">
+          <div>
+            <span class="label">Concept C</span>
+            <h3>Inline logo with the shortest possible top block</h3>
+          </div>
+          <div class="pill-row">
+            <span class="pill">Best cash $1,890.00</span>
+            <span class="pill">ITM 25.0%</span>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-cell"><span class="label">Buy-ins</span><strong>$3,866.85</strong></div>
+          <div class="summary-cell"><span class="label">Rake</span><strong>$309.35</strong></div>
+          <div class="summary-cell"><span class="label">Prize</span><strong>$4,567.90</strong></div>
+          <div class="summary-cell"><span class="label">Net</span><strong class="positive">$701.05</strong></div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
