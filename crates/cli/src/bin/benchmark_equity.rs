@@ -3,10 +3,10 @@ use std::time::Instant;
 use pokercraft_core::{
     card::{Card, Hand},
     equity::EquityResult,
-    PokercraftLocalError,
+    GgsessionError,
 };
 
-fn main() -> Result<(), PokercraftLocalError> {
+fn main() -> Result<(), GgsessionError> {
     let hand1: Hand = (Card::try_from("Ah")?, Card::try_from("Ad")?);
     let hand2: Hand = (Card::try_from("6s")?, Card::try_from("7s")?);
 

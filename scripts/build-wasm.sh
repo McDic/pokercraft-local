@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build WASM module for pokercraft-local web app
+# Build WASM module for ggsession
 
 set -e
 

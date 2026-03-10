@@ -79,7 +79,7 @@ const siteUrl = getSiteUrl()
 const socialImageUrl = getAssetUrl(
   siteUrl,
   basePath,
-  'pokercraft_local_full_banner.png',
+  'ggsession_social_banner.png',
 )
 
 // https://vite.dev/config/

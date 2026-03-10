@@ -7,7 +7,7 @@ use wasm_bindgen::prelude::*;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::JsValue;
 
-use crate::{errors::PokercraftLocalError, utils::FixedSizedCombinationIterator};
+use crate::{errors::GgsessionError, utils::FixedSizedCombinationIterator};
 
 pub const NUM_OF_SHAPES: usize = 4;
 pub const NUM_OF_NUMBERS: usize = 13;
@@ -64,7 +64,7 @@ impl From<CardShape> for char {
 }
 
 impl TryFrom<char> for CardShape {
-    type Error = PokercraftLocalError;
+    type Error = GgsessionError;
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
         for shape in Self::all() {
@@ -72,7 +72,7 @@ impl TryFrom<char> for CardShape {
                 return Ok(shape);
             }
         }
-        Err(PokercraftLocalError::GeneralError(format!(
+        Err(GgsessionError::GeneralError(format!(
             "Invalid card shape: {}",
             value
         )))
@@ -164,12 +164,12 @@ impl Default for CardNumber {
 }
 
 impl TryFrom<i32> for CardNumber {
-    type Error = PokercraftLocalError;
+    type Error = GgsessionError;
 
     fn try_from(value: i32) -> Result<Self, Self::Error> {
         match CardNumber::new(value) {
             Some(num) => Ok(num),
-            None => Err(PokercraftLocalError::GeneralError(format!(
+            None => Err(GgsessionError::GeneralError(format!(
                 "Invalid card number: {}",
                 value
             ))),
@@ -198,7 +198,7 @@ impl From<CardNumber> for char {
 }
 
 impl TryFrom<char> for CardNumber {
-    type Error = PokercraftLocalError;
+    type Error = GgsessionError;
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
         for number in Self::all() {
@@ -206,7 +206,7 @@ impl TryFrom<char> for CardNumber {
                 return Ok(number);
             }
         }
-        Err(PokercraftLocalError::GeneralError(format!(
+        Err(GgsessionError::GeneralError(format!(
             "Invalid card number: {}",
             value
         )))
@@ -269,7 +269,7 @@ impl std::fmt::Display for Card {
 }
 
 impl TryFrom<&str> for Card {
-    type Error = PokercraftLocalError;
+    type Error = GgsessionError;
 
     /// Create a `Card` from a 2-character string.
     /// The first character represents the card number,
@@ -282,7 +282,7 @@ impl TryFrom<&str> for Card {
     /// - "5h" -> Five of Hearts
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         if value.len() != 2 {
-            return Err(PokercraftLocalError::GeneralError(format!(
+            return Err(GgsessionError::GeneralError(format!(
                 "Invalid card string: {}",
                 value
             )));
@@ -517,9 +517,9 @@ impl HandRank {
 
     /// Find the best 5-card hand from the given cards.
     /// If `cards` has less than 5 cards, return an error.
-    pub fn find_best5(cards: &[Card]) -> Result<([Card; 5], HandRank), PokercraftLocalError> {
+    pub fn find_best5(cards: &[Card]) -> Result<([Card; 5], HandRank), GgsessionError> {
         if cards.len() < 5 {
-            return Err(PokercraftLocalError::GeneralError(
+            return Err(GgsessionError::GeneralError(
                 "Not enough cards; Should have at least 5 cards".to_string(),
             ));
         }
@@ -609,12 +609,12 @@ impl ShapeMapping {
     /// Create a `ShapeMapping` from a mapping array.
     pub fn new(
         mapping: [(CardShape, CardShape); NUM_OF_SHAPES],
-    ) -> Result<Self, PokercraftLocalError> {
+    ) -> Result<Self, GgsessionError> {
         if mapping.iter().unique().count() != NUM_OF_SHAPES
             || mapping.iter().map(|(from, _)| *from).unique().count() != NUM_OF_SHAPES
             || mapping.iter().map(|(_, to)| *to).unique().count() != NUM_OF_SHAPES
         {
-            return Err(PokercraftLocalError::GeneralError(format!(
+            return Err(GgsessionError::GeneralError(format!(
                 "Invalid shape mapping: {:?}",
                 mapping
             )));
@@ -699,7 +699,7 @@ mod tests {
     /// This method will throw an error if any of the strings is invalid or duplicated.
     fn create_cards_slice<const N: usize>(
         card_strs: [&str; N],
-    ) -> Result<[Card; N], PokercraftLocalError> {
+    ) -> Result<[Card; N], GgsessionError> {
         let mut cards = [Card::default(); N];
         for (i, s) in card_strs.iter().enumerate() {
             cards[i] = Card::try_from(*s)?;
@@ -707,7 +707,7 @@ mod tests {
         for i in 0..N {
             for j in (i + 1)..N {
                 if cards[i] == cards[j] {
-                    return Err(PokercraftLocalError::GeneralError(format!(
+                    return Err(GgsessionError::GeneralError(format!(
                         "Duplicated card: {}",
                         cards[i]
                     )));
@@ -719,7 +719,7 @@ mod tests {
 
     #[test]
     /// Test the construction of `HandRank` from various card combinations.
-    fn test_rank_construction() -> Result<(), PokercraftLocalError> {
+    fn test_rank_construction() -> Result<(), GgsessionError> {
         for cards in [
             create_cards_slice(["As", "Kd", "Jh", "9c", "3s"])?,
             create_cards_slice(["5s", "7d", "4s", "3s", "2s"])?,
@@ -857,7 +857,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rank_order() -> Result<(), PokercraftLocalError> {
+    fn test_rank_order() -> Result<(), GgsessionError> {
         let ranks = [
             // High cards
             HandRank::HighCard(create_cards_slice(["7s", "6d", "4h", "3c", "2s"])?),
@@ -952,7 +952,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rank_evaluation() -> Result<(), PokercraftLocalError> {
+    fn test_rank_evaluation() -> Result<(), GgsessionError> {
         let hand_and_boards: Vec<(Hand, [Card; 5], HandRank)> = vec![
             (
                 ("Ah".try_into()?, "8h".try_into()?),
@@ -1020,7 +1020,7 @@ mod tests {
     }
 
     #[test]
-    fn test_canonical_shape_mappings() -> Result<(), PokercraftLocalError> {
+    fn test_canonical_shape_mappings() -> Result<(), GgsessionError> {
         let mappings = get_canonical_shape_mappings();
         assert_eq!(mappings.len(), 24); // 4! = 24
 

@@ -1,5 +1,5 @@
 /**
- * Parser module for Pokercraft Local Web
+ * Parser module for ggsession
  * Handles parsing of GG Poker tournament summaries and hand histories
  */
 

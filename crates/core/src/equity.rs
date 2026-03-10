@@ -15,7 +15,7 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
 use crate::card::{Card, Hand, HandRank};
-use crate::errors::PokercraftLocalError;
+use crate::errors::GgsessionError;
 use crate::utils::{FixedSizedCombinationIterator, IterWrapper};
 
 /// Result of single equity calculation.
@@ -51,7 +51,7 @@ impl EquityResult {
     fn get_flop_iter(
         remaining_cards: Vec<Card>,
         fixed_communities: Vec<Card>,
-    ) -> Result<Box<dyn Iterator<Item = [Card; 5]> + Send>, PokercraftLocalError> {
+    ) -> Result<Box<dyn Iterator<Item = [Card; 5]> + Send>, GgsessionError> {
         match fixed_communities.len() {
             0 => Ok(Box::new(FixedSizedCombinationIterator::<Card, 5>::new(
                 remaining_cards.into_iter(),
@@ -76,7 +76,7 @@ impl EquityResult {
                 [Card::default(); 0],
                 &fixed_communities,
             )))),
-            len => Err(PokercraftLocalError::GeneralError(format!(
+            len => Err(GgsessionError::GeneralError(format!(
                 "Given {} fixed community cards; Cannot generate the 5-cards flop.",
                 len
             ))),
@@ -87,7 +87,7 @@ impl EquityResult {
     fn single_board_calculation(
         communities: [Card; 5],
         cards_people: &[Hand],
-    ) -> Result<Vec<i32>, PokercraftLocalError> {
+    ) -> Result<Vec<i32>, GgsessionError> {
         let mut card7: [Card; 7] = [Card::default(); 7];
         for (i, card) in communities.into_iter().enumerate() {
             card7[i] = card;
@@ -102,13 +102,13 @@ impl EquityResult {
                 if let Ok((_, best_rank_this_person)) = HandRank::find_best5(&card7) {
                     Ok(best_rank_this_person)
                 } else {
-                    Err(PokercraftLocalError::GeneralError(format!(
+                    Err(GgsessionError::GeneralError(format!(
                         "Failed to evaluate hand rank: {:?}",
                         card7
                     )))
                 }
             })
-            .collect::<Result<Vec<_>, PokercraftLocalError>>()?;
+            .collect::<Result<Vec<_>, GgsessionError>>()?;
 
         // Compare people hand ranks
         let mut best_rank = &best_ranks_people[0];
@@ -143,8 +143,8 @@ impl EquityResult {
     /// A helper function for `try_fold` in folding results.
     fn folding_fn(
         (mut win_acc, mut lose_acc): (Vec<Vec<u64>>, Vec<u64>),
-        res: Result<Vec<i32>, PokercraftLocalError>,
-    ) -> Result<(Vec<Vec<u64>>, Vec<u64>), PokercraftLocalError> {
+        res: Result<Vec<i32>, GgsessionError>,
+    ) -> Result<(Vec<Vec<u64>>, Vec<u64>), GgsessionError> {
         match res {
             Ok(this_result) => {
                 for (i, &val) in this_result.iter().enumerate() {
@@ -174,7 +174,7 @@ impl EquityResult {
         cards_people: Vec<Hand>,
         cards_community: Vec<Card>,
         parallel_calculation: bool,
-    ) -> Result<Self, PokercraftLocalError> {
+    ) -> Result<Self, GgsessionError> {
         let remaining_cards = Card::all()
             .into_iter()
             .filter(|card| {
@@ -184,15 +184,15 @@ impl EquityResult {
             .collect::<Vec<_>>();
 
         if cards_community.len() > 5 {
-            return Err(PokercraftLocalError::GeneralError(
+            return Err(GgsessionError::GeneralError(
                 "Too many community cards; Should have at most 5 cards".to_string(),
             ));
         } else if cards_people.is_empty() {
-            return Err(PokercraftLocalError::GeneralError(
+            return Err(GgsessionError::GeneralError(
                 "No player cards given".to_string(),
             ));
         } else if cards_people.len() > 23 {
-            return Err(PokercraftLocalError::GeneralError(
+            return Err(GgsessionError::GeneralError(
                 "Too many players; Should have at most 23 players".to_string(),
             ));
         }
@@ -230,16 +230,16 @@ impl EquityResult {
     }
 
     /// Get the equity of the given player index (0-based).
-    pub fn get_equity(&self, player_index: usize) -> Result<f64, PokercraftLocalError> {
+    pub fn get_equity(&self, player_index: usize) -> Result<f64, GgsessionError> {
         if player_index >= self.wins.len() {
-            return Err(PokercraftLocalError::GeneralError(
+            return Err(GgsessionError::GeneralError(
                 "Player index out of range".to_string(),
             ));
         }
         let total_wins: u64 = self.wins[player_index].iter().sum();
         let total_games: u64 = total_wins + self.loses[player_index];
         if total_games == 0 {
-            Err(PokercraftLocalError::GeneralError(
+            Err(GgsessionError::GeneralError(
                 "No games played; Cannot calculate equity".to_string(),
             ))
         } else {
@@ -260,9 +260,9 @@ impl EquityResult {
     pub fn get_winlosses(
         &self,
         player_index: usize,
-    ) -> Result<(Vec<u64>, u64), PokercraftLocalError> {
+    ) -> Result<(Vec<u64>, u64), GgsessionError> {
         if player_index >= self.wins.len() {
-            return Err(PokercraftLocalError::GeneralError(
+            return Err(GgsessionError::GeneralError(
                 "Player index out of range".to_string(),
             ));
         }
@@ -350,7 +350,7 @@ impl HUPreflopEquityCache {
     /// Followings are line examples:
     /// - `TsQh vs QsTd = 1376857 31189 304258`
     /// - `6sTh vs 9s8d = 940755 738123 33426`
-    pub fn new(path: &std::path::Path) -> Result<Self, PokercraftLocalError> {
+    pub fn new(path: &std::path::Path) -> Result<Self, GgsessionError> {
         let file = std::fs::OpenOptions::new().read(true).open(path)?;
         let decoder = GzDecoder::new(file);
         let reader = std::io::BufReader::new(decoder);
@@ -359,25 +359,25 @@ impl HUPreflopEquityCache {
             let line: String = line?;
             let parts = line.trim().split_whitespace().collect::<Vec<_>>();
             if parts.len() != 7 {
-                return Err(PokercraftLocalError::GeneralError(format!(
+                return Err(GgsessionError::GeneralError(format!(
                     "Invalid format in cache file line {}: {}",
                     i + 1,
                     line
                 )));
             } else if parts[1] != "vs" {
-                return Err(PokercraftLocalError::GeneralError(format!(
+                return Err(GgsessionError::GeneralError(format!(
                     "Invalid format (\"vs\" not present) in cache file line {}: {}",
                     i + 1,
                     line
                 )));
             } else if parts[3] != "=" {
-                return Err(PokercraftLocalError::GeneralError(format!(
+                return Err(GgsessionError::GeneralError(format!(
                     "Invalid format (\"=\" not present) in cache file line {}: {}",
                     i + 1,
                     line
                 )));
             } else if parts[0].len() != 4 || parts[2].len() != 4 {
-                return Err(PokercraftLocalError::GeneralError(format!(
+                return Err(GgsessionError::GeneralError(format!(
                     "Invalid hand format in cache file line {}: {}",
                     i + 1,
                     line
@@ -399,7 +399,7 @@ impl HUPreflopEquityCache {
                 );
                 for (other_keys, _is_swapped) in Self::possible_keys_l3(hand1, hand2) {
                     if cache.contains_key(&other_keys) {
-                        return Err(PokercraftLocalError::GeneralError(format!(
+                        return Err(GgsessionError::GeneralError(format!(
                             "Duplicate entry in cache file line {}: {}",
                             i + 1,
                             line
@@ -408,7 +408,7 @@ impl HUPreflopEquityCache {
                 }
                 cache.insert((hand1, hand2), (hand1_win, hand2_win, tie));
             } else {
-                return Err(PokercraftLocalError::GeneralError(format!(
+                return Err(GgsessionError::GeneralError(format!(
                     "Invalid win/tie counts in cache file line {}: {}",
                     i + 1,
                     line
@@ -471,7 +471,7 @@ impl HUPreflopEquityCache {
         &self,
         hand1: (Card, Card),
         hand2: (Card, Card),
-    ) -> Result<(u64, u64, u64), PokercraftLocalError> {
+    ) -> Result<(u64, u64, u64), GgsessionError> {
         for ((possible_hand1, possible_hand2), is_swapped) in Self::possible_keys_l3(hand1, hand2) {
             if let Some(&(win1, win2, tie)) = self.cache.get(&(possible_hand1, possible_hand2)) {
                 return if is_swapped {
@@ -481,7 +481,7 @@ impl HUPreflopEquityCache {
                 };
             }
         }
-        Err(PokercraftLocalError::GeneralError(format!(
+        Err(GgsessionError::GeneralError(format!(
             "No cache entry found for the given hands {}{} vs {}{}",
             hand1.0, hand1.1, hand2.0, hand2.1
         )))
@@ -491,7 +491,7 @@ impl HUPreflopEquityCache {
 #[cfg(feature = "wasm")]
 impl HUPreflopEquityCache {
     /// Create a `HUPreflopEquityCache` from gzip-compressed cache bytes.
-    pub fn from_gzip_bytes(bytes: &[u8]) -> Result<Self, PokercraftLocalError> {
+    pub fn from_gzip_bytes(bytes: &[u8]) -> Result<Self, GgsessionError> {
         let decoder = GzDecoder::new(bytes);
         let reader = std::io::BufReader::new(decoder);
         let mut cache: HashMap<(Hand, Hand), (u64, u64, u64)> = HashMap::new();
@@ -500,19 +500,19 @@ impl HUPreflopEquityCache {
             let line: String = line?;
             let parts = line.trim().split_whitespace().collect::<Vec<_>>();
             if parts.len() != 7 {
-                return Err(PokercraftLocalError::GeneralError(format!(
+                return Err(GgsessionError::GeneralError(format!(
                     "Invalid format in cache line {}: {}",
                     i + 1,
                     line
                 )));
             } else if parts[1] != "vs" || parts[3] != "=" {
-                return Err(PokercraftLocalError::GeneralError(format!(
+                return Err(GgsessionError::GeneralError(format!(
                     "Invalid format in cache line {}: {}",
                     i + 1,
                     line
                 )));
             } else if parts[0].len() != 4 || parts[2].len() != 4 {
-                return Err(PokercraftLocalError::GeneralError(format!(
+                return Err(GgsessionError::GeneralError(format!(
                     "Invalid hand format in cache line {}: {}",
                     i + 1,
                     line
@@ -534,7 +534,7 @@ impl HUPreflopEquityCache {
                 );
                 cache.insert((hand1, hand2), (hand1_win, hand2_win, tie));
             } else {
-                return Err(PokercraftLocalError::GeneralError(format!(
+                return Err(GgsessionError::GeneralError(format!(
                     "Invalid win/tie counts in cache line {}: {}",
                     i + 1,
                     line
@@ -596,17 +596,17 @@ impl LuckCalculator {
     }
 
     /// Add a new result to the calculator.
-    pub fn add_result(&mut self, equity: f64, actual: f64) -> Result<(), PokercraftLocalError> {
+    pub fn add_result(&mut self, equity: f64, actual: f64) -> Result<(), GgsessionError> {
         if equity < 0.0 || equity > 1.0 {
-            return Err(PokercraftLocalError::GeneralError(
+            return Err(GgsessionError::GeneralError(
                 "Equity must be between 0.0 and 1.0".to_string(),
             ));
         } else if equity == 0.0 && actual > 0.0 {
-            return Err(PokercraftLocalError::GeneralError(
+            return Err(GgsessionError::GeneralError(
                 "Cannot win with 0% equity".to_string(),
             ));
         } else if equity == 1.0 && actual < 1.0 {
-            return Err(PokercraftLocalError::GeneralError(
+            return Err(GgsessionError::GeneralError(
                 "Cannot lose with 100% equity".to_string(),
             ));
         } else {
@@ -790,7 +790,7 @@ mod tests {
         cards_people: Vec<(Card, Card)>,
         cards_community: Vec<Card>,
         expected_equities: Vec<f64>,
-    ) -> Result<(), PokercraftLocalError> {
+    ) -> Result<(), GgsessionError> {
         let equity = EquityResult::new(cards_people, cards_community, true)?;
         for (i, &expected) in expected_equities.iter().enumerate() {
             let actual = equity.get_equity(i)?;
@@ -800,7 +800,7 @@ mod tests {
     }
 
     #[test]
-    fn test_equity() -> Result<(), PokercraftLocalError> {
+    fn test_equity() -> Result<(), GgsessionError> {
         assert_equity(
             vec![
                 ("As".try_into()?, "Ad".try_into()?),
@@ -845,7 +845,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tails() -> Result<(), PokercraftLocalError> {
+    fn test_tails() -> Result<(), GgsessionError> {
         let mut luck_calc = LuckCalculator::new();
         luck_calc.add_result(0.3, 1.0)?;
         let (upper, lower, _) = luck_calc.tails().unwrap();

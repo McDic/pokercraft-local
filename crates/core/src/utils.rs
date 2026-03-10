@@ -84,10 +84,10 @@ mod tests {
     use itertools::Itertools;
 
     use super::*;
-    use crate::errors::PokercraftLocalError;
+    use crate::errors::GgsessionError;
 
     #[test]
-    fn test_fixed_sized_combination_iterator() -> Result<(), PokercraftLocalError> {
+    fn test_fixed_sized_combination_iterator() -> Result<(), GgsessionError> {
         let candidates = ["apple", "banana", "cherry", "duel", "egg", "fox", "grape"];
         let mut iter1 =
             FixedSizedCombinationIterator::<&'static str, 4>::new(candidates.iter().copied());
@@ -100,13 +100,13 @@ mod tests {
                     break Ok(());
                 }
                 (Some(a), None) => {
-                    return Err(PokercraftLocalError::GeneralError(format!(
+                    return Err(GgsessionError::GeneralError(format!(
                         "Iterator lengths do not match; FixedSize is longer: {:?}",
                         a
                     )))
                 }
                 (None, Some(b)) => {
-                    return Err(PokercraftLocalError::GeneralError(format!(
+                    return Err(GgsessionError::GeneralError(format!(
                         "Iterator lengths do not match; Combination is longer: {:?}",
                         b
                     )))

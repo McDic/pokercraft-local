@@ -63,16 +63,17 @@ async function ensureWasmInit(): Promise<void> {
 async function ensurePreflopCache(): Promise<HUPreflopEquityCache | null> {
   if (preflopCache) return preflopCache
 
-  // Try multiple possible paths (dev vs production, with/without base path)
+  const baseUrl = new URL(import.meta.env.BASE_URL, self.location.origin)
+
+  // Try both the active base path and the origin root.
   // Using .bin extension to prevent browser auto-decompression of gzip
   const possiblePaths = [
-    '/pokercraft-local/hu_preflop_cache.bin',  // With base path
-    '/hu_preflop_cache.bin',                    // Without base path
+    new URL('hu_preflop_cache.bin', baseUrl).href,
+    new URL('hu_preflop_cache.bin', self.location.origin).href,
   ]
 
-  for (const path of possiblePaths) {
+  for (const cacheUrl of possiblePaths) {
     try {
-      const cacheUrl = new URL(path, self.location.origin).href
       const response = await fetch(cacheUrl)
       if (!response.ok) continue
 

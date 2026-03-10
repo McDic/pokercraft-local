@@ -1,8 +1,8 @@
-# Pokercraft Local: Web Migration Plan
+# ggsession: Web Migration Plan
 
 > **Date**: 2026-02-15
 > **Branch**: `feature/web-migration-20260215`
-> **Goal**: Create a web version of Pokercraft Local using TypeScript + Rust/WASM, deployable on GitHub Pages
+> **Goal**: Create a web version of ggsession using TypeScript + Rust/WASM, deployable on GitHub Pages
 
 ---
 
@@ -69,7 +69,7 @@
 | `visualize/hand_history.py` | Hand history charts | ~700 | Port to TypeScript + Plotly.js |
 | `translate.py` | i18n support | ~200 | Port to TypeScript |
 | `gui.py` | Tkinter GUI | ~800 | Replace with web UI |
-| `pokercraft_local_rust/*.rs` | Rust computation | ~1200 | Compile to WASM |
+| `ggsession_rust/*.rs` | Rust computation | ~1200 | Compile to WASM |
 
 ---
 
@@ -139,7 +139,7 @@ Deployment: GitHub Pages (static files only)
 ### Proposed Monorepo Layout
 
 ```
-pokercraft_local/
+ggsession/
 ├── .github/
 │   └── workflows/
 │       ├── python-ci.yml          # Existing Python CI
@@ -165,7 +165,7 @@ pokercraft_local/
 │       ├── Cargo.toml
 │       └── src/lib.rs             # #[wasm_bindgen]
 │
-├── pokercraft_local/              # Python package (existing)
+├── ggsession/              # Python package (existing)
 │   ├── __init__.py
 │   ├── rust/                      # -> crates/python-bindings
 │   ├── parser.py
@@ -314,7 +314,7 @@ thiserror = "2.0"
 
 #### 0.2 Extract Core Logic
 
-Move from `pokercraft_local_rust/lib/` to `crates/core/src/`:
+Move from `ggsession_rust/lib/` to `crates/core/src/`:
 - `card.rs` - Remove `#[pyclass]`, `#[pymethods]`
 - `equity.rs` - Remove PyO3 dependencies
 - `bankroll.rs` - Remove PyO3 dependencies
@@ -328,7 +328,7 @@ use pyo3::prelude::*;
 use pokercraft_core::{card, equity, bankroll};
 
 #[pymodule]
-fn pokercraft_local_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn ggsession_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Re-export with PyO3 wrappers
 }
 ```
@@ -556,7 +556,7 @@ export function renderHistoricalPerformance(
 
 ### 6. Repository Structure: Monorepo
 
-**Decision:** Keep everything in `pokercraft-local` repository
+**Decision:** Keep everything in `ggsession` repository
 
 **Rationale:** Share Rust code between Python and WASM targets, single source of truth.
 

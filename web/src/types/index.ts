@@ -1,5 +1,5 @@
 /**
- * Core data types for Pokercraft Local Web
+ * Core data types for ggsession
  * Ported from Python's data_structures.py
  */
 

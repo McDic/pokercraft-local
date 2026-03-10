@@ -8,7 +8,7 @@ use wasm_bindgen::JsValue;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
 
-use crate::errors::PokercraftLocalError;
+use crate::errors::GgsessionError;
 
 /// Represents a bankruptcy metric.
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
@@ -120,25 +120,25 @@ pub fn simulate_core(
     max_iteration: u32,
     profit_exit_multiplier: f64,
     simulation_count: u32,
-) -> Result<BankruptcyMetric, PokercraftLocalError> {
+) -> Result<BankruptcyMetric, GgsessionError> {
     if initial_capital <= 0.0 {
-        return Err(PokercraftLocalError::GeneralError(
+        return Err(GgsessionError::GeneralError(
             "Initial capital must be positive".to_string(),
         ));
     } else if relative_return_results.is_empty() {
-        return Err(PokercraftLocalError::GeneralError(
+        return Err(GgsessionError::GeneralError(
             "Relative return results must not be empty".to_string(),
         ));
     } else if max_iteration < 1 {
-        return Err(PokercraftLocalError::GeneralError(
+        return Err(GgsessionError::GeneralError(
             "Max iteration must be positive".to_string(),
         ));
     } else if relative_return_results.iter().sum::<f64>() < 0.0 {
-        return Err(PokercraftLocalError::GeneralError(
+        return Err(GgsessionError::GeneralError(
             "Total relative returns are negative; Bankruptcy in long run is guaranteed".to_string(),
         ));
     } else if simulation_count < 1 {
-        return Err(PokercraftLocalError::GeneralError(
+        return Err(GgsessionError::GeneralError(
             "Simulation count must be positive".to_string(),
         ));
     }

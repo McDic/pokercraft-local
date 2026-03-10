@@ -13,4 +13,4 @@ pub mod utils;
 
 // Re-export commonly used types
 pub use card::{Card, CardNumber, CardShape, Hand, HandRank};
-pub use errors::PokercraftLocalError;
+pub use errors::GgsessionError;
