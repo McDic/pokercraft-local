@@ -4,10 +4,12 @@ import type { TournamentSummary } from '../types'
 import { getTournamentBuyIn, getTournamentProfit } from '../types'
 import {
   asDate,
+  getExpandedSessionKeys,
   getSessionKey,
   getSessionSummaries,
   getSessionViews,
   summarizeTournaments,
+  toggleExpandedSessionKey,
 } from './tournamentSummaryDashboardUtils'
 
 interface TournamentSummaryDashboardProps {
@@ -65,22 +67,6 @@ function formatProfitClass(value: number): string {
   return 'neutral'
 }
 
-function areSameKeys(left: string[], right: string[]): boolean {
-  return (
-    left.length === right.length &&
-    left.every((value, index) => value === right[index])
-  )
-}
-
-function getExpandedSessionKeys(selectedKeys: string[], visibleKeys: string[]): string[] {
-  const keptKeys = selectedKeys.filter(key => visibleKeys.includes(key))
-  if (keptKeys.length > 0) {
-    return keptKeys
-  }
-
-  return visibleKeys.slice(0, Math.min(2, visibleKeys.length))
-}
-
 export function TournamentSummaryDashboard({
   tournaments,
   handHistoryCount,
@@ -88,7 +74,7 @@ export function TournamentSummaryDashboard({
   isLoading = false,
 }: TournamentSummaryDashboardProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedExpandedSessionKeys, setSelectedExpandedSessionKeys] = useState<string[]>([])
+  const [selectedExpandedSessionKeys, setSelectedExpandedSessionKeys] = useState<string[] | null>(null)
   const hasTournaments = tournaments.length > 0
   const overallSummary = hasTournaments
     ? summarizeTournaments(tournaments)
@@ -99,14 +85,9 @@ export function TournamentSummaryDashboard({
   const expandedSessionKeys = getExpandedSessionKeys(selectedExpandedSessionKeys, visibleSessionKeys)
 
   const toggleSession = (sessionKey: string) => {
-    setSelectedExpandedSessionKeys(previous => {
-      const currentKeys = getExpandedSessionKeys(previous, visibleSessionKeys)
-      const nextKeys = currentKeys.includes(sessionKey)
-        ? currentKeys.filter(key => key !== sessionKey)
-        : [...currentKeys, sessionKey]
-
-      return areSameKeys(previous, nextKeys) ? previous : nextKeys
-    })
+    setSelectedExpandedSessionKeys(previous =>
+      toggleExpandedSessionKey(previous, visibleSessionKeys, sessionKey)
+    )
   }
 
   const expandAllSessions = () => {

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { TournamentSummary } from '../types'
 import {
+  getExpandedSessionKeys,
   getSessionSummaries,
   getSessionViews,
   summarizeTournaments,
+  toggleExpandedSessionKey,
 } from './tournamentSummaryDashboardUtils'
 
 function createTournament(overrides: Partial<TournamentSummary>): TournamentSummary {
@@ -96,5 +98,34 @@ describe('getSessionViews', () => {
     expect(views[0].visibleSummary.totalPrize).toBeCloseTo(43.79, 6)
     expect(views[0].visibleSummary.netProfit).toBeCloseTo(23.79, 6)
     expect(views[0].visibleSummary.itmCount).toBe(1)
+  })
+})
+
+describe('expanded session helpers', () => {
+  it('auto-opens the first two visible sessions only before the user changes anything', () => {
+    expect(getExpandedSessionKeys(null, ['2026-02-15', '2026-02-14', '2026-02-13'])).toEqual([
+      '2026-02-15',
+      '2026-02-14',
+    ])
+  })
+
+  it('keeps all sessions collapsed when collapse all explicitly sets an empty list', () => {
+    expect(getExpandedSessionKeys([], ['2026-02-15', '2026-02-14', '2026-02-13'])).toEqual([])
+  })
+
+  it('collapses an auto-opened session immediately on first click', () => {
+    expect(
+      toggleExpandedSessionKey(
+        null,
+        ['2026-02-15', '2026-02-14', '2026-02-13'],
+        '2026-02-14'
+      )
+    ).toEqual(['2026-02-15'])
+  })
+
+  it('respects collapse all and does not reopen the first two sessions', () => {
+    expect(
+      toggleExpandedSessionKey([], ['2026-02-15', '2026-02-14', '2026-02-13'], '2026-02-14')
+    ).toEqual(['2026-02-14'])
   })
 })

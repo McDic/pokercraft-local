@@ -26,6 +26,8 @@ export interface SessionView extends SessionSummary {
   isFiltered: boolean
 }
 
+export type ExpandedSessionSelection = string[] | null
+
 export function asDate(value: Date | string): Date {
   return value instanceof Date ? value : new Date(value)
 }
@@ -136,4 +138,29 @@ export function getSessionViews(
       }
     })
     .filter(session => session.visibleTournaments.length > 0)
+}
+
+export function getExpandedSessionKeys(
+  selectedKeys: ExpandedSessionSelection,
+  visibleKeys: string[]
+): string[] {
+  if (selectedKeys === null) {
+    return visibleKeys.slice(0, Math.min(2, visibleKeys.length))
+  }
+
+  return selectedKeys.filter(key => visibleKeys.includes(key))
+}
+
+export function toggleExpandedSessionKey(
+  selectedKeys: ExpandedSessionSelection,
+  visibleKeys: string[],
+  sessionKey: string
+): string[] {
+  const currentKeys = getExpandedSessionKeys(selectedKeys, visibleKeys)
+
+  if (currentKeys.includes(sessionKey)) {
+    return currentKeys.filter(key => key !== sessionKey)
+  }
+
+  return [...currentKeys, sessionKey]
 }
