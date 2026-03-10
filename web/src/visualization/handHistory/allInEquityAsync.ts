@@ -226,6 +226,28 @@ export async function collectAllInDataAsync(
   return { data: allData, luckScore }
 }
 
+export async function calculateLuckScore(allInData: AllInHandData[]): Promise<number> {
+  if (allInData.length === 0) return 0
+  const wasmModule = await import('../../wasm/pokercraft_wasm')
+  await wasmModule.default()
+  const luckCalc = new wasmModule.LuckCalculator()
+  for (const data of allInData) {
+    try {
+      luckCalc.addResult(data.equity, data.actualResult)
+    } catch {
+      // Skip invalid
+    }
+  }
+  let luckScore = 0
+  try {
+    luckScore = luckCalc.luckScore()
+  } catch {
+    // Failed
+  }
+  luckCalc.free()
+  return luckScore
+}
+
 /**
  * Create the chart from pre-computed all-in data
  */
