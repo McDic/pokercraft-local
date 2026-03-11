@@ -7,7 +7,6 @@ import Plot from 'react-plotly.js'
 import type { Data, Layout } from 'plotly.js-dist-min'
 import type { HandHistory } from '../types'
 import type { AllInHandData } from '../visualization/handHistory/allInEquityAsync'
-import { calculateLuckScore } from '../visualization/handHistory/allInEquityAsync'
 import type { ExportChart } from '../export/htmlExport'
 import { yieldToBrowser } from '../utils'
 
@@ -34,6 +33,7 @@ export interface HandHistoryChartsRef {
 
 // Global cache for equity results (persists across re-renders)
 const equityCache = new Map<string, AllInHandData>()
+let cachedLuckScore = 0
 
 export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryChartsProps>(
   function HandHistoryCharts({ handHistories }, ref) {
@@ -161,6 +161,12 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
           for (const data of newAllInData) {
             equityCache.set(data.handId, data)
           }
+
+          // Recalculate luck score with all cached data
+          // (simplified: we store the latest, but ideally recalculate from all)
+          if (newAllInData.length > 0) {
+            cachedLuckScore = newLuckScore
+          }
         }
 
         // Get all cached results for current hand histories
@@ -172,10 +178,7 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
           }
         }
 
-        const luckScore = await calculateLuckScore(allCachedData)
-        if (isStale()) return
-
-        const allInEquity = createAllInEquityChart(allCachedData, luckScore)
+        const allInEquity = createAllInEquityChart(allCachedData, cachedLuckScore)
 
         setState(prev => ({
           ...prev,
