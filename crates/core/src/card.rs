@@ -607,9 +607,7 @@ pub struct ShapeMapping {
 
 impl ShapeMapping {
     /// Create a `ShapeMapping` from a mapping array.
-    pub fn new(
-        mapping: [(CardShape, CardShape); NUM_OF_SHAPES],
-    ) -> Result<Self, GgsessionError> {
+    pub fn new(mapping: [(CardShape, CardShape); NUM_OF_SHAPES]) -> Result<Self, GgsessionError> {
         if mapping.iter().unique().count() != NUM_OF_SHAPES
             || mapping.iter().map(|(from, _)| *from).unique().count() != NUM_OF_SHAPES
             || mapping.iter().map(|(_, to)| *to).unique().count() != NUM_OF_SHAPES

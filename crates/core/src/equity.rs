@@ -257,10 +257,7 @@ impl EquityResult {
     /// of the given player index (0-based).
     /// The structure of return values are exactly same as
     /// `self.wins[player_index]` and `self.loses[player_index]`.
-    pub fn get_winlosses(
-        &self,
-        player_index: usize,
-    ) -> Result<(Vec<u64>, u64), GgsessionError> {
+    pub fn get_winlosses(&self, player_index: usize) -> Result<(Vec<u64>, u64), GgsessionError> {
         if player_index >= self.wins.len() {
             return Err(GgsessionError::GeneralError(
                 "Player index out of range".to_string(),
