@@ -140,7 +140,7 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
           }))
 
           // Calculate equity only for uncached hands
-          const { data: newAllInData } = await collectAllInDataAsync(
+          const { data: newAllInData, luckScore: newLuckScore } = await collectAllInDataAsync(
             uncachedHands,
             (current, total) => {
               if (!isStale()) {
