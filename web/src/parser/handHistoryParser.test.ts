@@ -189,4 +189,92 @@ Seat 7: Hero (button) folded before Flop
     const results = parseHandHistory('')
     expect(results).toHaveLength(0)
   })
+
+  it('should parse new format with ante in level info', () => {
+    const newFormatHand = `
+Poker Hand #TM5890117982: Tournament #280241902, Daily Special $3 Hold'em No Limit - Level10(250/500(60)) - 2026/04/30 22:25:46
+Table '53' 8-max Seat #5 is the button
+Seat 1: 5ad653e7 (20,480 in chips)
+Seat 2: ba03baf9 (5,205 in chips)
+Seat 3: Hero (19,050 in chips)
+5ad653e7: posts the ante 60
+ba03baf9: posts the ante 60
+Hero: posts the ante 60
+5ad653e7: posts small blind 250
+ba03baf9: posts big blind 500
+*** HOLE CARDS ***
+Dealt to 5ad653e7
+Dealt to ba03baf9
+Dealt to Hero [8c Tc]
+Hero: raises 500 to 1,000
+5ad653e7: folds
+ba03baf9: folds
+Uncalled bet (500) returned to Hero
+*** SHOWDOWN ***
+Hero collected 1,180 from pot
+*** SUMMARY ***
+Total pot 1,180 | Rake 0 | Jackpot 0 | Bingo 0 | Fortune 0 | Tax 0
+Seat 1: 5ad653e7 (small blind) folded before Flop
+Seat 2: ba03baf9 (big blind) folded before Flop
+Seat 3: Hero won (1,180)
+`.trim()
+
+    const results = parseHandHistory(newFormatHand)
+    expect(results).toHaveLength(1)
+
+    const hand = results[0]
+    expect(hand.id).toBe('TM5890117982')
+    expect(hand.tournamentId).toBe(280241902)
+    expect(hand.level).toBe(10)
+    expect(hand.sb).toBe(250)
+    expect(hand.bb).toBe(500)
+    expect(hand.maxSeats).toBe(8)
+    expect(hand.buttonSeat).toBe(5)
+    expect(hand.datetime.getFullYear()).toBe(2026)
+    expect(hand.datetime.getMonth()).toBe(3) // April (0-indexed)
+
+    // Antes parsed from action lines
+    const antes = hand.actionsPreflop.filter(a => a.action === 'ante')
+    expect(antes).toHaveLength(3)
+    expect(antes.every(a => a.amount === 60)).toBe(true)
+
+    expect(hand.wons.get('Hero')).toBe(1180)
+    expect(hand.uncalledReturned).toEqual(['Hero', 500])
+  })
+
+  it('should parse new format with large ante (Flipout)', () => {
+    const flipoutHand = `
+Poker Hand #TM5760010691: Tournament #274416465, Daily $100,000 #ThanksGG Flipout Hold'em No Limit - Level1(500/1,000(2,000,000,000)) - 2026/04/04 17:45:02
+Table '1' 8-max Seat #3 is the button
+Seat 1: abc12345 (10,000 in chips)
+Seat 2: Hero (10,000 in chips)
+abc12345: posts the ante 2,000,000,000
+Hero: posts the ante 2,000,000,000
+abc12345: posts small blind 500
+Hero: posts big blind 1,000
+*** HOLE CARDS ***
+Dealt to abc12345
+Dealt to Hero [As Kd]
+abc12345: folds
+Uncalled bet (500) returned to Hero
+*** SHOWDOWN ***
+Hero collected 4,000,001,000 from pot
+*** SUMMARY ***
+Total pot 4,000,001,000 | Rake 0 | Jackpot 0 | Bingo 0 | Fortune 0 | Tax 0
+Seat 1: abc12345 (small blind) folded before Flop
+Seat 2: Hero (big blind) won (4,000,001,000)
+`.trim()
+
+    const results = parseHandHistory(flipoutHand)
+    expect(results).toHaveLength(1)
+
+    const hand = results[0]
+    expect(hand.sb).toBe(500)
+    expect(hand.bb).toBe(1000)
+    expect(hand.level).toBe(1)
+
+    const antes = hand.actionsPreflop.filter(a => a.action === 'ante')
+    expect(antes).toHaveLength(2)
+    expect(antes[0].amount).toBe(2000000000)
+  })
 })

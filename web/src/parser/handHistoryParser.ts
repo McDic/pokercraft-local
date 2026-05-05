@@ -6,7 +6,7 @@
 import type { HandHistory, BetAction, HandStage, CardString } from '../types'
 
 // Regex patterns for hand history files
-const LINE1_INTRO = /^Poker Hand #(TM|BR|SG)(\d+): Tournament #(\d+), (.+) - Level(\d+)\(([\d,]+)\/([\d,]+)\) - (\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2})$/
+const LINE1_INTRO = /^Poker Hand #(TM|BR|SG)(\d+): Tournament #(\d+), (.+) - Level(\d+)\(([\d,]+)\/([\d,]+)(?:\([\d,]+\))?\) - (\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2})$/
 const LINE2_TABLE_NUM = /^Table '(\d+)' (\d+)-max Seat #(\d+) is the button$/
 const LINE3_SEAT_INFO = /^Seat (\d+): ([0-9a-f]+|Hero) \(([\d,]+) in chips\)$/
 const LINE4_POSTS_DEAD_MONEY = /^([0-9a-f]+|Hero): posts (?:the )?(ante|big blind|small blind) ([\d,]+)$/
