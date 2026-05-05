@@ -1,0 +1,42 @@
+# NOTE: Currently all web tests are pure TypeScript (parsers, utils, visualization).
+# If WASM-dependent test code is added, this workflow must also trigger on Rust
+# changes (crates/**, Cargo.toml, Cargo.lock) and include a wasm-pack build step.
+name: Web Testing
+
+on:
+  push:
+    branches:
+      - "**"
+    tags-ignore:
+      - "**"
+    paths:
+      - "web/**"
+      - ".github/workflows/test-web.yml"
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - "web/**"
+      - ".github/workflows/test-web.yml"
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Run tests
+        working-directory: web
+        run: npm test
