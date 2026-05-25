@@ -33,7 +33,6 @@ export interface HandHistoryChartsRef {
 
 // Global cache for equity results (persists across re-renders)
 const equityCache = new Map<string, AllInHandData>()
-let cachedLuckScore = 0
 
 export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryChartsProps>(
   function HandHistoryCharts({ handHistories }, ref) {
@@ -90,7 +89,7 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
       try {
         const [
           { getChipHistoriesData, getHandUsageHeatmapsData },
-          { collectAllInDataAsync, createAllInEquityChart },
+          { collectAllInDataAsync, createAllInEquityChart, calculateLuckScore },
         ] = await Promise.all([
           import('../visualization'),
           import('../visualization/handHistory/allInEquityAsync'),
@@ -140,7 +139,7 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
           }))
 
           // Calculate equity only for uncached hands
-          const { data: newAllInData, luckScore: newLuckScore } = await collectAllInDataAsync(
+          const { data: newAllInData } = await collectAllInDataAsync(
             uncachedHands,
             (current, total) => {
               if (!isStale()) {
@@ -161,12 +160,6 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
           for (const data of newAllInData) {
             equityCache.set(data.handId, data)
           }
-
-          // Recalculate luck score with all cached data
-          // (simplified: we store the latest, but ideally recalculate from all)
-          if (newAllInData.length > 0) {
-            cachedLuckScore = newLuckScore
-          }
         }
 
         // Get all cached results for current hand histories
@@ -178,7 +171,11 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
           }
         }
 
-        const allInEquity = createAllInEquityChart(allCachedData, cachedLuckScore)
+        // Recalculate luck score from all loaded hands (not just the latest batch)
+        const luckScore = await calculateLuckScore(allCachedData)
+        if (isStale()) return
+
+        const allInEquity = createAllInEquityChart(allCachedData, luckScore)
 
         setState(prev => ({
           ...prev,

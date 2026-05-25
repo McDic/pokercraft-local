@@ -126,12 +126,12 @@ function filterEligibleHands(handHistories: HandHistory[]): EligibleHand[] {
 export async function collectAllInDataAsync(
   handHistories: HandHistory[],
   onProgress?: (current: number, total: number) => void
-): Promise<{ data: AllInHandData[]; luckScore: number }> {
+): Promise<{ data: AllInHandData[] }> {
   // Filter eligible hands on main thread (fast)
   const eligible = filterEligibleHands(handHistories)
 
   if (eligible.length === 0) {
-    return { data: [], luckScore: 0 }
+    return { data: [] }
   }
 
   // Determine number of workers (use available cores, max 8)
@@ -214,27 +214,42 @@ export async function collectAllInDataAsync(
   const results = await Promise.all(workerPromises)
   const allData = results.flat()
 
+  return { data: allData }
+}
 
-  // Calculate combined luck score
+/**
+ * Calculate the luck score from a full set of all-in data.
+ *
+ * Recomputes from the entire data set so incremental updates reflect every
+ * loaded hand, not just the most recently added batch.
+ *
+ * Returns a numeric score, or a sentinel string for the unavailable cases:
+ * `'no-data'` when there are no all-in hands and `'failed'` when the WASM
+ * calculation errored. Both are distinct from a valid neutral score of 0 —
+ * callers must not treat them as neutral luck.
+ */
+export type LuckScore = number | 'no-data' | 'failed'
+
+export async function calculateLuckScore(allInData: AllInHandData[]): Promise<LuckScore> {
+  if (allInData.length === 0) return 'no-data'
   const wasmModule = await import('../../wasm/pokercraft_wasm')
   await wasmModule.default()  // Initialize WASM
   const luckCalc = new wasmModule.LuckCalculator()
-  for (const data of allData) {
-    try {
-      luckCalc.addResult(data.equity, data.actualResult)
-    } catch {
-      // Skip invalid
-    }
-  }
-  let luckScore = 0
   try {
-    luckScore = luckCalc.luckScore()
-  } catch {
-    // Failed
+    for (const data of allInData) {
+      try {
+        luckCalc.addResult(data.equity, data.actualResult)
+      } catch {
+        // Skip individual invalid results
+      }
+    }
+    return luckCalc.luckScore()
+  } catch (error) {
+    console.warn('Luck score calculation failed:', error)
+    return 'failed'
+  } finally {
+    luckCalc.free()
   }
-  luckCalc.free()
-
-  return { data: allData, luckScore }
 }
 
 /**
@@ -242,7 +257,7 @@ export async function collectAllInDataAsync(
  */
 export function createAllInEquityChart(
   allInData: AllInHandData[],
-  luckScore: number
+  luckScore: LuckScore
 ): AllInEquityData {
   if (allInData.length === 0) {
     return {
@@ -380,7 +395,13 @@ export function createAllInEquityChart(
     } as Data,
   ]
 
-  const luckPercentile = 100 * (1 - (1 / (1 + Math.exp(-luckScore * 1.7))))
+  // Sentinel scores are unavailable cases, distinct from a neutral 0
+  const luckText =
+    luckScore === 'no-data'
+      ? 'No all-in data'
+      : luckScore === 'failed'
+        ? 'Luck Score calculation failed'
+        : `Luck Score: ${luckScore.toFixed(2)} (Top ${(100 * (1 - (1 / (1 + Math.exp(-luckScore * 1.7))))).toFixed(1)}%)`
 
   const layout: Partial<Layout> = {
     title: { text: 'All-in Equity Analysis' },
@@ -432,7 +453,7 @@ export function createAllInEquityChart(
     },
     annotations: [
       {
-        text: `${allInData.length} all-ins | Luck Score: ${luckScore.toFixed(2)} (Top ${luckPercentile.toFixed(1)}%)`,
+        text: `${allInData.length} all-ins | ${luckText}`,
         xref: 'paper',
         yref: 'paper',
         x: 0.5,
