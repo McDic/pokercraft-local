@@ -371,3 +371,88 @@
     gap: 0.5rem;
   }
 }
+
+/* Confirm Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  animation: modal-fade-in 0.15s ease-out;
+}
+
+.modal-dialog {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  animation: modal-pop-in 0.15s ease-out;
+}
+
+.modal-title {
+  font-size: 1.1rem;
+  color: #fff;
+  margin-bottom: 0.75rem;
+}
+
+.modal-message {
+  color: #bbb;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.modal-button {
+  font-size: 0.875rem;
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.modal-button-secondary {
+  color: #aaa;
+  border: 1px solid #444;
+  background: transparent;
+}
+
+.modal-button-secondary:hover {
+  color: #fff;
+  border-color: #666;
+  background: #333;
+}
+
+.modal-button-primary {
+  color: #fff;
+  border: 1px solid #646cff;
+  background: #646cff;
+}
+
+.modal-button-primary:hover {
+  background: #535bf2;
+  border-color: #535bf2;
+}
+
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-pop-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
