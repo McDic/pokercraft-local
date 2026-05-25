@@ -223,12 +223,15 @@ export async function collectAllInDataAsync(
  * Recomputes from the entire data set so incremental updates reflect every
  * loaded hand, not just the most recently added batch.
  *
- * Returns the luck score, or `null` if the WASM calculation failed. `null` is
- * distinct from a valid neutral score of 0 — callers must treat it as
- * "calculation failed", not as neutral luck.
+ * Returns a numeric score, or a sentinel string for the unavailable cases:
+ * `'no-data'` when there are no all-in hands and `'failed'` when the WASM
+ * calculation errored. Both are distinct from a valid neutral score of 0 —
+ * callers must not treat them as neutral luck.
  */
-export async function calculateLuckScore(allInData: AllInHandData[]): Promise<number | null> {
-  if (allInData.length === 0) return 0
+export type LuckScore = number | 'no-data' | 'failed'
+
+export async function calculateLuckScore(allInData: AllInHandData[]): Promise<LuckScore> {
+  if (allInData.length === 0) return 'no-data'
   const wasmModule = await import('../../wasm/pokercraft_wasm')
   await wasmModule.default()  // Initialize WASM
   const luckCalc = new wasmModule.LuckCalculator()
@@ -243,7 +246,7 @@ export async function calculateLuckScore(allInData: AllInHandData[]): Promise<nu
     return luckCalc.luckScore()
   } catch (error) {
     console.warn('Luck score calculation failed:', error)
-    return null
+    return 'failed'
   } finally {
     luckCalc.free()
   }
@@ -254,7 +257,7 @@ export async function calculateLuckScore(allInData: AllInHandData[]): Promise<nu
  */
 export function createAllInEquityChart(
   allInData: AllInHandData[],
-  luckScore: number | null
+  luckScore: LuckScore
 ): AllInEquityData {
   if (allInData.length === 0) {
     return {
@@ -392,10 +395,13 @@ export function createAllInEquityChart(
     } as Data,
   ]
 
-  // null score means the WASM calculation failed (distinct from a neutral 0)
-  const luckText = luckScore === null
-    ? 'Luck Score calculation failed'
-    : `Luck Score: ${luckScore.toFixed(2)} (Top ${(100 * (1 - (1 / (1 + Math.exp(-luckScore * 1.7))))).toFixed(1)}%)`
+  // Sentinel scores are unavailable cases, distinct from a neutral 0
+  const luckText =
+    luckScore === 'no-data'
+      ? 'No all-in data'
+      : luckScore === 'failed'
+        ? 'Luck Score calculation failed'
+        : `Luck Score: ${luckScore.toFixed(2)} (Top ${(100 * (1 - (1 / (1 + Math.exp(-luckScore * 1.7))))).toFixed(1)}%)`
 
   const layout: Partial<Layout> = {
     title: { text: 'All-in Equity Analysis' },
