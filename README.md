@@ -8,11 +8,6 @@ This is a customized visualization tool using downloaded data from Pokercraft in
 
 No installation required - runs entirely in your browser using WebAssembly. Your data stays on your device and is never uploaded anywhere.
 
-## Demo
-
-- [Tourney result analysis](https://blog.mcdic.net/assets/raw_html/damavaco_performance_en.html)
-- [Hand history analysis](https://blog.mcdic.net/assets/raw_html/damavaco_handhistories_en.html)
-
 ## Features
 
 The web app supports the following features:

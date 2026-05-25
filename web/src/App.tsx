@@ -59,13 +59,29 @@ function App() {
   }, [tournaments.length, isLoading, runAnalysis])
 
   const handleExport = useCallback(() => {
-    const tournamentCharts = tournamentChartsRef.current?.getChartData() ?? []
-    const handHistoryCharts = handHistoryChartsRef.current?.getChartData() ?? []
-    if (tournamentCharts.length === 0 && handHistoryCharts.length === 0) return
-    const html = generateExportHTML(tournamentCharts, handHistoryCharts)
+    // Export only the currently-active tab's charts.
+    const isTournament = activeTab === 'tournament'
+    const activeRef = isTournament ? tournamentChartsRef.current : handHistoryChartsRef.current
+    const charts = activeRef?.getChartData() ?? []
+    if (charts.length === 0) return
+
+    // Eager export: warn if the active tab is still computing, since some charts
+    // (e.g. the long-running All-In Equity) may be missing from the export.
+    if (activeRef?.isComputing()) {
+      const proceed = window.confirm(
+        'Charts are still being calculated. Some charts (such as All-In Equity) may be ' +
+          'missing from the export. Export anyway?'
+      )
+      if (!proceed) return
+    }
+
+    const html = isTournament
+      ? generateExportHTML(charts, [])
+      : generateExportHTML([], charts)
     const timestamp = new Date().toISOString().slice(0, 10)
-    downloadHTML(html, `pokercraft-export-${timestamp}.html`)
-  }, [])
+    const label = isTournament ? 'tournament' : 'handhistory'
+    downloadHTML(html, `pokercraft-${label}-${timestamp}.html`)
+  }, [activeTab])
 
   // Auto-switch tab when data changes
   useEffect(() => {
