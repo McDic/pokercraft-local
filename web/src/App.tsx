@@ -87,11 +87,13 @@ function App() {
     const charts = activeRef?.getChartData() ?? []
     if (charts.length === 0) return
 
-    // Eager export: warn if charts may still be incomplete. This covers both the
-    // chart component's own generation loop (isComputing) and background workers
-    // tracked by isLoading — notably the bankroll simulation, which is computed by
-    // the analysis worker rather than inside TournamentCharts.
-    if (isLoading || activeRef?.isComputing()) {
+    // Eager export: warn if charts may still be incomplete. This covers the chart
+    // component's own generation loop (isComputing) plus the bankroll simulation,
+    // which runs in the analysis worker (isLoading) rather than inside
+    // TournamentCharts. The analysis worker only produces tournament charts, so
+    // isLoading is only relevant to the tournament tab — gating it there avoids a
+    // false "still calculating" warning when exporting hand history during analysis.
+    if ((isTournament && isLoading) || activeRef?.isComputing()) {
       setPendingExport({ charts, isTournament })
       return
     }

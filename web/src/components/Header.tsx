@@ -22,7 +22,7 @@ export function Header({ wasmVersion, onExport }: HeaderProps) {
           className="export-button"
           onClick={onExport}
           disabled={!onExport}
-          title={onExport ? 'Export all charts as HTML' : 'Load data to enable export'}
+          title={onExport ? 'Export the active tab\'s charts as HTML' : 'Load data to enable export'}
         >
           Export HTML
         </button>
