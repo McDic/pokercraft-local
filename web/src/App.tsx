@@ -87,15 +87,17 @@ function App() {
     const charts = activeRef?.getChartData() ?? []
     if (charts.length === 0) return
 
-    // Eager export: warn if the active tab is still computing, since some charts
-    // (e.g. the long-running All-In Equity) may be missing from the export.
-    if (activeRef?.isComputing()) {
+    // Eager export: warn if charts may still be incomplete. This covers both the
+    // chart component's own generation loop (isComputing) and background workers
+    // tracked by isLoading — notably the bankroll simulation, which is computed by
+    // the analysis worker rather than inside TournamentCharts.
+    if (isLoading || activeRef?.isComputing()) {
       setPendingExport({ charts, isTournament })
       return
     }
 
     runExport(charts, isTournament)
-  }, [activeTab, runExport])
+  }, [activeTab, isLoading, runExport])
 
   // Auto-switch tab when data changes
   useEffect(() => {
