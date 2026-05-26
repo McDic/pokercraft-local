@@ -11,17 +11,31 @@ import {
   type TournamentChartsRef,
   HandHistoryCharts,
   type HandHistoryChartsRef,
+  ConfirmModal,
 } from './components'
 
 // Hooks
 import { useAnalysisWorker } from './hooks/useAnalysisWorker'
 
 // Export
-import { generateExportHTML, downloadHTML } from './export/htmlExport'
+import { generateExportHTML, downloadHTML, type ExportChart } from './export/htmlExport'
+
+/** Local timestamp `YYYY-MM-DD_HH-MM-SS` for export filenames (colon-free for all OSes). */
+function exportTimestamp(): string {
+  const d = new Date()
+  const p = (n: number) => String(n).padStart(2, '0')
+  return (
+    `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` +
+    `_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`
+  )
+}
 
 function App() {
   const [activeTab, setActiveTab] = useState<ChartTab>('tournament')
   const [wasmVersion, setWasmVersion] = useState('')
+  const [pendingExport, setPendingExport] = useState<
+    { charts: ExportChart[]; isTournament: boolean } | null
+  >(null)
   const prevTournamentCountRef = useRef(0)
   const tournamentChartsRef = useRef<TournamentChartsRef>(null)
   const handHistoryChartsRef = useRef<HandHistoryChartsRef>(null)
@@ -58,14 +72,34 @@ function App() {
     }
   }, [tournaments.length, isLoading, runAnalysis])
 
-  const handleExport = useCallback(() => {
-    const tournamentCharts = tournamentChartsRef.current?.getChartData() ?? []
-    const handHistoryCharts = handHistoryChartsRef.current?.getChartData() ?? []
-    if (tournamentCharts.length === 0 && handHistoryCharts.length === 0) return
-    const html = generateExportHTML(tournamentCharts, handHistoryCharts)
-    const timestamp = new Date().toISOString().slice(0, 10)
-    downloadHTML(html, `pokercraft-export-${timestamp}.html`)
+  const runExport = useCallback((charts: ExportChart[], isTournament: boolean) => {
+    const html = isTournament
+      ? generateExportHTML(charts, [])
+      : generateExportHTML([], charts)
+    const label = isTournament ? 'tournament' : 'handhistory'
+    downloadHTML(html, `pokercraft-${label}-${exportTimestamp()}.html`)
   }, [])
+
+  const handleExport = useCallback(() => {
+    // Export only the currently-active tab's charts.
+    const isTournament = activeTab === 'tournament'
+    const activeRef = isTournament ? tournamentChartsRef.current : handHistoryChartsRef.current
+    const charts = activeRef?.getChartData() ?? []
+    if (charts.length === 0) return
+
+    // Eager export: warn if charts may still be incomplete. This covers the chart
+    // component's own generation loop (isComputing) plus the bankroll simulation,
+    // which runs in the analysis worker (isLoading) rather than inside
+    // TournamentCharts. The analysis worker only produces tournament charts, so
+    // isLoading is only relevant to the tournament tab — gating it there avoids a
+    // false "still calculating" warning when exporting hand history during analysis.
+    if ((isTournament && isLoading) || activeRef?.isComputing()) {
+      setPendingExport({ charts, isTournament })
+      return
+    }
+
+    runExport(charts, isTournament)
+  }, [activeTab, isLoading, runExport])
 
   // Auto-switch tab when data changes
   useEffect(() => {
@@ -123,6 +157,19 @@ function App() {
       <div style={{ display: activeTab === 'handHistory' ? 'block' : 'none' }}>
         <HandHistoryCharts ref={handHistoryChartsRef} handHistories={handHistories} />
       </div>
+
+      <ConfirmModal
+        open={pendingExport !== null}
+        title="Charts still calculating"
+        message="Some charts (such as All-In Equity) are still being calculated and may be missing from the export. Export anyway?"
+        confirmLabel="Export anyway"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          if (pendingExport) runExport(pendingExport.charts, pendingExport.isTournament)
+          setPendingExport(null)
+        }}
+        onCancel={() => setPendingExport(null)}
+      />
     </div>
   )
 }

@@ -32,6 +32,7 @@ interface ChartsState {
 
 export interface TournamentChartsRef {
   getChartData: () => ExportChart[]
+  isComputing: () => boolean
 }
 
 export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentChartsProps>(
@@ -59,6 +60,9 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
       if (state.prizePies) charts.push({ name: 'Prize Distribution', ...state.prizePies })
       if (state.rrByRank) charts.push({ name: 'RR by Rank', ...state.rrByRank })
       return charts
+    },
+    isComputing() {
+      return state.isComputing
     },
   }))
 

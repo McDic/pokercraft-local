@@ -29,6 +29,7 @@ interface ChartsState {
 
 export interface HandHistoryChartsRef {
   getChartData: () => ExportChart[]
+  isComputing: () => boolean
 }
 
 // Global cache for equity results (persists across re-renders)
@@ -54,6 +55,9 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
       if (state.handUsage) charts.push({ name: 'Hand Usage Heatmaps', ...state.handUsage })
       if (state.allInEquity) charts.push({ name: 'All-In Equity', ...state.allInEquity })
       return charts
+    },
+    isComputing() {
+      return state.isComputing
     },
   }))
 
