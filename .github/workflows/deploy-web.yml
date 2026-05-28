@@ -36,6 +36,14 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          shared-key: "wasm-build"
 
       - name: Install wasm-pack
         run: cargo install wasm-pack
