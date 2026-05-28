@@ -3,6 +3,7 @@
  */
 
 import type { Data, Layout } from 'plotly.js-dist-min'
+import { getVersionInfo } from '../utils/version'
 
 export interface ExportChart {
   name: string
@@ -100,9 +101,10 @@ export function generateExportHTML(
   handHistoryCharts: ExportChart[]
 ): string {
   const timestamp = new Date().toLocaleString()
-  const appVersion = __APP_VERSION__
-  const gitHash = __GIT_HASH__
-  const hashSuffix = gitHash && gitHash !== 'unknown' ? ` (${escapeHtml(gitHash)})` : ''
+  const version = getVersionInfo()
+  const versionHtml = version.url
+    ? `<a href="${escapeHtml(version.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(version.text)}</a>`
+    : escapeHtml(version.text)
 
   const hasTournament = tournamentCharts.length > 0
   const hasHandHistory = handHistoryCharts.length > 0
@@ -119,7 +121,7 @@ export function generateExportHTML(
 <body>
   <div class="export-header">
     <h1>Pokercraft Local</h1>
-    <div class="meta">Exported on ${escapeHtml(timestamp)} &middot; v${escapeHtml(appVersion)}${hashSuffix}</div>
+    <div class="meta">Exported on ${escapeHtml(timestamp)} &middot; ${versionHtml}</div>
   </div>
   ${
     hasTournament
