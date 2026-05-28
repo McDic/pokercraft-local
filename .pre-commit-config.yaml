@@ -3,12 +3,12 @@ repos:
     rev: v3.2.0
     hooks:
       - id: trailing-whitespace
-        exclude: (\.svg|\.nvmrc)$
+        exclude: (\.svg|\.nvmrc|^demo/.*\.html)$
       - id: end-of-file-fixer
-        exclude: (\.svg|\.nvmrc)$
+        exclude: (\.svg|\.nvmrc|^demo/.*\.html)$
       - id: check-yaml
       - id: check-added-large-files
-        exclude: web/public/hu_preflop_cache\.bin
+        exclude: (web/public/hu_preflop_cache\.bin|^demo/.*\.html$)
 
   - repo: local
     hooks:
