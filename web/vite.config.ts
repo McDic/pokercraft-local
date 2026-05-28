@@ -11,12 +11,21 @@ function getGitHash(): string {
   }
 }
 
+// Get git commit timestamp (Unix seconds) at build time
+function getGitTimestamp(): number {
+  try {
+    return parseInt(execSync('git log -1 --format=%ct HEAD').toString().trim(), 10)
+  } catch {
+    return 0
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   define: {
-    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.0.0'),
     __GIT_HASH__: JSON.stringify(getGitHash()),
+    __GIT_TIMESTAMP__: getGitTimestamp(),
   },
   // Base URL for custom domain (pokercraft.mcdic.net)
   // Use '/' for custom domains, '/<repo-name>/' for github.io URLs

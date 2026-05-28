@@ -32,7 +32,6 @@ function exportTimestamp(): string {
 
 function App() {
   const [activeTab, setActiveTab] = useState<ChartTab>('tournament')
-  const [wasmVersion, setWasmVersion] = useState('')
   const [pendingExport, setPendingExport] = useState<
     { charts: ExportChart[]; isTournament: boolean } | null
   >(null)
@@ -50,16 +49,6 @@ function App() {
     parseFiles,
     runAnalysis,
   } = useAnalysisWorker()
-
-  // Load WASM version on mount
-  useEffect(() => {
-    import('./wasm/pokercraft_wasm').then(async (wasm) => {
-      await wasm.default()
-      setWasmVersion(wasm.version())
-    }).catch(() => {
-      // WASM load failed
-    })
-  }, [])
 
   // Auto-run analysis when new tournament data is added
   // (Hand history analysis is handled independently by HandHistoryCharts)
@@ -113,7 +102,6 @@ function App() {
   return (
     <div className="app">
       <Header
-        wasmVersion={wasmVersion}
         onExport={tournaments.length > 0 || handHistories.length > 0 ? handleExport : undefined}
       />
 

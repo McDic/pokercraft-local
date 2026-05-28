@@ -2,14 +2,14 @@
  * Application header component
  */
 
+import { getVersionInfo } from '../utils/version'
+
 interface HeaderProps {
-  wasmVersion: string
   onExport?: () => void
 }
 
-export function Header({ wasmVersion, onExport }: HeaderProps) {
-  const appVersion = __APP_VERSION__
-  const gitHash = __GIT_HASH__
+export function Header({ onExport }: HeaderProps) {
+  const version = getVersionInfo()
 
   return (
     <header className="header">
@@ -35,9 +35,17 @@ export function Header({ wasmVersion, onExport }: HeaderProps) {
           GitHub
         </a>
         <span className="version">
-          v{appVersion}
-          {gitHash && gitHash !== 'unknown' && ` (${gitHash})`}
-          {wasmVersion && ` | WASM v${wasmVersion}`}
+          {version.url ? (
+            <a
+              href={version.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {version.text}
+            </a>
+          ) : (
+            version.text
+          )}
         </span>
       </div>
     </header>
