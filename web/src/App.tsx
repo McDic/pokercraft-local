@@ -12,6 +12,7 @@ import {
   HandHistoryCharts,
   type HandHistoryChartsRef,
   ConfirmModal,
+  ErrorBoundary,
 } from './components'
 
 // Hooks
@@ -135,15 +136,19 @@ function App() {
           to preserve computation state and progress bars across tab switches.
           Tradeoff: higher memory usage from persistent Plotly DOM nodes. */}
       <div style={{ display: activeTab === 'tournament' ? 'block' : 'none' }}>
-        <TournamentCharts
-          ref={tournamentChartsRef}
-          tournaments={tournaments}
-          bankrollResults={bankrollResults}
-        />
+        <ErrorBoundary label="tournament charts">
+          <TournamentCharts
+            ref={tournamentChartsRef}
+            tournaments={tournaments}
+            bankrollResults={bankrollResults}
+          />
+        </ErrorBoundary>
       </div>
 
       <div style={{ display: activeTab === 'handHistory' ? 'block' : 'none' }}>
-        <HandHistoryCharts ref={handHistoryChartsRef} handHistories={handHistories} />
+        <ErrorBoundary label="hand history charts">
+          <HandHistoryCharts ref={handHistoryChartsRef} handHistories={handHistories} />
+        </ErrorBoundary>
       </div>
 
       <ConfirmModal

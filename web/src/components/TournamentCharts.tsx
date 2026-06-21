@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
-import Plot from 'react-plotly.js'
+import Plot from './plot'
 import type { Data, Layout } from 'plotly.js-dist-min'
 import type { TournamentSummary } from '../types'
 import type { BankrollWorkerResult } from '../workers/analysisWorker'
