@@ -136,7 +136,7 @@ function App() {
           to preserve computation state and progress bars across tab switches.
           Tradeoff: higher memory usage from persistent Plotly DOM nodes. */}
       <div style={{ display: activeTab === 'tournament' ? 'block' : 'none' }}>
-        <ErrorBoundary label="tournament charts">
+        <ErrorBoundary label="tournament charts" resetKeys={[tournaments, bankrollResults]}>
           <TournamentCharts
             ref={tournamentChartsRef}
             tournaments={tournaments}
@@ -146,7 +146,7 @@ function App() {
       </div>
 
       <div style={{ display: activeTab === 'handHistory' ? 'block' : 'none' }}>
-        <ErrorBoundary label="hand history charts">
+        <ErrorBoundary label="hand history charts" resetKeys={[handHistories]}>
           <HandHistoryCharts ref={handHistoryChartsRef} handHistories={handHistories} />
         </ErrorBoundary>
       </div>

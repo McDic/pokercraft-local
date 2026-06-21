@@ -289,6 +289,37 @@
   font-size: 0.875rem;
 }
 
+/* Error Boundary fallback */
+.error-boundary {
+  max-width: 800px;
+  margin: 1.5rem auto;
+  background: rgba(255, 100, 100, 0.1);
+  border: 1px solid rgba(255, 100, 100, 0.3);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  color: #ddd;
+}
+
+.error-boundary h3 {
+  color: #ff6464;
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+}
+
+.error-boundary summary {
+  cursor: pointer;
+  color: #ff9999;
+  font-size: 0.875rem;
+}
+
+.error-boundary pre {
+  color: #bbb;
+  font-size: 0.8rem;
+  background: #1a1a1a;
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
 /* No Data State */
 .no-data {
   text-align: center;
