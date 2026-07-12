@@ -21,6 +21,11 @@ function plotlyFields(value: string): Set<string> {
   return new Set(Array.from(value.matchAll(/%\{([^}]+)}/g), m => m[1]))
 }
 
+/** Markup — `<b>`, `<br>`, `<extra></extra>` — counted, since repeats are meaningful. */
+function tags(value: string): string[] {
+  return Array.from(value.matchAll(/<\/?\w+>/g), m => m[0]).sort()
+}
+
 const englishKeys = Object.keys(en)
 
 // Driven off the same registry the app is, so a language added to LANGUAGES is
@@ -77,6 +82,23 @@ describe('locales', () => {
         const extra = [...actual].filter(field => !expected.has(field))
         if (missing.length || extra.length) {
           mismatched.push(`${key}: dropped [${missing}], unexpected [${extra}]`)
+        }
+      }
+      expect(mismatched).toEqual([])
+    })
+
+    it('keeps the same markup the English has', () => {
+      // `<b>`, `<br>` and especially `<extra></extra>` are markup, not words. Dropping
+      // the `<extra></extra>` from a hovertemplate visibly breaks the tooltip, and it
+      // is the easiest thing in the file for a translator to mistake for text.
+      const mismatched: string[] = []
+      for (const [key, value] of Object.entries(locale)) {
+        const source = (en as Record<string, string>)[key]
+        if (source === undefined) continue
+        const expected = tags(source)
+        const actual = tags(value)
+        if (expected.join('') !== actual.join('')) {
+          mismatched.push(`${key}: expected [${expected}], got [${actual}]`)
         }
       }
       expect(mismatched).toEqual([])

@@ -67,8 +67,9 @@ function escapeHtml(str: string): string {
  * `JSON.stringify` escapes neither `<` nor `/`, so a tournament named
  * `"</script>..."` — the name is copied verbatim out of the uploaded summary file,
  * and reaches the export through trace names and `customdata` — would close the
- * script element early, leaving a chart-less page. Escaping `<` as `<` keeps
- * the JSON semantically identical while making `</script>` unrepresentable.
+ * script element early, leaving a chart-less page. Escaping `<` as the `<`
+ * escape keeps the JSON semantically identical while making `</script>`
+ * unrepresentable, so the tokenizer can never leave the script-data state.
  */
 function embedJson(value: unknown): string {
   return JSON.stringify(value).replace(/</g, '\\u003c')

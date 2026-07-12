@@ -29,8 +29,6 @@ export const LANGUAGES = [
   { code: 'ko', label: '한국어', translation: ko },
 ] as const
 
-export type Language = (typeof LANGUAGES)[number]['code']
-
 export const LANGUAGE_CODES = LANGUAGES.map(l => l.code)
 
 const resources = Object.fromEntries(

@@ -56,6 +56,7 @@
   "progress.chart.chipHistories": "Generating chip histories...",
   "progress.chart.handUsage": "Generating hand usage heatmaps...",
   "progress.chart.equityCache": "Checking equity cache...",
+  "progress.chart.allInEquity": "Generating all-in equity...",
   "progress.chart.equityCached": "Found {{cached}} cached, calculating {{pending}} new...",
   "progress.chart.equity": "Calculating equity: {{current}}/{{total}} all-ins...",
   "progress.chart.complete": "Complete",

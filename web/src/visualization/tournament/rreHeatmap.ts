@@ -23,11 +23,11 @@ export interface RREHeatmapData {
  */
 export function getRREHeatmapData(tournaments: TournamentSummary[], t: Translate): RREHeatmapData {
   // Calculate data for each tournament
-  const data = tournaments.map(t => ({
-    buyIn: getTournamentBuyIn(t),
-    rre: getTournamentRRE(t),
-    totalEntries: t.totalPlayers,
-    timeOfDay: getTournamentTimeOfWeek(t)[1], // minutes of day
+  const data = tournaments.map(tour => ({
+    buyIn: getTournamentBuyIn(tour),
+    rre: getTournamentRRE(tour),
+    totalEntries: tour.totalPlayers,
+    timeOfDay: getTournamentTimeOfWeek(tour)[1], // minutes of day
   }))
 
   const log2RRE = data.map(d => log2OrNaN(d.rre))

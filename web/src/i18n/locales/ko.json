@@ -56,6 +56,7 @@
   "progress.chart.chipHistories": "칩 히스토리 차트를 생성하는 중...",
   "progress.chart.handUsage": "핸드 사용 히트맵을 생성하는 중...",
   "progress.chart.equityCache": "에퀴티 캐시를 확인하는 중...",
+  "progress.chart.allInEquity": "올인 에퀴티 차트를 생성하는 중...",
   "progress.chart.equityCached": "캐시 {{cached}}개 발견, {{pending}}개 새로 계산하는 중...",
   "progress.chart.equity": "에퀴티 계산 중: 올인 {{current}}/{{total}}...",
   "progress.chart.complete": "완료",

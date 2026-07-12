@@ -35,9 +35,9 @@ export function getHistoricalPerformanceData(
 
   // Base data
   const indices = tournaments.map((_, i) => i + 1)
-  const profits = tournaments.map(t => getTournamentProfit(t))
-  const rakes = tournaments.map(t => t.rake * t.myEntries)
-  const buyIns = tournaments.map(t => getTournamentBuyIn(t))
+  const profits = tournaments.map(tour => getTournamentProfit(tour))
+  const rakes = tournaments.map(tour => tour.rake * tour.myEntries)
+  const buyIns = tournaments.map(tour => getTournamentBuyIn(tour))
   const profitable = profits.map(p => (p > 0 ? 1 : 0))
 
   // Cumulative calculations

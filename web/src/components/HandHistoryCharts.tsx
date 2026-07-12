@@ -1,5 +1,19 @@
 /**
- * Hand history charts container with async loading and caching
+ * Hand history charts container.
+ *
+ * Deliberately two layers, in two effects:
+ *
+ *   data   — the WASM all-in equity pass. Depends on the hand histories and nothing
+ *            else. Expensive: it spawns a pool of Web Workers that cannot be aborted.
+ *   charts — the Plotly figures. Depends on that data plus the active language.
+ *            Cheap, pure, and safe to redo.
+ *
+ * Keeping them apart is what makes a language switch free: it re-runs only the chart
+ * layer, so no equity is ever recomputed and no worker is ever respawned. Folding the
+ * two together — the obvious shape, since figures are what the component stores — means
+ * the language has to be a dependency of the equity pass too, and switching mid-analysis
+ * then supersedes a run whose workers keep going, while its replacement starts a second
+ * pool for the same hands.
  */
 
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
@@ -7,7 +21,7 @@ import { useTranslation } from 'react-i18next'
 import Plot from './plot'
 import type { Data, Layout } from 'plotly.js-dist-min'
 import type { HandHistory } from '../types'
-import type { AllInHandData } from '../visualization/handHistory/allInEquityAsync'
+import type { AllInHandData, LuckScore } from '../visualization/handHistory/allInEquityAsync'
 import type { ExportChart } from '../export/htmlExport'
 import type { TranslationKey } from '../i18n'
 import { yieldToBrowser } from '../utils'
@@ -21,16 +35,16 @@ interface HandHistoryChartsProps {
   handHistories: HandHistory[]
 }
 
-interface ChartsState {
-  chipHistories: ChartData | null
-  allInEquity: ChartData | null
-  handUsage: ChartData | null
-  isComputing: boolean
-  progress: {
-    messageKey: TranslationKey | null
-    messageParams?: Record<string, string | number>
-    percentage: number
-  }
+interface Progress {
+  messageKey: TranslationKey | null
+  messageParams?: Record<string, string | number>
+  percentage: number
+}
+
+/** The language-independent output of the equity pass. */
+interface EquityData {
+  allInData: AllInHandData[]
+  luckScore: LuckScore
 }
 
 export interface HandHistoryChartsRef {
@@ -44,196 +58,195 @@ const equityCache = new Map<string, AllInHandData>()
 export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryChartsProps>(
   function HandHistoryCharts({ handHistories }, ref) {
   const { t, i18n } = useTranslation()
-  const [state, setState] = useState<ChartsState>({
-    chipHistories: null,
-    allInEquity: null,
-    handUsage: null,
-    isComputing: false,
-    progress: { messageKey: null, percentage: 0 },
-  })
+  const language = i18n.resolvedLanguage
 
-  const computeIdRef = useRef(0)
+  // --- data layer ---
+  const [equity, setEquity] = useState<EquityData | null>(null)
+  const [isCalculating, setIsCalculating] = useState(false)
+  const [dataProgress, setDataProgress] = useState<Progress>({ messageKey: null, percentage: 0 })
+
+  // --- chart layer ---
+  const [chipHistories, setChipHistories] = useState<ChartData | null>(null)
+  const [handUsage, setHandUsage] = useState<ChartData | null>(null)
+  const [allInEquity, setAllInEquity] = useState<ChartData | null>(null)
+  const [isDrawing, setIsDrawing] = useState(false)
+  const [drawProgress, setDrawProgress] = useState<Progress>({ messageKey: null, percentage: 0 })
+
+  const calcIdRef = useRef(0)
+  const drawIdRef = useRef(0)
   const lastComputedRef = useRef<Set<string>>(new Set())
-  const lastLanguageRef = useRef<string | undefined>(undefined)
+
+  const isComputing = isCalculating || isDrawing
+  // While the equity pass is running, its progress is what the user cares about; the
+  // chart layer only ever reports the brief tail.
+  const progress = isCalculating ? dataProgress : drawProgress
 
   useImperativeHandle(ref, () => ({
     getChartData() {
       const charts: ExportChart[] = []
-      if (state.chipHistories) {
-        charts.push({ name: t('chart.chipHistories.name'), ...state.chipHistories })
-      }
-      if (state.handUsage) charts.push({ name: t('chart.handUsage.name'), ...state.handUsage })
-      if (state.allInEquity) charts.push({ name: t('chart.allInEquity.name'), ...state.allInEquity })
+      if (chipHistories) charts.push({ name: t('chart.chipHistories.name'), ...chipHistories })
+      if (handUsage) charts.push({ name: t('chart.handUsage.name'), ...handUsage })
+      if (allInEquity) charts.push({ name: t('chart.allInEquity.name'), ...allInEquity })
       return charts
     },
     isComputing() {
-      return state.isComputing
+      return isComputing
     },
   }))
 
-  const language = i18n.resolvedLanguage
-
+  // ---------------------------------------------------------------------------
+  // Data layer: all-in equity. No `t`/`language` dependency, by design.
+  // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (handHistories.length === 0) {
-      return
-    }
+    if (handHistories.length === 0) return
 
-    // Check if we have new hands to process
-    const currentIds = new Set(handHistories.map(h => h.id))
     const hasNewHands = handHistories.some(h => !lastComputedRef.current.has(h.id))
+    if (!hasNewHands && lastComputedRef.current.size > 0) {
+      return // Nothing new to compute.
+    }
+    // Claim these ids up front, so a re-render with the same data cannot start a
+    // second pass.
+    lastComputedRef.current = new Set(handHistories.map(h => h.id))
 
-    // A language switch brings no new hands, so it has to be able to get past the
-    // skip below — otherwise the charts would keep their old-language labels until
-    // the next file was loaded. Once the equity pass has finished, this rebuild costs
-    // nothing extra: every hand is in `equityCache`, so `uncachedHands` is empty and
-    // only the figures are reassembled. Switching *during* the equity pass restarts
-    // the hands still outstanding, but not the ones already banked (see the cache
-    // write below, which deliberately happens before the staleness check).
-    const languageChanged = lastLanguageRef.current !== language
-    lastLanguageRef.current = language
+    const thisId = ++calcIdRef.current
+    const isStale = () => calcIdRef.current !== thisId
 
-    if (!hasNewHands && !languageChanged && lastComputedRef.current.size > 0) {
-      return // No new data, skip recomputation
+    const calculate = async () => {
+      setIsCalculating(true)
+      setDataProgress({ messageKey: 'progress.chart.equityCache', percentage: 20 })
+      await yieldToBrowser()
+
+      try {
+        const { collectAllInDataAsync, calculateLuckScore } = await import(
+          '../visualization/handHistory/allInEquityAsync'
+        )
+        if (isStale()) return
+
+        const uncachedHands = handHistories.filter(h => !equityCache.has(h.id))
+        const cachedCount = handHistories.length - uncachedHands.length
+
+        if (uncachedHands.length > 0) {
+          setDataProgress({
+            messageKey: 'progress.chart.equityCached',
+            messageParams: { cached: cachedCount, pending: uncachedHands.length },
+            percentage: 25,
+          })
+
+          const { data: newAllInData } = await collectAllInDataAsync(
+            uncachedHands,
+            (current, total) => {
+              if (isStale()) return
+              setDataProgress({
+                messageKey: 'progress.chart.equity',
+                messageParams: { current, total },
+                percentage: 25 + Math.floor((current / total) * 70),
+              })
+            }
+          )
+
+          // Bank before the staleness check. Equity is keyed by hand id and does not
+          // depend on which run produced it, so results are always worth keeping —
+          // returning first would throw away every hand this run already paid WASM
+          // for, and a run does get superseded, by a second upload landing mid-pass.
+          for (const data of newAllInData) {
+            equityCache.set(data.handId, data)
+          }
+          if (isStale()) return
+        }
+
+        const allInData = handHistories
+          .map(h => equityCache.get(h.id))
+          .filter((d): d is AllInHandData => d !== undefined)
+
+        // Luck is scored over every loaded hand, not just the latest batch.
+        const luckScore = await calculateLuckScore(allInData)
+        if (isStale()) return
+
+        setEquity({ allInData, luckScore })
+        setIsCalculating(false)
+      } catch (error) {
+        console.error('Equity calculation failed:', error)
+        if (isStale()) return
+        lastComputedRef.current = new Set() // Allow retry on next render
+        setIsCalculating(false)
+        setDataProgress({ messageKey: 'progress.chart.error', percentage: 0 })
+      }
     }
 
-    // Mark current IDs immediately to prevent duplicate computations
-    // from re-renders with the same data
-    lastComputedRef.current = currentIds
+    calculate()
 
-    const thisComputeId = ++computeIdRef.current
-    const isStale = () => computeIdRef.current !== thisComputeId
+    return () => {
+      // Reading the ref's latest value is the intent, not a stale-capture mistake,
+      // so the rule's "copy it into a variable" advice does not apply.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      calcIdRef.current++ // Invalidate this pass
+    }
+  }, [handHistories])
 
-    const compute = async () => {
-      setState(prev => ({
-        ...prev,
-        isComputing: true,
-        progress: { messageKey: 'progress.chart.loadingModules', percentage: 5 },
-      }))
+  // ---------------------------------------------------------------------------
+  // Chart layer: rebuilt whenever the data or the language changes. Pure and cheap —
+  // it never touches WASM, and never spawns a worker.
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (handHistories.length === 0) return
 
+    const thisId = ++drawIdRef.current
+    const isStale = () => drawIdRef.current !== thisId
+
+    const draw = async () => {
+      setIsDrawing(true)
+      setDrawProgress({ messageKey: 'progress.chart.loadingModules', percentage: 5 })
       await yieldToBrowser()
 
       try {
         const [
           { getChipHistoriesData, getHandUsageHeatmapsData },
-          { collectAllInDataAsync, createAllInEquityChart, calculateLuckScore },
+          { createAllInEquityChart },
         ] = await Promise.all([
           import('../visualization'),
           import('../visualization/handHistory/allInEquityAsync'),
         ])
-
         if (isStale()) return
 
-        // Chip histories (always recompute - fast enough)
-        setState(prev => ({
-          ...prev,
-          progress: { messageKey: 'progress.chart.chipHistories', percentage: 10 },
-        }))
+        setDrawProgress({ messageKey: 'progress.chart.chipHistories', percentage: 35 })
         await yieldToBrowser()
-
-        const chipHistories = await getChipHistoriesData(handHistories, t)
+        const chips = await getChipHistoriesData(handHistories, t)
         if (isStale()) return
+        setChipHistories(chips)
 
-        setState(prev => ({
-          ...prev,
-          chipHistories,
-          progress: { messageKey: 'progress.chart.handUsage', percentage: 15 },
-        }))
+        setDrawProgress({ messageKey: 'progress.chart.handUsage', percentage: 70 })
         await yieldToBrowser()
-
-        // Hand usage heatmaps (compute before equity)
-        const handUsage = await getHandUsageHeatmapsData(handHistories, t)
+        const usage = await getHandUsageHeatmapsData(handHistories, t)
         if (isStale()) return
+        setHandUsage(usage)
 
-        setState(prev => ({
-          ...prev,
-          handUsage,
-          progress: { messageKey: 'progress.chart.equityCache', percentage: 20 },
-        }))
-        await yieldToBrowser()
-
-        // Filter out hands that are already cached
-        const uncachedHands = handHistories.filter(h => !equityCache.has(h.id))
-        const cachedCount = handHistories.length - uncachedHands.length
-
-        if (uncachedHands.length > 0) {
-          setState(prev => ({
-            ...prev,
-            progress: {
-              messageKey: 'progress.chart.equityCached',
-              messageParams: { cached: cachedCount, pending: uncachedHands.length },
-              percentage: 25,
-            },
-          }))
-
-          // Calculate equity only for uncached hands
-          const { data: newAllInData } = await collectAllInDataAsync(
-            uncachedHands,
-            (current, total) => {
-              if (!isStale()) {
-                const pct = 25 + Math.floor((current / total) * 70)
-                setState(prev => ({
-                  ...prev,
-                  progress: {
-                    messageKey: 'progress.chart.equity',
-                    messageParams: { current, total },
-                    percentage: pct,
-                  },
-                }))
-              }
-            }
-          )
-
-          // Bank the results BEFORE the staleness check. Equity is keyed by hand id
-          // and does not depend on which run computed it, so it is always worth
-          // keeping — whereas returning first would throw away every hand this run
-          // already paid WASM for. That is not hypothetical: switching language
-          // mid-analysis supersedes this run, and discarding here would make the
-          // replacement run recompute the whole batch from an empty cache.
-          for (const data of newAllInData) {
-            equityCache.set(data.handId, data)
-          }
-
+        // Absent only while the equity pass is still running; this effect reruns when
+        // it lands.
+        if (equity) {
+          setDrawProgress({ messageKey: 'progress.chart.allInEquity', percentage: 90 })
+          await yieldToBrowser()
+          const chart = createAllInEquityChart(equity.allInData, equity.luckScore, t)
           if (isStale()) return
+          setAllInEquity(chart)
         }
 
-        // Get all cached results for current hand histories
-        const allCachedData: AllInHandData[] = []
-        for (const h of handHistories) {
-          const cached = equityCache.get(h.id)
-          if (cached) {
-            allCachedData.push(cached)
-          }
-        }
-
-        // Recalculate luck score from all loaded hands (not just the latest batch)
-        const luckScore = await calculateLuckScore(allCachedData)
-        if (isStale()) return
-
-        const allInEquity = createAllInEquityChart(allCachedData, luckScore, t)
-
-        setState(prev => ({
-          ...prev,
-          allInEquity,
-          isComputing: false,
-          progress: { messageKey: 'progress.chart.complete', percentage: 100 },
-        }))
+        setIsDrawing(false)
+        setDrawProgress({ messageKey: 'progress.chart.complete', percentage: 100 })
       } catch (error) {
         console.error('Chart generation failed:', error)
-        lastComputedRef.current = new Set() // Allow retry on next render
-        setState(prev => ({
-          ...prev,
-          isComputing: false,
-          progress: { messageKey: 'progress.chart.error', percentage: 0 },
-        }))
+        if (isStale()) return
+        setIsDrawing(false)
+        setDrawProgress({ messageKey: 'progress.chart.error', percentage: 0 })
       }
     }
 
-    compute()
+    draw()
 
     return () => {
-      computeIdRef.current++ // Invalidate this computation
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      drawIdRef.current++ // Invalidate this redraw
     }
-  }, [handHistories, t, language])
+  }, [handHistories, equity, t, language])
 
   if (handHistories.length === 0) {
     return (
@@ -245,26 +258,25 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
 
   return (
     <div className="charts-container">
-      {state.isComputing && (
+      {isComputing && (
         <div className="chart-loading">
           <div className="progress-bar">
             <div
               className="progress-fill"
-              style={{ width: `${state.progress.percentage}%` }}
+              style={{ width: `${progress.percentage}%` }}
             />
           </div>
           <p className="progress-message">
-            {state.progress.messageKey &&
-              t(state.progress.messageKey, state.progress.messageParams)}
+            {progress.messageKey && t(progress.messageKey, progress.messageParams)}
           </p>
         </div>
       )}
 
-      {state.chipHistories && state.chipHistories.traces.length > 0 && (
+      {chipHistories && chipHistories.traces.length > 0 && (
         <section className="chart-section">
           <Plot
-            data={state.chipHistories.traces}
-            layout={{ ...state.chipHistories.layout, autosize: true }}
+            data={chipHistories.traces}
+            layout={{ ...chipHistories.layout, autosize: true }}
             useResizeHandler
             style={{ width: '100%', height: '900px' }}
             config={{ responsive: true }}
@@ -272,11 +284,11 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
         </section>
       )}
 
-      {state.handUsage && state.handUsage.traces.length > 0 && (
+      {handUsage && handUsage.traces.length > 0 && (
         <section className="chart-section">
           <Plot
-            data={state.handUsage.traces}
-            layout={{ ...state.handUsage.layout, autosize: true }}
+            data={handUsage.traces}
+            layout={{ ...handUsage.layout, autosize: true }}
             useResizeHandler
             style={{ width: '100%', height: '900px' }}
             config={{ responsive: true }}
@@ -284,11 +296,11 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
         </section>
       )}
 
-      {state.allInEquity && state.allInEquity.traces.length > 0 && (
+      {allInEquity && allInEquity.traces.length > 0 && (
         <section className="chart-section">
           <Plot
-            data={state.allInEquity.traces}
-            layout={{ ...state.allInEquity.layout, autosize: true }}
+            data={allInEquity.traces}
+            layout={{ ...allInEquity.layout, autosize: true }}
             useResizeHandler
             style={{ width: '100%', height: '700px' }}
             config={{ responsive: true }}

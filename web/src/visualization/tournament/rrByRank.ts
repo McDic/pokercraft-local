@@ -20,16 +20,16 @@ export interface RRByRankData {
 export function getRRByRankData(tournaments: TournamentSummary[], t: Translate): RRByRankData {
   // Calculate data for each tournament
   const data = tournaments
-    .map(t => {
-      const rrs = getTournamentRRs(t)
+    .map(tour => {
+      const rrs = getTournamentRRs(tour)
       const rr = rrs.length > 0 ? rrs[rrs.length - 1] + 1.0 : NaN // Convert back to RR (not relative)
       return {
-        name: `${t.name} (${t.startTime.toISOString().slice(0, 10).replace(/-/g, '')})`,
-        rank: t.myRank,
-        totalPlayers: t.totalPlayers,
-        rankPercentile: t.myRank / t.totalPlayers,
+        name: `${tour.name} (${tour.startTime.toISOString().slice(0, 10).replace(/-/g, '')})`,
+        rank: tour.myRank,
+        totalPlayers: tour.totalPlayers,
+        rankPercentile: tour.myRank / tour.totalPlayers,
         rr,
-        peRR: (t.myRank / t.totalPlayers) * rr, // Percentile * RR
+        peRR: (tour.myRank / tour.totalPlayers) * rr, // Percentile * RR
       }
     })
     .filter(d => d.rr > 0 && !isNaN(d.rr))
