@@ -95,7 +95,7 @@ describe('TournamentCharts', () => {
 
     await render(firstUpload, firstSim)
     await drain()
-    expect(viz.getBankrollAnalysisData).toHaveBeenCalledWith(firstSim)
+    expect(viz.getBankrollAnalysisData).toHaveBeenCalledWith(firstSim, expect.any(Function))
 
     // Second upload: more tournaments, simulation for them still running.
     const secondUpload = [...firstUpload, makeTournament(3)]
@@ -107,7 +107,7 @@ describe('TournamentCharts', () => {
     await render(secondUpload, secondSim)
     await drain()
 
-    expect(viz.getBankrollAnalysisData).toHaveBeenLastCalledWith(secondSim)
+    expect(viz.getBankrollAnalysisData).toHaveBeenLastCalledWith(secondSim, expect.any(Function))
   })
 
   // Regression: a superseded generation must not report "Complete". It captured
@@ -140,7 +140,7 @@ describe('TournamentCharts', () => {
     )
 
     await drain()
-    expect(viz.getBankrollAnalysisData).toHaveBeenCalledWith(sim)
+    expect(viz.getBankrollAnalysisData).toHaveBeenCalledWith(sim, expect.any(Function))
     expect(isComputing()).toBe(false)
   })
 })

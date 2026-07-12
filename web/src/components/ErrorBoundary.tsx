@@ -9,11 +9,13 @@
  * error code (e.g. #130).
  */
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { withTranslation, type WithTranslation } from 'react-i18next'
+import type { TranslationKey } from '../i18n'
 
-interface Props {
+interface OwnProps {
   children: ReactNode
-  /** Short label for which area failed, shown in the fallback. */
-  label?: string
+  /** Which area failed, as a translation key, shown in the fallback. */
+  labelKey?: TranslationKey
   /**
    * When any value in this array changes (shallow compare), the boundary clears
    * its error and re-attempts rendering its children. Pass the inputs that a
@@ -23,12 +25,16 @@ interface Props {
   resetKeys?: readonly unknown[]
 }
 
+type Props = OwnProps & WithTranslation
+
 interface State {
   error: Error | null
   componentStack: string | null
 }
 
-export class ErrorBoundary extends Component<Props, State> {
+// Must stay a class — only class components can implement getDerivedStateFromError.
+// withTranslation() below supplies `t` and re-renders it on a language change.
+class ErrorBoundaryInner extends Component<Props, State> {
   state: State = { error: null, componentStack: null }
 
   static getDerivedStateFromError(error: Error): Partial<State> {
@@ -37,8 +43,13 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     this.setState({ componentStack: info.componentStack ?? null })
-    // Keep a console copy for users grabbing logs from the deployed site.
-    console.error(`[ErrorBoundary${this.props.label ? ` ${this.props.label}` : ''}]`, error, info.componentStack)
+    // Keep a console copy for users grabbing logs from the deployed site. The key,
+    // not the translation, so pasted logs read the same whatever the language.
+    console.error(
+      `[ErrorBoundary${this.props.labelKey ? ` ${this.props.labelKey}` : ''}]`,
+      error,
+      info.componentStack
+    )
   }
 
   componentDidUpdate(prevProps: Props) {
@@ -55,14 +66,19 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     const { error, componentStack } = this.state
+    const { t, labelKey } = this.props
     if (error) {
       return (
         <div className="error-boundary" style={{ whiteSpace: 'pre-wrap' }}>
-          <h3>Something went wrong{this.props.label ? ` in ${this.props.label}` : ''}.</h3>
+          <h3>
+            {labelKey
+              ? t('errorBoundary.titleIn', { label: t(labelKey) })
+              : t('errorBoundary.title')}
+          </h3>
           <p style={{ fontFamily: 'monospace' }}>{error.message || String(error)}</p>
           {componentStack && (
             <details open>
-              <summary>Component stack</summary>
+              <summary>{t('errorBoundary.componentStack')}</summary>
               <pre style={{ overflowX: 'auto' }}>{componentStack}</pre>
             </details>
           )}
@@ -72,3 +88,5 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children
   }
 }
+
+export const ErrorBoundary = withTranslation()(ErrorBoundaryInner)

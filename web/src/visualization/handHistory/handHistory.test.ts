@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import type { HandHistory } from '../../types'
 import { getChipHistoriesData } from './chipHistories'
 import { getHandUsageHeatmapsData } from './handUsageHeatmaps'
+import { identityT } from '../../test/i18n'
 
 // Helper to create a minimal hand history for testing
 function createMockHandHistory(overrides: Partial<HandHistory> = {}): HandHistory {
@@ -40,7 +41,7 @@ function createMockHandHistory(overrides: Partial<HandHistory> = {}): HandHistor
 
 describe('chipHistories', () => {
   it('should return only danger line for empty input', async () => {
-    const result = await getChipHistoriesData([])
+    const result = await getChipHistoriesData([], identityT)
     // Should only have the danger line trace when no data
     expect(result.traces.length).toBeLessThanOrEqual(1)
   })
@@ -65,16 +66,16 @@ describe('chipHistories', () => {
       { playerId: 'Hero', action: 'call', amount: 30, isAllIn: false },
     ]
 
-    const result = await getChipHistoriesData([hh1, hh2])
+    const result = await getChipHistoriesData([hh1, hh2], identityT)
     // Should have at least the chip history line + danger line
     expect(result.traces.length).toBeGreaterThan(0)
-    expect(result.layout.title).toEqual({ text: 'Chip Histories' })
+    expect(result.layout.title).toEqual({ text: 'chart.chipHistories.title' })
   })
 })
 
 describe('handUsageHeatmaps', () => {
   it('should return empty traces for empty input', async () => {
-    const result = await getHandUsageHeatmapsData([])
+    const result = await getHandUsageHeatmapsData([], identityT)
     // Even with empty input, we still generate the 9 heatmaps (just with no data)
     expect(result.traces).toHaveLength(9)
   })
@@ -86,9 +87,9 @@ describe('handUsageHeatmaps', () => {
       { playerId: 'Hero', action: 'raise', amount: 60, isAllIn: false },
     ]
 
-    const result = await getHandUsageHeatmapsData([hh])
+    const result = await getHandUsageHeatmapsData([hh], identityT)
     expect(result.traces).toHaveLength(9) // 8 positions + all
-    expect(result.layout.title).toEqual({ text: 'Hand Usage by Position (VPIP Heatmaps)' })
+    expect(result.layout.title).toEqual({ text: 'chart.handUsage.title' })
   })
 })
 

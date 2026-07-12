@@ -1,3 +1,5 @@
+import type { Translate } from '../i18n'
+
 const REPO_URL = 'https://github.com/McDic/pokercraft-local'
 
 export interface VersionInfo {
@@ -5,11 +7,11 @@ export interface VersionInfo {
   url: string | null
 }
 
-export function getVersionInfo(): VersionInfo {
+export function getVersionInfo(t: Translate): VersionInfo {
   const hash = __GIT_HASH__
   const ts = __GIT_TIMESTAMP__
   if (!hash || hash === 'unknown' || !ts) {
-    return { text: 'dev build', url: null }
+    return { text: t('header.devBuild'), url: null }
   }
   const d = new Date(ts * 1000)
   const pad = (n: number) => String(n).padStart(2, '0')

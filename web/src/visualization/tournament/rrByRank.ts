@@ -6,6 +6,7 @@
 import type { TournamentSummary } from '../../types'
 import { getTournamentRRs } from '../../types'
 import { log2OrNaN, log10OrNaN, linearRegression } from '../../analytics'
+import type { Translate } from '../../i18n'
 import type { Data, Layout } from 'plotly.js-dist-min'
 
 export interface RRByRankData {
@@ -16,7 +17,7 @@ export interface RRByRankData {
 /**
  * Generate RR by Rank chart data
  */
-export function getRRByRankData(tournaments: TournamentSummary[]): RRByRankData {
+export function getRRByRankData(tournaments: TournamentSummary[], t: Translate): RRByRankData {
   // Calculate data for each tournament
   const data = tournaments
     .map(t => {
@@ -75,13 +76,9 @@ export function getRRByRankData(tournaments: TournamentSummary[]): RRByRankData 
       x: rankPercentiles,
       y: rrValues,
       mode: 'markers',
-      name: 'RR by Percentile',
+      name: t('chart.rrByRank.legend.rrByPercentile'),
       customdata: data.map(d => [d.name, d.totalPlayers, d.rank, d.rr, d.peRR]),
-      hovertemplate:
-        '%{customdata[0]}<br>' +
-        'Rank: %{customdata[2]}/%{customdata[1]}<br>' +
-        'RR: %{customdata[3]:.2f}<br>' +
-        'PERR: %{customdata[4]:.4f}<extra></extra>',
+      hovertemplate: t('chart.rrByRank.hover.rr'),
     } as Data,
     // Secondary scatter: PERR (on secondary y-axis)
     {
@@ -89,13 +86,11 @@ export function getRRByRankData(tournaments: TournamentSummary[]): RRByRankData 
       x: rankPercentiles,
       y: peRRValues,
       mode: 'markers',
-      name: 'PERR (Percentile × RR)',
+      name: t('chart.rrByRank.legend.perr'),
       visible: 'legendonly',
       marker: { color: '#BB75FF' },
       customdata: data.map(d => [d.name, d.totalPlayers, d.rank, d.rr, d.peRR]),
-      hovertemplate:
-        '%{customdata[0]}<br>' +
-        'PERR: %{customdata[4]:.4f}<extra></extra>',
+      hovertemplate: t('chart.rrByRank.hover.perr'),
       yaxis: 'y2',
     } as Data,
     // Regression line
@@ -104,17 +99,17 @@ export function getRRByRankData(tournaments: TournamentSummary[]): RRByRankData 
       x: fittedX,
       y: fittedY,
       mode: 'lines',
-      name: 'RR Trendline (top 12.5%)',
+      name: t('chart.rrByRank.legend.trendline'),
       line: { color: 'rgba(54,234,201,0.4)' },
       hoverinfo: 'skip',
     } as Data,
   ]
 
   const layout: Partial<Layout> = {
-    title: { text: 'RR by Rank Percentile' },
+    title: { text: t('chart.rrByRank.title') },
     height: 500,
     xaxis: {
-      title: { text: 'Rank Percentile' },
+      title: { text: t('chart.rrByRank.axis.rankPercentile') },
       type: 'log',
       // Significant-digit percent (`p`) with trailing zeros trimmed (`~`), so deep runs
       // stay distinguishable: 0.1% / 0.01% instead of both collapsing to "0%" under `.0%`.
@@ -123,13 +118,13 @@ export function getRRByRankData(tournaments: TournamentSummary[]): RRByRankData 
       autorange: false,
     },
     yaxis: {
-      title: { text: 'RR' },
+      title: { text: t('chart.rrByRank.axis.rr') },
       type: 'log',
       range: [-1, log10OrNaN(Math.max(maxRR, 1)) + 0.1],
       autorange: false,
     },
     yaxis2: {
-      title: { text: 'PERR' },
+      title: { text: t('chart.rrByRank.axis.perr') },
       type: 'log',
       overlaying: 'y',
       side: 'right',
@@ -180,7 +175,7 @@ export function getRRByRankData(tournaments: TournamentSummary[]): RRByRankData 
     ],
     annotations: [
       {
-        text: '<b>Break-even</b>',
+        text: t('chart.rrByRank.annotation.breakEven'),
         xref: 'paper',
         x: 1,
         xanchor: 'right',
@@ -191,7 +186,7 @@ export function getRRByRankData(tournaments: TournamentSummary[]): RRByRankData 
         font: { color: 'rgba(255,0,0,0.5)', size: 14 },
       },
       {
-        text: 'Rough ITM Cut (~12.5%)',
+        text: t('chart.rrByRank.annotation.itmCut'),
         xref: 'x',
         x: 1 / 8,
         yref: 'paper',

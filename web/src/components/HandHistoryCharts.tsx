@@ -3,11 +3,13 @@
  */
 
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
+import { useTranslation } from 'react-i18next'
 import Plot from './plot'
 import type { Data, Layout } from 'plotly.js-dist-min'
 import type { HandHistory } from '../types'
 import type { AllInHandData } from '../visualization/handHistory/allInEquityAsync'
 import type { ExportChart } from '../export/htmlExport'
+import type { TranslationKey } from '../i18n'
 import { yieldToBrowser } from '../utils'
 
 interface ChartData {
@@ -24,7 +26,11 @@ interface ChartsState {
   allInEquity: ChartData | null
   handUsage: ChartData | null
   isComputing: boolean
-  progress: { message: string; percentage: number }
+  progress: {
+    messageKey: TranslationKey | null
+    messageParams?: Record<string, string | number>
+    percentage: number
+  }
 }
 
 export interface HandHistoryChartsRef {
@@ -37,29 +43,35 @@ const equityCache = new Map<string, AllInHandData>()
 
 export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryChartsProps>(
   function HandHistoryCharts({ handHistories }, ref) {
+  const { t, i18n } = useTranslation()
   const [state, setState] = useState<ChartsState>({
     chipHistories: null,
     allInEquity: null,
     handUsage: null,
     isComputing: false,
-    progress: { message: '', percentage: 0 },
+    progress: { messageKey: null, percentage: 0 },
   })
 
   const computeIdRef = useRef(0)
   const lastComputedRef = useRef<Set<string>>(new Set())
+  const lastLanguageRef = useRef<string | undefined>(undefined)
 
   useImperativeHandle(ref, () => ({
     getChartData() {
       const charts: ExportChart[] = []
-      if (state.chipHistories) charts.push({ name: 'Chip Histories', ...state.chipHistories })
-      if (state.handUsage) charts.push({ name: 'Hand Usage Heatmaps', ...state.handUsage })
-      if (state.allInEquity) charts.push({ name: 'All-In Equity', ...state.allInEquity })
+      if (state.chipHistories) {
+        charts.push({ name: t('chart.chipHistories.name'), ...state.chipHistories })
+      }
+      if (state.handUsage) charts.push({ name: t('chart.handUsage.name'), ...state.handUsage })
+      if (state.allInEquity) charts.push({ name: t('chart.allInEquity.name'), ...state.allInEquity })
       return charts
     },
     isComputing() {
       return state.isComputing
     },
   }))
+
+  const language = i18n.resolvedLanguage
 
   useEffect(() => {
     if (handHistories.length === 0) {
@@ -70,7 +82,17 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
     const currentIds = new Set(handHistories.map(h => h.id))
     const hasNewHands = handHistories.some(h => !lastComputedRef.current.has(h.id))
 
-    if (!hasNewHands && lastComputedRef.current.size > 0) {
+    // A language switch brings no new hands, so it has to be able to get past the
+    // skip below — otherwise the charts would keep their old-language labels until
+    // the next file was loaded. Once the equity pass has finished, this rebuild costs
+    // nothing extra: every hand is in `equityCache`, so `uncachedHands` is empty and
+    // only the figures are reassembled. Switching *during* the equity pass restarts
+    // the hands still outstanding, but not the ones already banked (see the cache
+    // write below, which deliberately happens before the staleness check).
+    const languageChanged = lastLanguageRef.current !== language
+    lastLanguageRef.current = language
+
+    if (!hasNewHands && !languageChanged && lastComputedRef.current.size > 0) {
       return // No new data, skip recomputation
     }
 
@@ -85,7 +107,7 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
       setState(prev => ({
         ...prev,
         isComputing: true,
-        progress: { message: 'Loading chart modules...', percentage: 5 },
+        progress: { messageKey: 'progress.chart.loadingModules', percentage: 5 },
       }))
 
       await yieldToBrowser()
@@ -104,28 +126,28 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
         // Chip histories (always recompute - fast enough)
         setState(prev => ({
           ...prev,
-          progress: { message: 'Generating chip histories...', percentage: 10 },
+          progress: { messageKey: 'progress.chart.chipHistories', percentage: 10 },
         }))
         await yieldToBrowser()
 
-        const chipHistories = await getChipHistoriesData(handHistories)
+        const chipHistories = await getChipHistoriesData(handHistories, t)
         if (isStale()) return
 
         setState(prev => ({
           ...prev,
           chipHistories,
-          progress: { message: 'Generating hand usage heatmaps...', percentage: 15 },
+          progress: { messageKey: 'progress.chart.handUsage', percentage: 15 },
         }))
         await yieldToBrowser()
 
         // Hand usage heatmaps (compute before equity)
-        const handUsage = await getHandUsageHeatmapsData(handHistories)
+        const handUsage = await getHandUsageHeatmapsData(handHistories, t)
         if (isStale()) return
 
         setState(prev => ({
           ...prev,
           handUsage,
-          progress: { message: 'Checking equity cache...', percentage: 20 },
+          progress: { messageKey: 'progress.chart.equityCache', percentage: 20 },
         }))
         await yieldToBrowser()
 
@@ -137,7 +159,8 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
           setState(prev => ({
             ...prev,
             progress: {
-              message: `Found ${cachedCount} cached, calculating ${uncachedHands.length} new...`,
+              messageKey: 'progress.chart.equityCached',
+              messageParams: { cached: cachedCount, pending: uncachedHands.length },
               percentage: 25,
             },
           }))
@@ -151,19 +174,26 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
                 setState(prev => ({
                   ...prev,
                   progress: {
-                    message: `Calculating equity: ${current}/${total} all-ins...`,
+                    messageKey: 'progress.chart.equity',
+                    messageParams: { current, total },
                     percentage: pct,
                   },
                 }))
               }
             }
           )
-          if (isStale()) return
 
-          // Add new results to cache
+          // Bank the results BEFORE the staleness check. Equity is keyed by hand id
+          // and does not depend on which run computed it, so it is always worth
+          // keeping — whereas returning first would throw away every hand this run
+          // already paid WASM for. That is not hypothetical: switching language
+          // mid-analysis supersedes this run, and discarding here would make the
+          // replacement run recompute the whole batch from an empty cache.
           for (const data of newAllInData) {
             equityCache.set(data.handId, data)
           }
+
+          if (isStale()) return
         }
 
         // Get all cached results for current hand histories
@@ -179,13 +209,13 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
         const luckScore = await calculateLuckScore(allCachedData)
         if (isStale()) return
 
-        const allInEquity = createAllInEquityChart(allCachedData, luckScore)
+        const allInEquity = createAllInEquityChart(allCachedData, luckScore, t)
 
         setState(prev => ({
           ...prev,
           allInEquity,
           isComputing: false,
-          progress: { message: 'Complete', percentage: 100 },
+          progress: { messageKey: 'progress.chart.complete', percentage: 100 },
         }))
       } catch (error) {
         console.error('Chart generation failed:', error)
@@ -193,7 +223,7 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
         setState(prev => ({
           ...prev,
           isComputing: false,
-          progress: { message: 'Error generating charts', percentage: 0 },
+          progress: { messageKey: 'progress.chart.error', percentage: 0 },
         }))
       }
     }
@@ -203,12 +233,12 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
     return () => {
       computeIdRef.current++ // Invalidate this computation
     }
-  }, [handHistories])
+  }, [handHistories, t, language])
 
   if (handHistories.length === 0) {
     return (
       <div className="no-data">
-        <p>No hand history data loaded</p>
+        <p>{t('charts.noHandHistoryData')}</p>
       </div>
     )
   }
@@ -223,7 +253,10 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
               style={{ width: `${state.progress.percentage}%` }}
             />
           </div>
-          <p className="progress-message">{state.progress.message}</p>
+          <p className="progress-message">
+            {state.progress.messageKey &&
+              t(state.progress.messageKey, state.progress.messageParams)}
+          </p>
         </div>
       )}
 

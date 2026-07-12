@@ -63,6 +63,31 @@
   background: #333;
 }
 
+.header .language-select {
+  color: #888;
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.header .language-select:hover {
+  color: #fff;
+  border-color: #666;
+  background: #333;
+}
+
+/* The popup list is drawn by the OS, which ignores the transparent background
+   above and would otherwise paint dark text on a dark menu. */
+.header .language-select option {
+  background: #222;
+  color: #ddd;
+}
+
 .header .export-button {
   color: #888;
   font-size: 0.875rem;

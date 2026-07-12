@@ -3,11 +3,13 @@
  */
 
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
+import { useTranslation } from 'react-i18next'
 import Plot from './plot'
 import type { Data, Layout } from 'plotly.js-dist-min'
 import type { TournamentSummary } from '../types'
 import type { BankrollWorkerResult } from '../workers/analysisWorker'
 import type { ExportChart } from '../export/htmlExport'
+import type { TranslationKey } from '../i18n'
 import { yieldToBrowser } from '../utils'
 
 interface ChartData {
@@ -27,7 +29,7 @@ interface ChartsState {
   prizePies: ChartData | null
   rrByRank: ChartData | null
   isComputing: boolean
-  progress: { message: string; percentage: number }
+  progress: { messageKey: TranslationKey | null; percentage: number }
 }
 
 export interface TournamentChartsRef {
@@ -37,6 +39,7 @@ export interface TournamentChartsRef {
 
 export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentChartsProps>(
   function TournamentCharts({ tournaments, bankrollResults }, ref) {
+  const { t, i18n } = useTranslation()
   const [state, setState] = useState<ChartsState>({
     historical: null,
     rre: null,
@@ -44,7 +47,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
     prizePies: null,
     rrByRank: null,
     isComputing: false,
-    progress: { message: '', percentage: 0 },
+    progress: { messageKey: null, percentage: 0 },
   })
 
   const computeIdRef = useRef(0)
@@ -52,11 +55,11 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
   useImperativeHandle(ref, () => ({
     getChartData() {
       const charts: ExportChart[] = []
-      if (state.historical) charts.push({ name: 'Historical Performance', ...state.historical })
-      if (state.rre) charts.push({ name: 'RRE Distribution', ...state.rre })
-      if (state.bankroll) charts.push({ name: 'Bankroll Analysis', ...state.bankroll })
-      if (state.prizePies) charts.push({ name: 'Prize Distribution', ...state.prizePies })
-      if (state.rrByRank) charts.push({ name: 'RR by Rank', ...state.rrByRank })
+      if (state.historical) charts.push({ name: t('chart.historical.name'), ...state.historical })
+      if (state.rre) charts.push({ name: t('chart.rre.name'), ...state.rre })
+      if (state.bankroll) charts.push({ name: t('chart.bankroll.name'), ...state.bankroll })
+      if (state.prizePies) charts.push({ name: t('chart.prizePies.name'), ...state.prizePies })
+      if (state.rrByRank) charts.push({ name: t('chart.rrByRank.name'), ...state.rrByRank })
       return charts
     },
     isComputing() {
@@ -69,6 +72,12 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
   // count-based skip here: a bankroll run always returns one result per initial
   // capital, so its length is identical even when every number in it changed,
   // and the fresh results would be dropped.
+  //
+  // `language` is a dependency because every title, axis, and legend string is
+  // baked into the figure at build time. These builders are pure and synchronous
+  // over already-parsed data, so rebuilding them on a language switch is cheap.
+  const language = i18n.resolvedLanguage
+
   useEffect(() => {
     if (tournaments.length === 0) return
 
@@ -80,7 +89,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
       setState(prev => ({
         ...prev,
         isComputing: true,
-        progress: { message: 'Loading chart modules...', percentage: 5 },
+        progress: { messageKey: 'progress.chart.loadingModules', percentage: 5 },
       }))
 
       await yieldToBrowser()
@@ -99,11 +108,11 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
         // Historical Performance
         setState(prev => ({
           ...prev,
-          progress: { message: 'Generating historical performance...', percentage: 15 },
+          progress: { messageKey: 'progress.chart.historical', percentage: 15 },
         }))
         await yieldToBrowser()
 
-        const historical = getHistoricalPerformanceData(tournaments)
+        const historical = getHistoricalPerformanceData(tournaments, t)
         if (isStale()) return
 
         setState(prev => ({ ...prev, historical }))
@@ -112,11 +121,11 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
         // RRE Heatmap
         setState(prev => ({
           ...prev,
-          progress: { message: 'Generating RRE heatmap...', percentage: 30 },
+          progress: { messageKey: 'progress.chart.rre', percentage: 30 },
         }))
         await yieldToBrowser()
 
-        const rre = getRREHeatmapData(tournaments)
+        const rre = getRREHeatmapData(tournaments, t)
         if (isStale()) return
 
         setState(prev => ({ ...prev, rre }))
@@ -125,11 +134,11 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
         // Prize Pies
         setState(prev => ({
           ...prev,
-          progress: { message: 'Generating prize distribution...', percentage: 50 },
+          progress: { messageKey: 'progress.chart.prizePies', percentage: 50 },
         }))
         await yieldToBrowser()
 
-        const prizePies = getPrizePiesData(tournaments)
+        const prizePies = getPrizePiesData(tournaments, t)
         if (isStale()) return
 
         setState(prev => ({ ...prev, prizePies }))
@@ -138,11 +147,11 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
         // RR by Rank
         setState(prev => ({
           ...prev,
-          progress: { message: 'Generating RR by rank...', percentage: 70 },
+          progress: { messageKey: 'progress.chart.rrByRank', percentage: 70 },
         }))
         await yieldToBrowser()
 
-        const rrByRank = getRRByRankData(tournaments)
+        const rrByRank = getRRByRankData(tournaments, t)
         if (isStale()) return
 
         setState(prev => ({ ...prev, rrByRank }))
@@ -152,11 +161,11 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
         if (bankrollResults.length > 0) {
           setState(prev => ({
             ...prev,
-            progress: { message: 'Generating bankroll analysis...', percentage: 85 },
+            progress: { messageKey: 'progress.chart.bankroll', percentage: 85 },
           }))
           await yieldToBrowser()
 
-          const bankroll = getBankrollAnalysisData(bankrollResults)
+          const bankroll = getBankrollAnalysisData(bankrollResults, t)
           if (isStale()) return
 
           setState(prev => ({ ...prev, bankroll }))
@@ -170,7 +179,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
         setState(prev => ({
           ...prev,
           isComputing: false,
-          progress: { message: 'Complete', percentage: 100 },
+          progress: { messageKey: 'progress.chart.complete', percentage: 100 },
         }))
       } catch (error) {
         console.error('Chart generation failed:', error)
@@ -179,7 +188,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
         setState(prev => ({
           ...prev,
           isComputing: false,
-          progress: { message: 'Error generating charts', percentage: 0 },
+          progress: { messageKey: 'progress.chart.error', percentage: 0 },
         }))
       }
     }
@@ -193,12 +202,14 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
       // eslint-disable-next-line react-hooks/exhaustive-deps
       computeIdRef.current++
     }
-  }, [tournaments, bankrollResults])
+    // `t` is a stable identity per language in react-i18next, and `language` is
+    // listed explicitly to make the language dependency obvious at a glance.
+  }, [tournaments, bankrollResults, t, language])
 
   if (tournaments.length === 0) {
     return (
       <div className="no-data">
-        <p>No tournament data loaded</p>
+        <p>{t('charts.noTournamentData')}</p>
       </div>
     )
   }
@@ -213,7 +224,9 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
               style={{ width: `${state.progress.percentage}%` }}
             />
           </div>
-          <p className="progress-message">{state.progress.message}</p>
+          <p className="progress-message">
+            {state.progress.messageKey && t(state.progress.messageKey)}
+          </p>
         </div>
       )}
 

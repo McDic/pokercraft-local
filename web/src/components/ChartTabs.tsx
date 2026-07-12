@@ -2,6 +2,8 @@
  * Tab navigation for chart sections
  */
 
+import { useTranslation } from 'react-i18next'
+
 export type ChartTab = 'tournament' | 'handHistory'
 
 interface ChartTabsProps {
@@ -17,6 +19,7 @@ export function ChartTabs({
   tournamentCount,
   handHistoryCount,
 }: ChartTabsProps) {
+  const { t } = useTranslation()
   const hasTournaments = tournamentCount > 0
   const hasHandHistories = handHistoryCount > 0
 
@@ -32,7 +35,7 @@ export function ChartTabs({
         disabled={!hasTournaments}
       >
         <span className="tab-icon">🏆</span>
-        <span className="tab-label">Tournament Summary</span>
+        <span className="tab-label">{t('tabs.tournament')}</span>
         {hasTournaments && <span className="tab-count">{tournamentCount}</span>}
       </button>
       <button
@@ -41,7 +44,7 @@ export function ChartTabs({
         disabled={!hasHandHistories}
       >
         <span className="tab-icon">🃏</span>
-        <span className="tab-label">Hand History</span>
+        <span className="tab-label">{t('tabs.handHistory')}</span>
         {hasHandHistories && <span className="tab-count">{handHistoryCount}</span>}
       </button>
     </nav>

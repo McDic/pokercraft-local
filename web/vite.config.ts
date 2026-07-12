@@ -1,4 +1,5 @@
-import { defineConfig } from 'vite'
+// From 'vitest/config', not 'vite': the plain defineConfig does not accept `test`.
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { execSync } from 'child_process'
 
@@ -35,6 +36,13 @@ export default defineConfig({
     outDir: 'dist',
     // Enable source maps for debugging
     sourcemap: true,
+  },
+  test: {
+    // The app is browser-only, and i18next's language detector reads localStorage
+    // and navigator at import time, so tests need a DOM by default.
+    environment: 'jsdom',
+    // Initializes i18next once, so components calling useTranslation() have it.
+    setupFiles: ['./src/test/setup.ts'],
   },
   // WASM support will be added here when we integrate the Rust WASM module
 })

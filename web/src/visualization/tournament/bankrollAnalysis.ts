@@ -5,6 +5,7 @@
 
 import type { TournamentSummary } from '../../types'
 import { getTournamentRRs, getTournamentBuyIn } from '../../types'
+import type { Translate } from '../../i18n'
 import type { Data, Layout } from 'plotly.js-dist-min'
 
 export interface BankrollAnalysisOptions {
@@ -77,16 +78,17 @@ export async function runBankrollSimulation(
  * Generate bankroll analysis chart data
  */
 export function getBankrollAnalysisData(
-  results: BankrollResult[]
+  results: BankrollResult[],
+  t: Translate
 ): BankrollAnalysisData {
   if (results.length === 0) {
     return {
       traces: [],
       layout: {
-        title: { text: 'Bankroll Analysis' },
+        title: { text: t('chart.bankroll.title') },
         annotations: [
           {
-            text: 'No data available (simulation may have failed)',
+            text: t('chart.bankroll.noData'),
             xref: 'paper',
             yref: 'paper',
             x: 0.5,
@@ -99,7 +101,7 @@ export function getBankrollAnalysisData(
     }
   }
 
-  const labels = results.map(r => `${r.initialCapital} buy-ins`)
+  const labels = results.map(r => t('chart.bankroll.tick.buyIns', { capital: r.initialCapital }))
   const bankruptcyRates = results.map(r => r.bankruptcyRate)
   const survivalRates = results.map(r => r.survivalRate)
 
@@ -108,36 +110,36 @@ export function getBankrollAnalysisData(
       type: 'bar',
       x: labels,
       y: bankruptcyRates,
-      name: 'Bankruptcy Rate',
+      name: t('chart.bankroll.legend.bankruptcy'),
       marker: { color: 'rgb(242, 111, 111)' },
       text: bankruptcyRates.map(r => `${(r * 100).toFixed(1)}%`),
       textposition: 'auto',
-      hovertemplate: '%{x}: %{y:.2%}',
+      hovertemplate: t('chart.bankroll.hover.rate'),
     } as Data,
     {
       type: 'bar',
       x: labels,
       y: survivalRates,
-      name: 'Survival Rate',
+      name: t('chart.bankroll.legend.survival'),
       marker: { color: 'rgb(113, 222, 139)' },
       text: survivalRates.map(r => `${(r * 100).toFixed(1)}%`),
       textposition: 'auto',
-      hovertemplate: '%{x}: %{y:.2%}',
+      hovertemplate: t('chart.bankroll.hover.rate'),
     } as Data,
   ]
 
   const layout: Partial<Layout> = {
-    title: { text: 'Bankroll Analysis' },
+    title: { text: t('chart.bankroll.title') },
     barmode: 'stack',
     yaxis: {
       tickformat: '.0%',
       range: [0, 1],
     },
     xaxis: {
-      title: { text: 'Initial Capital' },
+      title: { text: t('chart.bankroll.axis.initialCapital') },
     },
     legend: {
-      title: { text: 'Rate Type' },
+      title: { text: t('chart.bankroll.legend.title') },
       orientation: 'h',
       xanchor: 'center',
       x: 0.5,
@@ -162,6 +164,7 @@ export async function analyzeBankroll(
     profitExitMultiplier: number,
     simulationCount: number
   ) => { bankruptcy_rate: number; survival_rate: number },
+  t: Translate,
   options: BankrollAnalysisOptions = {}
 ): Promise<BankrollAnalysisData> {
   const {
@@ -172,7 +175,7 @@ export async function analyzeBankroll(
 
   const relativeReturns = collectRelativeReturns(tournaments)
   if (relativeReturns.length === 0) {
-    return getBankrollAnalysisData([])
+    return getBankrollAnalysisData([], t)
   }
 
   const maxIterations = Math.max(minIterations, tournaments.length * 10)
@@ -191,5 +194,5 @@ export async function analyzeBankroll(
     }
   }
 
-  return getBankrollAnalysisData(results)
+  return getBankrollAnalysisData(results, t)
 }

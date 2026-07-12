@@ -37,6 +37,13 @@ jobs:
         working-directory: web
         run: npm ci
 
+      # Typechecking used to run only in the deploy workflow, on master. That is
+      # too late: the i18n keys are checked by the type system, so a bad key in a
+      # PR would have gone green here and only broken the deploy.
+      - name: Typecheck
+        working-directory: web
+        run: npx tsc -b
+
       - name: Run tests
         working-directory: web
         run: npm test
