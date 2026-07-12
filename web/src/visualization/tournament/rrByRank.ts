@@ -116,7 +116,9 @@ export function getRRByRankData(tournaments: TournamentSummary[]): RRByRankData 
     xaxis: {
       title: { text: 'Rank Percentile' },
       type: 'log',
-      tickformat: ',.0%',
+      // Significant-digit percent (`p`) with trailing zeros trimmed (`~`), so deep runs
+      // stay distinguishable: 0.1% / 0.01% instead of both collapsing to "0%" under `.0%`.
+      tickformat: ',.3~p',
       range: [0, log10OrNaN(minPercentile) - 0.2],
       autorange: false,
     },
