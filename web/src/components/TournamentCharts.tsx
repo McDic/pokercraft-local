@@ -47,9 +47,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
     progress: { message: '', percentage: 0 },
   })
 
-  const abortRef = useRef(false)
-  const lastTournamentCountRef = useRef(0)
-  const lastBankrollCountRef = useRef(0)
+  const computeIdRef = useRef(0)
 
   useImperativeHandle(ref, () => ({
     getChartData() {
@@ -66,18 +64,17 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
     },
   }))
 
+  // Both props keep their identity while their contents are unchanged, so the
+  // dependency list alone decides when to redraw. Do not reintroduce a
+  // count-based skip here: a bankroll run always returns one result per initial
+  // capital, so its length is identical even when every number in it changed,
+  // and the fresh results would be dropped.
   useEffect(() => {
     if (tournaments.length === 0) return
 
-    // Skip if data hasn't changed (same counts means no new unique data was added)
-    if (
-      tournaments.length === lastTournamentCountRef.current &&
-      bankrollResults.length === lastBankrollCountRef.current
-    ) {
-      return
-    }
-
-    abortRef.current = false
+    // Any compute started later supersedes this one.
+    const thisComputeId = ++computeIdRef.current
+    const isStale = () => computeIdRef.current !== thisComputeId
 
     const compute = async () => {
       setState(prev => ({
@@ -97,7 +94,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
           getBankrollAnalysisData,
         } = await import('../visualization')
 
-        if (abortRef.current) return
+        if (isStale()) return
 
         // Historical Performance
         setState(prev => ({
@@ -107,7 +104,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
         await yieldToBrowser()
 
         const historical = getHistoricalPerformanceData(tournaments)
-        if (abortRef.current) return
+        if (isStale()) return
 
         setState(prev => ({ ...prev, historical }))
         await yieldToBrowser()
@@ -120,7 +117,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
         await yieldToBrowser()
 
         const rre = getRREHeatmapData(tournaments)
-        if (abortRef.current) return
+        if (isStale()) return
 
         setState(prev => ({ ...prev, rre }))
         await yieldToBrowser()
@@ -133,7 +130,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
         await yieldToBrowser()
 
         const prizePies = getPrizePiesData(tournaments)
-        if (abortRef.current) return
+        if (isStale()) return
 
         setState(prev => ({ ...prev, prizePies }))
         await yieldToBrowser()
@@ -146,7 +143,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
         await yieldToBrowser()
 
         const rrByRank = getRRByRankData(tournaments)
-        if (abortRef.current) return
+        if (isStale()) return
 
         setState(prev => ({ ...prev, rrByRank }))
         await yieldToBrowser()
@@ -160,14 +157,15 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
           await yieldToBrowser()
 
           const bankroll = getBankrollAnalysisData(bankrollResults)
-          if (abortRef.current) return
+          if (isStale()) return
 
           setState(prev => ({ ...prev, bankroll }))
         }
 
-        // Update refs
-        lastTournamentCountRef.current = tournaments.length
-        lastBankrollCountRef.current = bankrollResults.length
+        // Without this check a superseded compute would report "Complete" over a
+        // live one, clearing the progress bar and the export's still-calculating
+        // guard while the newest charts are still being generated.
+        if (isStale()) return
 
         setState(prev => ({
           ...prev,
@@ -176,6 +174,8 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
         }))
       } catch (error) {
         console.error('Chart generation failed:', error)
+        if (isStale()) return
+
         setState(prev => ({
           ...prev,
           isComputing: false,
@@ -187,7 +187,11 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
     compute()
 
     return () => {
-      abortRef.current = true
+      // Supersede the in-flight compute on unmount / prop change. Reading the
+      // ref's latest value here is the intent, not a stale-capture mistake, so
+      // the rule's "copy it into a variable" advice does not apply.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      computeIdRef.current++
     }
   }, [tournaments, bankrollResults])
 
