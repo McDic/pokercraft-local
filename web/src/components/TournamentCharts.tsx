@@ -47,9 +47,8 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
     progress: { message: '', percentage: 0 },
   })
 
-  const abortRef = useRef(false)
-  const lastTournamentCountRef = useRef(0)
-  const lastBankrollCountRef = useRef(0)
+  const computeIdRef = useRef(0)
+  const lastComputedRef = useRef<TournamentChartsProps | null>(null)
 
   useImperativeHandle(ref, () => ({
     getChartData() {
@@ -69,15 +68,19 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
   useEffect(() => {
     if (tournaments.length === 0) return
 
-    // Skip if data hasn't changed (same counts means no new unique data was added)
-    if (
-      tournaments.length === lastTournamentCountRef.current &&
-      bankrollResults.length === lastBankrollCountRef.current
-    ) {
+    // Both arrays keep their identity while their contents are unchanged, so a
+    // reference match means there is nothing new to draw. Counts cannot be used
+    // here: a fresh bankroll simulation always returns one result per initial
+    // capital, so its length is identical even when every number in it changed.
+    const last = lastComputedRef.current
+    if (last && last.tournaments === tournaments && last.bankrollResults === bankrollResults) {
       return
     }
+    lastComputedRef.current = { tournaments, bankrollResults }
 
-    abortRef.current = false
+    // Any compute started later supersedes this one.
+    const thisComputeId = ++computeIdRef.current
+    const isStale = () => computeIdRef.current !== thisComputeId
 
     const compute = async () => {
       setState(prev => ({
@@ -97,7 +100,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
           getBankrollAnalysisData,
         } = await import('../visualization')
 
-        if (abortRef.current) return
+        if (isStale()) return
 
         // Historical Performance
         setState(prev => ({
@@ -107,7 +110,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
         await yieldToBrowser()
 
         const historical = getHistoricalPerformanceData(tournaments)
-        if (abortRef.current) return
+        if (isStale()) return
 
         setState(prev => ({ ...prev, historical }))
         await yieldToBrowser()
@@ -120,7 +123,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
         await yieldToBrowser()
 
         const rre = getRREHeatmapData(tournaments)
-        if (abortRef.current) return
+        if (isStale()) return
 
         setState(prev => ({ ...prev, rre }))
         await yieldToBrowser()
@@ -133,7 +136,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
         await yieldToBrowser()
 
         const prizePies = getPrizePiesData(tournaments)
-        if (abortRef.current) return
+        if (isStale()) return
 
         setState(prev => ({ ...prev, prizePies }))
         await yieldToBrowser()
@@ -146,7 +149,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
         await yieldToBrowser()
 
         const rrByRank = getRRByRankData(tournaments)
-        if (abortRef.current) return
+        if (isStale()) return
 
         setState(prev => ({ ...prev, rrByRank }))
         await yieldToBrowser()
@@ -160,14 +163,10 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
           await yieldToBrowser()
 
           const bankroll = getBankrollAnalysisData(bankrollResults)
-          if (abortRef.current) return
+          if (isStale()) return
 
           setState(prev => ({ ...prev, bankroll }))
         }
-
-        // Update refs
-        lastTournamentCountRef.current = tournaments.length
-        lastBankrollCountRef.current = bankrollResults.length
 
         setState(prev => ({
           ...prev,
@@ -185,10 +184,6 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
     }
 
     compute()
-
-    return () => {
-      abortRef.current = true
-    }
   }, [tournaments, bankrollResults])
 
   if (tournaments.length === 0) {

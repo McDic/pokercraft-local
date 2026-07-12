@@ -36,7 +36,6 @@ function App() {
   const [pendingExport, setPendingExport] = useState<
     { charts: ExportChart[]; isTournament: boolean } | null
   >(null)
-  const prevTournamentCountRef = useRef(0)
   const tournamentChartsRef = useRef<TournamentChartsRef>(null)
   const handHistoryChartsRef = useRef<HandHistoryChartsRef>(null)
 
@@ -51,16 +50,15 @@ function App() {
     runAnalysis,
   } = useAnalysisWorker()
 
-  // Auto-run analysis when new tournament data is added
+  // Auto-run analysis whenever the tournament set actually changes. `tournaments`
+  // keeps its identity when a parse adds nothing new, so this fires exactly once
+  // per real data change.
   // (Hand history analysis is handled independently by HandHistoryCharts)
   useEffect(() => {
-    const hasTournamentChanges = tournaments.length !== prevTournamentCountRef.current
-
-    if (hasTournamentChanges && !isLoading && tournaments.length > 0) {
-      prevTournamentCountRef.current = tournaments.length
+    if (tournaments.length > 0) {
       runAnalysis()
     }
-  }, [tournaments.length, isLoading, runAnalysis])
+  }, [tournaments, runAnalysis])
 
   const runExport = useCallback((charts: ExportChart[], isTournament: boolean) => {
     const html = isTournament

@@ -32,27 +32,36 @@ export interface AnalysisState {
 }
 
 /**
- * Merge tournaments, deduplicating by tournament ID
+ * Merge tournaments, deduplicating by tournament ID and sorting by start time.
+ * Returns `existing` itself when nothing new was added, so consumers can treat a
+ * changed array identity as "the data really changed".
  */
-function mergeTournaments(
+export function mergeTournaments(
   existing: TournamentSummary[],
   newItems: TournamentSummary[]
 ): TournamentSummary[] {
   const existingIds = new Set(existing.map(t => t.id))
   const uniqueNew = newItems.filter(t => !existingIds.has(t.id))
-  return [...existing, ...uniqueNew]
+  if (uniqueNew.length === 0) return existing
+  return [...existing, ...uniqueNew].sort(
+    (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+  )
 }
 
 /**
- * Merge hand histories, deduplicating by hand ID
+ * Merge hand histories, deduplicating by hand ID and sorting by time.
+ * Preserves the existing array's identity when nothing new was added.
  */
-function mergeHandHistories(
+export function mergeHandHistories(
   existing: HandHistory[],
   newItems: HandHistory[]
 ): HandHistory[] {
   const existingIds = new Set(existing.map(h => h.id))
   const uniqueNew = newItems.filter(h => !existingIds.has(h.id))
-  return [...existing, ...uniqueNew]
+  if (uniqueNew.length === 0) return existing
+  return [...existing, ...uniqueNew].sort(
+    (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
+  )
 }
 
 export interface UseAnalysisWorkerReturn extends AnalysisState {
@@ -111,24 +120,14 @@ export function useAnalysisWorker(): UseAnalysisWorkerReturn {
         } else if (result.parseResult) {
           // Parse result - merge with existing data, deduplicating by ID
           setState(prev => {
-            const mergedTournaments = mergeTournaments(prev.tournaments, result.parseResult!.tournaments)
-            const mergedHH = mergeHandHistories(prev.handHistories, result.parseResult!.handHistories)
-
-            // Sort by time
-            mergedTournaments.sort(
-              (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
-            )
-            mergedHH.sort(
-              (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
-            )
-
+            const parsed = result.parseResult!
             return {
               ...prev,
               isLoading: false,
               progress: null,
-              tournaments: mergedTournaments,
-              handHistories: mergedHH,
-              errors: [...prev.errors, ...result.parseResult!.errors],
+              tournaments: mergeTournaments(prev.tournaments, parsed.tournaments),
+              handHistories: mergeHandHistories(prev.handHistories, parsed.handHistories),
+              errors: [...prev.errors, ...parsed.errors],
               wasmVersion: result.wasmVersion || prev.wasmVersion,
             }
           })
