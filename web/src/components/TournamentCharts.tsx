@@ -48,7 +48,6 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
   })
 
   const computeIdRef = useRef(0)
-  const lastComputedRef = useRef<TournamentChartsProps | null>(null)
 
   useImperativeHandle(ref, () => ({
     getChartData() {
@@ -65,18 +64,13 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
     },
   }))
 
+  // Both props keep their identity while their contents are unchanged, so the
+  // dependency list alone decides when to redraw. Do not reintroduce a
+  // count-based skip here: a bankroll run always returns one result per initial
+  // capital, so its length is identical even when every number in it changed,
+  // and the fresh results would be dropped.
   useEffect(() => {
     if (tournaments.length === 0) return
-
-    // Both arrays keep their identity while their contents are unchanged, so a
-    // reference match means there is nothing new to draw. Counts cannot be used
-    // here: a fresh bankroll simulation always returns one result per initial
-    // capital, so its length is identical even when every number in it changed.
-    const last = lastComputedRef.current
-    if (last && last.tournaments === tournaments && last.bankrollResults === bankrollResults) {
-      return
-    }
-    lastComputedRef.current = { tournaments, bankrollResults }
 
     // Any compute started later supersedes this one.
     const thisComputeId = ++computeIdRef.current
@@ -168,6 +162,11 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
           setState(prev => ({ ...prev, bankroll }))
         }
 
+        // Without this check a superseded compute would report "Complete" over a
+        // live one, clearing the progress bar and the export's still-calculating
+        // guard while the newest charts are still being generated.
+        if (isStale()) return
+
         setState(prev => ({
           ...prev,
           isComputing: false,
@@ -175,6 +174,8 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
         }))
       } catch (error) {
         console.error('Chart generation failed:', error)
+        if (isStale()) return
+
         setState(prev => ({
           ...prev,
           isComputing: false,
@@ -184,6 +185,14 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
     }
 
     compute()
+
+    return () => {
+      // Supersede the in-flight compute on unmount / prop change. Reading the
+      // ref's latest value here is the intent, not a stale-capture mistake, so
+      // the rule's "copy it into a variable" advice does not apply.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      computeIdRef.current++
+    }
   }, [tournaments, bankrollResults])
 
   if (tournaments.length === 0) {
