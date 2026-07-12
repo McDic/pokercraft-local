@@ -16,3 +16,7 @@ target/
 
 # Open source tools to analyze
 open_sources/
+
+# Claude Code local config and skills
+.claude/settings.local.json
+.claude/skills/
