@@ -336,6 +336,12 @@ export function getSituationLedgerData(
   // Stacked upward from the top of the plot area in *pixels*: the chart's height varies
   // with the row count, so paper-relative offsets would drift line-spacing as it grows.
   const captionKeys: TranslationKey[] = [
+    // First, because it is the question a reader asks before any other: what *is* a row?
+    // The position in a row label is always Hero's, even in the rows that are a response
+    // to someone else — "3-bet vs. open · CO" is Hero 3-betting from the cutoff, against
+    // an opener who could have been anywhere. The opponent's seat is not in the row at
+    // all; it is the opener filter. Nothing about the label says so.
+    'chart.situation.ledger.caption.row',
     'chart.situation.ledger.caption.reading',
     'chart.situation.ledger.caption.scale',
     'chart.situation.ledger.caption.caveat',

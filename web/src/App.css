@@ -289,14 +289,15 @@
   overflow: hidden;
 }
 
-/* Prose, so it wraps — which is the whole reason it is not a Plotly annotation. `ch`
-   rather than a pixel width: the measure follows the font, so it stays readable when a
-   translation runs longer than the English. */
+/* Prose, so it wraps — which is the whole reason it is not a Plotly annotation.
+   Full width, deliberately: a reading measure (~75-100ch) guards the eye's return sweep
+   across many lines of body text, but these are one-liners that sit above the figure they
+   describe. Capping them just left the caption visibly narrower than its own chart. */
 .chart-caption {
   font-size: 0.8rem;
   line-height: 1.5;
   color: #898781;
-  max-width: 100ch;
+  max-width: 100%;
   margin: 0 0 0.4rem 0;
 }
 

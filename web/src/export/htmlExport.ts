@@ -65,7 +65,7 @@ const THEME_CSS = `
     font-size: 0.8rem;
     line-height: 1.5;
     color: #777;
-    max-width: 100ch;
+    max-width: 100%;
     margin: 0 0 0.4rem 0;
   }
   .chart-container {

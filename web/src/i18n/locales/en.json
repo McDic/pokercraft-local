@@ -213,6 +213,7 @@
 
   "chart.situation.name": "Situation Ledger",
   "chart.situation.ledger.title": "What each preflop decision paid, against folding",
+  "chart.situation.ledger.caption.row": "Each row is one action of yours from one of your positions, over n decisions — \"3-bet vs. open · CO\" means you 3-bet from the cutoff. The position is always yours, never your opponent's; for theirs, use the \"Opponent's raise from\" filter above.",
   "chart.situation.ledger.caption.reading": "Zero is folding — right of the line, the decision beat folding. Grey = the 95% interval includes zero, so that row cannot be told apart from folding.",
   "chart.situation.ledger.caption.scale": "Groups run from the smallest pot to the largest. Deeper spots make folding costlier, so they score higher by geometry alone — compare rows within a group, not down the chart.",
   "chart.situation.ledger.caption.caveat": "Chip EV (no ICM), and it includes your postflop play.",
