@@ -124,6 +124,7 @@
 
   "chart.rrByRank.name": "RR by Rank",
   "chart.rrByRank.title": "RR by Rank Percentile",
+  "chart.rrByRank.noData": "No cashes yet — nothing to plot",
   "chart.rrByRank.legend.rrByPercentile": "RR by Percentile",
   "chart.rrByRank.legend.perr": "PERR (Percentile × RR)",
   "chart.rrByRank.legend.trendline": "RR Trendline (top 12.5%)",

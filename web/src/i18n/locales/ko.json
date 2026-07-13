@@ -124,6 +124,7 @@
 
   "chart.rrByRank.name": "순위 백분위별 RR",
   "chart.rrByRank.title": "랭킹 백분위수별 RR",
+  "chart.rrByRank.noData": "아직 상금을 획득한 토너먼트가 없습니다",
   "chart.rrByRank.legend.rrByPercentile": "백분위별 RR",
   "chart.rrByRank.legend.perr": "PERR (백분위 × RR)",
   "chart.rrByRank.legend.trendline": "RR 추세선 (상위 12.5%)",
