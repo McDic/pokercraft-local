@@ -11,12 +11,16 @@ import type {
   AllInEquityWorkerData,
   BankrollWorkerResult,
 } from '../workers/analysisWorker'
+import i18n from '../i18n'
+import type { TranslationKey } from '../i18n'
 
 export interface AnalysisProgress {
   stage: WorkerProgress['stage']
   current: number
   total: number
-  message: string
+  /** Rendered by the consumer with `t()`, so it follows a mid-analysis language switch. */
+  messageKey: TranslationKey
+  messageParams?: Record<string, string | number>
   percentage: number
 }
 
@@ -103,7 +107,8 @@ export function useAnalysisWorker(): UseAnalysisWorkerReturn {
             stage: progress.stage,
             current: progress.current,
             total: progress.total,
-            message: progress.message,
+            messageKey: progress.messageKey,
+            messageParams: progress.messageParams,
             percentage: progress.total > 0 ? (progress.current / progress.total) * 100 : 0,
           },
         }))
@@ -149,7 +154,7 @@ export function useAnalysisWorker(): UseAnalysisWorkerReturn {
         ...prev,
         isLoading: false,
         progress: null,
-        errors: [...prev.errors, `Worker error: ${error.message}`],
+        errors: [...prev.errors, i18n.t('errors.worker', { message: error.message })],
       }))
     }
 
@@ -168,7 +173,7 @@ export function useAnalysisWorker(): UseAnalysisWorkerReturn {
         stage: 'init',
         current: 0,
         total: 1,
-        message: 'Starting...',
+        messageKey: 'progress.starting',
         percentage: 0,
       },
       errors: [],
@@ -197,7 +202,7 @@ export function useAnalysisWorker(): UseAnalysisWorkerReturn {
         stage: 'init',
         current: 0,
         total: 1,
-        message: 'Starting analysis...',
+        messageKey: 'progress.startingAnalysis',
         percentage: 0,
       },
     }))

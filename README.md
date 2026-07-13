@@ -33,6 +33,16 @@ The web app supports the following features:
 2. Chip Histories
 3. Your Hand Usage by Positions
 
+### Languages
+
+The site, the charts, and the exported HTML are available in **English** and **Korean** (한국어).
+Your language is detected from the browser and can be changed from the header.
+
+Every string lives in a JSON file, so translating Pokercraft Local into another language
+needs no TypeScript — see [the translator's guide](web/src/i18n/locales/README.md).
+Contributions from native speakers are very welcome, and a partial translation is a
+perfectly good pull request: anything untranslated falls back to English.
+
 ## Data Collection
 
 Download *"Game summaries"* file by pressing green button on your pokercraft tournament section,

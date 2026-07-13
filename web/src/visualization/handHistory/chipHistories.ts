@@ -10,6 +10,7 @@ import {
   generateChipHistory,
   getSequenceDisplayName,
 } from '../../types'
+import type { Translate } from '../../i18n'
 import { yieldToBrowser } from '../../utils'
 
 export interface ChipHistoriesData {
@@ -22,6 +23,7 @@ export interface ChipHistoriesData {
  */
 export async function getChipHistoriesData(
   handHistories: HandHistory[],
+  t: Translate,
   onProgress?: (current: number, total: number) => void
 ): Promise<ChipHistoriesData> {
   const sequences = generateSequences(handHistories)
@@ -31,7 +33,9 @@ export async function getChipHistoriesData(
   let maxHandLength = 1
   const diedAt: number[] = []
   const deathThresholds = [3 / 4, 3 / 5, 1 / 2, 2 / 5, 1 / 3, 1 / 4, 1 / 5, 1 / 8, 1 / 10]
-  const deathThresholdCount: Map<number, number> = new Map(deathThresholds.map(t => [t, 0]))
+  const deathThresholdCount: Map<number, number> = new Map(
+    deathThresholds.map(threshold => [threshold, 0])
+  )
   let totalTourneys = 0
   let processedCount = 0
 
@@ -96,8 +100,8 @@ export async function getChipHistoriesData(
       x: xValues,
       y: normalizedHistory,
       mode: 'lines',
-      name: getSequenceDisplayName(seq),
-      hovertemplate: '%{fullData.name}<br>Hand #%{x}<br>Stack: %{y:.2f}x initial<extra></extra>',
+      name: getSequenceDisplayName(seq, t),
+      hovertemplate: t('chart.chipHistories.hover.stack'),
     } as Data)
 
     // Yield every 50 tournaments to keep UI responsive
@@ -121,7 +125,7 @@ export async function getChipHistoriesData(
     x: dangerX,
     y: dangerY,
     mode: 'lines',
-    name: 'Danger Line',
+    name: t('chart.chipHistories.legend.dangerLine'),
     line: { dash: 'dash', color: 'rgba(33,33,33,0.33)' },
     hoverinfo: 'skip',
   } as Data)
@@ -156,11 +160,11 @@ export async function getChipHistoriesData(
       x: binPositions,
       y: survivalRates,
       mode: 'lines',
-      name: 'Survival Rate',
+      name: t('chart.chipHistories.legend.survivalRate'),
       line: { color: 'rgba(38,210,87,0.9)', width: 2 },
       fill: 'tozeroy',
       fillcolor: 'rgba(38,210,87,0.3)',
-      hovertemplate: 'Hand #%{x}<br>Survival: %{y:.1%}<extra></extra>',
+      hovertemplate: t('chart.chipHistories.hover.survival'),
       xaxis: 'x2',
       yaxis: 'y2',
     } as Data)
@@ -171,11 +175,13 @@ export async function getChipHistoriesData(
     const sortedThresholds = [...deathThresholds].sort((a, b) => b - a)
     traces.push({
       type: 'bar',
-      x: sortedThresholds.map(t => `${t.toFixed(2)}x`),
-      y: sortedThresholds.map(t => (deathThresholdCount.get(t) ?? 0) / totalTourneys),
-      name: 'Death Threshold Die Rate',
+      x: sortedThresholds.map(threshold => `${threshold.toFixed(2)}x`),
+      y: sortedThresholds.map(
+        threshold => (deathThresholdCount.get(threshold) ?? 0) / totalTourneys
+      ),
+      name: t('chart.chipHistories.legend.deathThreshold'),
       marker: { color: 'rgba(222,118,177,0.9)' },
-      hovertemplate: 'Below %{x} of peak<br>→ %{y:.1%} never recovered<extra></extra>',
+      hovertemplate: t('chart.chipHistories.hover.deathThreshold'),
       xaxis: 'x3',
       yaxis: 'y3',
     } as Data)
@@ -184,7 +190,7 @@ export async function getChipHistoriesData(
   const avgDiedAt = diedAt.length > 0 ? diedAt.reduce((a, b) => a + b, 0) / diedAt.length : 0
 
   const layout: Partial<Layout> = {
-    title: { text: 'Chip Histories' },
+    title: { text: t('chart.chipHistories.title') },
     height: 900,
     showlegend: false,
     grid: {
@@ -194,37 +200,37 @@ export async function getChipHistoriesData(
       roworder: 'top to bottom',
     },
     xaxis: {
-      title: { text: 'Hand Number' },
+      title: { text: t('chart.chipHistories.axis.handNumber') },
       domain: [0, 1],
       anchor: 'y',
       range: [0, maxHandLength + 1],
     },
     yaxis: {
-      title: { text: 'Stack (x initial)' },
+      title: { text: t('chart.chipHistories.axis.stack') },
       type: 'log',
       domain: [0.45, 1],
       anchor: 'x',
       range: [-2.25, 2],
     },
     xaxis2: {
-      title: { text: 'Hand Number (Bust)' },
+      title: { text: t('chart.chipHistories.axis.handNumberBust') },
       domain: [0, 0.45],
       anchor: 'y2',
     },
     yaxis2: {
-      title: { text: 'Survival Rate' },
+      title: { text: t('chart.chipHistories.axis.survivalRate') },
       tickformat: '.0%',
       domain: [0, 0.30],
       anchor: 'x2',
       range: [0, 1],
     },
     xaxis3: {
-      title: { text: 'Death Threshold' },
+      title: { text: t('chart.chipHistories.axis.deathThreshold') },
       domain: [0.55, 1],
       anchor: 'y3',
     },
     yaxis3: {
-      title: { text: 'Die Rate' },
+      title: { text: t('chart.chipHistories.axis.dieRate') },
       tickformat: '.0%',
       domain: [0, 0.30],
       anchor: 'x3',
@@ -232,7 +238,7 @@ export async function getChipHistoriesData(
     },
     annotations: [
       {
-        text: `Avg Bust: ${avgDiedAt.toFixed(1)} hands`,
+        text: t('chart.chipHistories.annotation.avgBust', { hands: avgDiedAt.toFixed(1) }),
         xref: 'x2',
         yref: 'y2',
         x: avgDiedAt,
@@ -242,7 +248,7 @@ export async function getChipHistoriesData(
         font: { color: 'rgba(12,17,166,0.7)' },
       },
       {
-        text: '<b>Danger Line</b>',
+        text: t('chart.chipHistories.annotation.dangerLine'),
         xref: 'x',
         yref: 'y',
         x: Math.min(maxHandLength, 150),

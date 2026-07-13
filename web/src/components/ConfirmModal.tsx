@@ -3,9 +3,11 @@
  */
 
 import { useEffect, useId, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface ConfirmModalProps {
   open: boolean
+  /** Already-translated text; the caller owns the wording. */
   title?: string
   message: string
   confirmLabel?: string
@@ -16,13 +18,14 @@ interface ConfirmModalProps {
 
 export function ConfirmModal({
   open,
-  title = 'Confirm',
+  title,
   message,
-  confirmLabel = 'OK',
-  cancelLabel = 'Cancel',
+  confirmLabel,
+  cancelLabel,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
+  const { t } = useTranslation()
   const titleId = useId()
   const messageId = useId()
   const cancelButtonRef = useRef<HTMLButtonElement>(null)
@@ -54,7 +57,7 @@ export function ConfirmModal({
         aria-describedby={messageId}
         onClick={e => e.stopPropagation()}
       >
-        <h2 className="modal-title" id={titleId}>{title}</h2>
+        <h2 className="modal-title" id={titleId}>{title ?? t('modal.defaultTitle')}</h2>
         <p className="modal-message" id={messageId}>{message}</p>
         <div className="modal-actions">
           <button
@@ -62,10 +65,10 @@ export function ConfirmModal({
             className="modal-button modal-button-secondary"
             onClick={onCancel}
           >
-            {cancelLabel}
+            {cancelLabel ?? t('modal.cancel')}
           </button>
           <button className="modal-button modal-button-primary" onClick={onConfirm}>
-            {confirmLabel}
+            {confirmLabel ?? t('modal.confirm')}
           </button>
         </div>
       </div>

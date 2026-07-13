@@ -3,15 +3,8 @@
  * Shows bankruptcy/survival rates using Monte Carlo simulation (WASM)
  */
 
-import type { TournamentSummary } from '../../types'
-import { getTournamentRRs, getTournamentBuyIn } from '../../types'
+import type { Translate } from '../../i18n'
 import type { Data, Layout } from 'plotly.js-dist-min'
-
-export interface BankrollAnalysisOptions {
-  initialCapitals?: number[]
-  simulationCount?: number
-  minIterations?: number
-}
 
 export interface BankrollResult {
   initialCapital: number
@@ -25,68 +18,20 @@ export interface BankrollAnalysisData {
 }
 
 /**
- * Collect all relative returns from tournaments
- */
-export function collectRelativeReturns(tournaments: TournamentSummary[]): number[] {
-  const returns: number[] = []
-  for (const t of tournaments) {
-    const buyIn = getTournamentBuyIn(t)
-    if (buyIn > 0) {
-      returns.push(...getTournamentRRs(t))
-    }
-  }
-  return returns
-}
-
-/**
- * Run bankroll simulation using WASM
- * Returns null if simulation fails (e.g., negative expected returns)
- */
-export async function runBankrollSimulation(
-  relativeReturns: number[],
-  initialCapital: number,
-  maxIterations: number,
-  simulationCount: number,
-  simulate: (
-    initialCapital: number,
-    relativeReturns: Float64Array,
-    maxIterations: number,
-    profitExitMultiplier: number,
-    simulationCount: number
-  ) => { bankruptcy_rate: number; survival_rate: number }
-): Promise<BankrollResult | null> {
-  try {
-    const result = simulate(
-      initialCapital,
-      new Float64Array(relativeReturns),
-      maxIterations,
-      0.0, // No profit exit
-      simulationCount
-    )
-    return {
-      initialCapital,
-      bankruptcyRate: result.bankruptcy_rate,
-      survivalRate: result.survival_rate,
-    }
-  } catch {
-    return null
-  }
-}
-
-/**
  * Generate bankroll analysis chart data
  */
 export function getBankrollAnalysisData(
-  results: BankrollResult[]
+  results: BankrollResult[],
+  t: Translate
 ): BankrollAnalysisData {
   if (results.length === 0) {
     return {
       traces: [],
       layout: {
-        title: { text: 'Bankroll Analysis' },
+        title: { text: t('chart.bankroll.title') },
         annotations: [
           {
-            text: 'No data available (simulation may have failed)',
+            text: t('chart.bankroll.noData'),
             xref: 'paper',
             yref: 'paper',
             x: 0.5,
@@ -99,7 +44,7 @@ export function getBankrollAnalysisData(
     }
   }
 
-  const labels = results.map(r => `${r.initialCapital} buy-ins`)
+  const labels = results.map(r => t('chart.bankroll.tick.buyIns', { capital: r.initialCapital }))
   const bankruptcyRates = results.map(r => r.bankruptcyRate)
   const survivalRates = results.map(r => r.survivalRate)
 
@@ -108,36 +53,36 @@ export function getBankrollAnalysisData(
       type: 'bar',
       x: labels,
       y: bankruptcyRates,
-      name: 'Bankruptcy Rate',
+      name: t('chart.bankroll.legend.bankruptcy'),
       marker: { color: 'rgb(242, 111, 111)' },
       text: bankruptcyRates.map(r => `${(r * 100).toFixed(1)}%`),
       textposition: 'auto',
-      hovertemplate: '%{x}: %{y:.2%}',
+      hovertemplate: t('chart.bankroll.hover.rate'),
     } as Data,
     {
       type: 'bar',
       x: labels,
       y: survivalRates,
-      name: 'Survival Rate',
+      name: t('chart.bankroll.legend.survival'),
       marker: { color: 'rgb(113, 222, 139)' },
       text: survivalRates.map(r => `${(r * 100).toFixed(1)}%`),
       textposition: 'auto',
-      hovertemplate: '%{x}: %{y:.2%}',
+      hovertemplate: t('chart.bankroll.hover.rate'),
     } as Data,
   ]
 
   const layout: Partial<Layout> = {
-    title: { text: 'Bankroll Analysis' },
+    title: { text: t('chart.bankroll.title') },
     barmode: 'stack',
     yaxis: {
       tickformat: '.0%',
       range: [0, 1],
     },
     xaxis: {
-      title: { text: 'Initial Capital' },
+      title: { text: t('chart.bankroll.axis.initialCapital') },
     },
     legend: {
-      title: { text: 'Rate Type' },
+      title: { text: t('chart.bankroll.legend.title') },
       orientation: 'h',
       xanchor: 'center',
       x: 0.5,
@@ -148,48 +93,4 @@ export function getBankrollAnalysisData(
   }
 
   return { traces, layout }
-}
-
-/**
- * Full bankroll analysis pipeline
- */
-export async function analyzeBankroll(
-  tournaments: TournamentSummary[],
-  simulate: (
-    initialCapital: number,
-    relativeReturns: Float64Array,
-    maxIterations: number,
-    profitExitMultiplier: number,
-    simulationCount: number
-  ) => { bankruptcy_rate: number; survival_rate: number },
-  options: BankrollAnalysisOptions = {}
-): Promise<BankrollAnalysisData> {
-  const {
-    initialCapitals = [10, 20, 50, 100, 200, 500],
-    simulationCount = 25000,
-    minIterations = 40000,
-  } = options
-
-  const relativeReturns = collectRelativeReturns(tournaments)
-  if (relativeReturns.length === 0) {
-    return getBankrollAnalysisData([])
-  }
-
-  const maxIterations = Math.max(minIterations, tournaments.length * 10)
-  const results: BankrollResult[] = []
-
-  for (const initialCapital of initialCapitals) {
-    const result = await runBankrollSimulation(
-      relativeReturns,
-      initialCapital,
-      maxIterations,
-      simulationCount,
-      simulate
-    )
-    if (result) {
-      results.push(result)
-    }
-  }
-
-  return getBankrollAnalysisData(results)
 }

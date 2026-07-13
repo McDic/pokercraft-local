@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import './App.css'
 
 // Components
@@ -32,6 +33,7 @@ function exportTimestamp(): string {
 }
 
 function App() {
+  const { t, i18n } = useTranslation()
   const [activeTab, setActiveTab] = useState<ChartTab>('tournament')
   const [pendingExport, setPendingExport] = useState<
     { charts: ExportChart[]; isTournament: boolean } | null
@@ -60,13 +62,19 @@ function App() {
     }
   }, [tournaments, runAnalysis])
 
-  const runExport = useCallback((charts: ExportChart[], isTournament: boolean) => {
-    const html = isTournament
-      ? generateExportHTML(charts, [])
-      : generateExportHTML([], charts)
-    const label = isTournament ? 'tournament' : 'handhistory'
-    downloadHTML(html, `pokercraft-${label}-${exportTimestamp()}.html`)
-  }, [])
+  // The export follows whatever language the site is currently in: the charts were
+  // built in it, so anything else would mean rebuilding every figure.
+  const language = i18n.resolvedLanguage ?? 'en'
+  const runExport = useCallback(
+    (charts: ExportChart[], isTournament: boolean) => {
+      const html = isTournament
+        ? generateExportHTML(charts, [], t, language)
+        : generateExportHTML([], charts, t, language)
+      const label = isTournament ? 'tournament' : 'handhistory'
+      downloadHTML(html, `pokercraft-${label}-${exportTimestamp()}.html`)
+    },
+    [t, language]
+  )
 
   const handleExport = useCallback(() => {
     // Export only the currently-active tab's charts.
@@ -114,7 +122,7 @@ function App() {
 
       {errors.length > 0 && (
         <div className="errors">
-          <h3>Errors:</h3>
+          <h3>{t('errors.title')}</h3>
           <ul>
             {errors.map((err, i) => (
               <li key={i}>{err}</li>
@@ -134,7 +142,10 @@ function App() {
           to preserve computation state and progress bars across tab switches.
           Tradeoff: higher memory usage from persistent Plotly DOM nodes. */}
       <div style={{ display: activeTab === 'tournament' ? 'block' : 'none' }}>
-        <ErrorBoundary label="tournament charts" resetKeys={[tournaments, bankrollResults]}>
+        <ErrorBoundary
+          labelKey="errorBoundary.label.tournamentCharts"
+          resetKeys={[tournaments, bankrollResults]}
+        >
           <TournamentCharts
             ref={tournamentChartsRef}
             tournaments={tournaments}
@@ -144,17 +155,17 @@ function App() {
       </div>
 
       <div style={{ display: activeTab === 'handHistory' ? 'block' : 'none' }}>
-        <ErrorBoundary label="hand history charts" resetKeys={[handHistories]}>
+        <ErrorBoundary labelKey="errorBoundary.label.handHistoryCharts" resetKeys={[handHistories]}>
           <HandHistoryCharts ref={handHistoryChartsRef} handHistories={handHistories} />
         </ErrorBoundary>
       </div>
 
       <ConfirmModal
         open={pendingExport !== null}
-        title="Charts still calculating"
-        message="Some charts (such as All-In Equity) are still being calculated and may be missing from the export. Export anyway?"
-        confirmLabel="Export anyway"
-        cancelLabel="Cancel"
+        title={t('modal.export.title')}
+        message={t('modal.export.message')}
+        confirmLabel={t('modal.export.confirm')}
+        cancelLabel={t('modal.cancel')}
         onConfirm={() => {
           if (pendingExport) runExport(pendingExport.charts, pendingExport.isTournament)
           setPendingExport(null)

@@ -9,6 +9,7 @@ import {
   getHandHistoryOffsetFromButton,
   getHandHistoryPreflopPassiveFolded,
 } from '../../types'
+import type { Translate, TranslationKey } from '../../i18n'
 import { yieldToBrowser } from '../../utils'
 
 export interface HandUsageHeatmapsData {
@@ -148,7 +149,10 @@ function getRangeUsage(matrix: HandMatrix, minVPIP = 0): number {
 /**
  * Generate hand usage heatmaps chart data (async for large datasets)
  */
-export async function getHandUsageHeatmapsData(handHistories: HandHistory[]): Promise<HandUsageHeatmapsData> {
+export async function getHandUsageHeatmapsData(
+  handHistories: HandHistory[],
+  t: Translate
+): Promise<HandUsageHeatmapsData> {
   // Create matrices for each position
   const matrices: Map<number | null, HandMatrix> = new Map([
     [-5, createEmptyMatrix()], // UTG
@@ -208,26 +212,32 @@ export async function getHandUsageHeatmapsData(handHistories: HandHistory[]): Pr
 
   const traces: Data[] = []
 
-  // Position configurations (row, col, offset, name)
-  const positions: [number, number, number | null, string][] = [
-    [1, 1, -5, 'UTG'],
-    [1, 2, -4, 'UTG+1'],
-    [1, 3, -3, 'MP'],
-    [2, 1, -2, 'MP+1'],
-    [2, 2, -1, 'CO'],
-    [2, 3, 0, 'BTN'],
-    [3, 1, 1, 'SB'],
-    [3, 2, 2, 'BB'],
-    [3, 3, null, 'All'],
+  // Position configurations (row, col, offset, translation key)
+  const positions: [number, number, number | null, TranslationKey][] = [
+    [1, 1, -5, 'chart.handUsage.position.utg'],
+    [1, 2, -4, 'chart.handUsage.position.utg1'],
+    [1, 3, -3, 'chart.handUsage.position.mp'],
+    [2, 1, -2, 'chart.handUsage.position.mp1'],
+    [2, 2, -1, 'chart.handUsage.position.co'],
+    [2, 3, 0, 'chart.handUsage.position.btn'],
+    [3, 1, 1, 'chart.handUsage.position.sb'],
+    [3, 2, 2, 'chart.handUsage.position.bb'],
+    [3, 3, null, 'chart.handUsage.position.all'],
   ]
 
-  for (const [figRow, figCol, offset, posName] of positions) {
+  /** The label under each heatmap, e.g. "BTN (VPIP 42.1%, Range 30.0%)". */
+  const subplotTitle = (posKey: TranslationKey, matrix: HandMatrix): string =>
+    t('chart.handUsage.subplotTitle', {
+      position: t(posKey),
+      vpip: (aggregateVPIP(matrix) * 100).toFixed(1),
+      range: (getRangeUsage(matrix, 0.1) * 100).toFixed(1),
+    })
+
+  for (const [figRow, figCol, offset, posKey] of positions) {
     const matrix = matrices.get(offset)!
-    const vpip = aggregateVPIP(matrix)
-    const rangeUsage = getRangeUsage(matrix, 0.1)
 
     const z = matrix.map(row => row.map(cell => calcVPIP(cell)))
-    const title = `${posName} (VPIP ${(vpip * 100).toFixed(1)}%, Range ${(rangeUsage * 100).toFixed(1)}%)`
+    const title = subplotTitle(posKey, matrix)
 
     traces.push({
       type: 'heatmap',
@@ -238,7 +248,7 @@ export async function getHandUsageHeatmapsData(handHistories: HandHistory[]): Pr
       colorscale: 'YlGnBu',
       zmin: 0,
       zmax: 1,
-      hovertemplate: '%{text}<br>VPIP: %{z:.1%}<extra></extra>',
+      hovertemplate: t('chart.handUsage.hover.vpip'),
       xaxis: `x${(figRow - 1) * 3 + figCol}`,
       yaxis: `y${(figRow - 1) * 3 + figCol}`,
       name: title,
@@ -247,7 +257,7 @@ export async function getHandUsageHeatmapsData(handHistories: HandHistory[]): Pr
 
   // Build layout with 3x3 grid
   const layout: Partial<Layout> = {
-    title: { text: 'Hand Usage by Position (VPIP Heatmaps)' },
+    title: { text: t('chart.handUsage.title') },
     height: 900,
     showlegend: false,
     grid: {
@@ -265,10 +275,7 @@ export async function getHandUsageHeatmapsData(handHistories: HandHistory[]): Pr
       const yDomain = [1 - (row + 1) / 3 + 0.05, 1 - row / 3 - 0.05]
 
       const posConfig = positions[row * 3 + col]
-      const matrix = matrices.get(posConfig[2])!
-      const vpip = aggregateVPIP(matrix)
-      const rangeUsage = getRangeUsage(matrix, 0.1)
-      const axisTitle = `${posConfig[3]} (VPIP ${(vpip * 100).toFixed(1)}%, Range ${(rangeUsage * 100).toFixed(1)}%)`
+      const axisTitle = subplotTitle(posConfig[3], matrices.get(posConfig[2])!)
 
       ;(layout as Record<string, unknown>)[`xaxis${idx === 1 ? '' : idx}`] = {
         domain: xDomain,

@@ -12,6 +12,7 @@ import {
   getTournamentRRs,
   getTournamentBuyIn,
 } from '../types'
+import type { TranslationKey } from '../i18n'
 
 // Message types
 export interface WorkerMessage {
@@ -27,7 +28,15 @@ export interface WorkerProgress {
   stage: 'init' | 'parsing' | 'equity' | 'bankroll' | 'complete'
   current: number
   total: number
-  message: string
+  /**
+   * A translation key plus its values, rather than a rendered sentence: a worker
+   * has no access to the language the user picked, and posting prose here would
+   * freeze the progress bar in whatever language was current when the message was
+   * sent. The main thread renders this with `t()`, so it also re-renders on the
+   * fly when the language changes mid-analysis.
+   */
+  messageKey: TranslationKey
+  messageParams?: Record<string, string | number>
 }
 
 export interface WorkerResult {
@@ -61,13 +70,20 @@ async function ensureWasmInit(): Promise<void> {
   }
 }
 
-function postProgress(stage: WorkerProgress['stage'], current: number, total: number, message: string): void {
+function postProgress(
+  stage: WorkerProgress['stage'],
+  current: number,
+  total: number,
+  messageKey: TranslationKey,
+  messageParams?: Record<string, string | number>
+): void {
   self.postMessage({
     type: 'progress',
     stage,
     current,
     total,
-    message,
+    messageKey,
+    messageParams,
   } as WorkerProgress)
 }
 
@@ -154,7 +170,10 @@ async function calculateEquityData(handHistories: HandHistory[]): Promise<AllInE
 
     processed++
     if (processed % 10 === 0) {
-      postProgress('equity', processed, eligibleHands.length, `Calculating equity: ${processed}/${eligibleHands.length}`)
+      postProgress('equity', processed, eligibleHands.length, 'progress.equity', {
+        current: processed,
+        total: eligibleHands.length,
+      })
     }
   }
 
@@ -183,7 +202,9 @@ async function runBankrollSimulation(tournaments: TournamentSummary[]): Promise<
 
   for (let i = 0; i < initialCapitals.length; i++) {
     const initialCapital = initialCapitals[i]
-    postProgress('bankroll', i + 1, initialCapitals.length, `Simulating ${initialCapital} buy-ins...`)
+    postProgress('bankroll', i + 1, initialCapitals.length, 'progress.bankroll', {
+      capital: initialCapital,
+    })
 
     try {
       const result = simulate(
@@ -213,15 +234,15 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
 
   try {
     if (type === 'parse' && files) {
-      postProgress('init', 0, 1, 'Initializing WASM...')
+      postProgress('init', 0, 1, 'progress.init')
       await ensureWasmInit()
       const wasmVer = version()
 
-      postProgress('parsing', 0, files.length, 'Parsing files...')
+      postProgress('parsing', 0, files.length, 'progress.parsing')
       const rateConverter = new CurrencyRateConverter()
       const parseResult = await loadAndParseFiles(files, rateConverter, allowFreerolls ?? false)
 
-      postProgress('parsing', files.length, files.length, 'Parsing complete')
+      postProgress('parsing', files.length, files.length, 'progress.parsingComplete')
 
       self.postMessage({
         type: 'result',
@@ -238,17 +259,17 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
 
       // Calculate equity for all-in hands
       if (handHistories && handHistories.length > 0) {
-        postProgress('equity', 0, 1, 'Starting equity calculations...')
+        postProgress('equity', 0, 1, 'progress.equityStart')
         equityData = await calculateEquityData(handHistories)
       }
 
       // Run bankroll simulation
       if (tournaments && tournaments.length > 0) {
-        postProgress('bankroll', 0, 1, 'Starting bankroll simulation...')
+        postProgress('bankroll', 0, 1, 'progress.bankrollStart')
         bankrollResults = await runBankrollSimulation(tournaments)
       }
 
-      postProgress('complete', 1, 1, 'Analysis complete')
+      postProgress('complete', 1, 1, 'progress.complete')
 
       self.postMessage({
         type: 'result',

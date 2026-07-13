@@ -3,6 +3,8 @@
  * Ported from Python's data_structures.py
  */
 
+import type { Translate } from '../i18n'
+
 // ============================================================================
 // Currency Types
 // ============================================================================
@@ -340,13 +342,18 @@ export interface SequentialHandHistories {
 /**
  * Get the tournament name with date for a sequence of hand histories.
  */
-export function getSequenceDisplayName(seq: SequentialHandHistories): string {
+export function getSequenceDisplayName(seq: SequentialHandHistories, t: Translate): string {
   const first = seq.histories[0]
+  const trial = seq.reEntryNumber + 1
   if (first.tournamentName) {
     const dateStr = first.datetime.toISOString().slice(0, 10).replace(/-/g, '')
-    return `${first.tournamentName} (${dateStr} / Trial #${seq.reEntryNumber + 1})`
+    return t('chart.chipHistories.trace.tournament', {
+      name: first.tournamentName,
+      date: dateStr,
+      trial,
+    })
   }
-  return `Unknown Tournament (Trial #${seq.reEntryNumber + 1})`
+  return t('chart.chipHistories.trace.unknownTournament', { trial })
 }
 
 /**

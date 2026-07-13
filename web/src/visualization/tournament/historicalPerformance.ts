@@ -9,6 +9,7 @@ import {
   getTournamentProfit,
 } from '../../types'
 import { cumsum, cummax, cummin, rollingMean, expandingMean } from '../../analytics'
+import type { Translate } from '../../i18n'
 import type { Data, Layout } from 'plotly.js-dist-min'
 
 export const DEFAULT_WINDOW_SIZES = [25, 100, 400, 800] as const
@@ -27,15 +28,16 @@ export interface HistoricalPerformanceData {
  */
 export function getHistoricalPerformanceData(
   tournaments: TournamentSummary[],
+  t: Translate,
   options: HistoricalPerformanceOptions = {}
 ): HistoricalPerformanceData {
   const { windowSizes = DEFAULT_WINDOW_SIZES } = options
 
   // Base data
   const indices = tournaments.map((_, i) => i + 1)
-  const profits = tournaments.map(t => getTournamentProfit(t))
-  const rakes = tournaments.map(t => t.rake * t.myEntries)
-  const buyIns = tournaments.map(t => getTournamentBuyIn(t))
+  const profits = tournaments.map(tour => getTournamentProfit(tour))
+  const rakes = tournaments.map(tour => tour.rake * tour.myEntries)
+  const buyIns = tournaments.map(tour => getTournamentBuyIn(tour))
   const profitable = profits.map(p => (p > 0 ? 1 : 0))
 
   // Cumulative calculations
@@ -67,10 +69,10 @@ export function getHistoricalPerformanceData(
   traces.push({
     x: indices,
     y: netProfit,
-    name: 'Net Profit',
+    name: t('chart.historical.legend.netProfit'),
     mode: 'lines',
     legendgroup: 'profit',
-    legendgrouptitle: { text: 'Profits & Rakes' },
+    legendgrouptitle: { text: t('chart.historical.legendGroup.profitsRakes') },
     hovertemplate: '%{y:$,.2f}',
     yaxis: 'y1',
   } as Data)
@@ -78,7 +80,7 @@ export function getHistoricalPerformanceData(
   traces.push({
     x: indices,
     y: netRake,
-    name: 'Net Rake',
+    name: t('chart.historical.legend.netRake'),
     mode: 'lines',
     legendgroup: 'profit',
     visible: 'legendonly',
@@ -89,7 +91,7 @@ export function getHistoricalPerformanceData(
   traces.push({
     x: indices,
     y: idealProfit,
-    name: 'Ideal Profit',
+    name: t('chart.historical.legend.idealProfit'),
     mode: 'lines',
     legendgroup: 'profit',
     hovertemplate: '%{y:$,.2f}',
@@ -99,7 +101,7 @@ export function getHistoricalPerformanceData(
   traces.push({
     x: indices,
     y: maxDrawdown,
-    name: 'Max Drawdown',
+    name: t('chart.historical.legend.maxDrawdown'),
     mode: 'lines',
     legendgroup: 'profit',
     hovertemplate: '%{y:$,.2f}',
@@ -110,10 +112,10 @@ export function getHistoricalPerformanceData(
   traces.push({
     x: indices,
     y: profitableExpanding,
-    name: 'Since #0',
+    name: t('chart.historical.legend.since0'),
     mode: 'lines',
     legendgroup: 'profitableRatio',
-    legendgrouptitle: { text: 'Profitable Ratio' },
+    legendgrouptitle: { text: t('chart.historical.legendGroup.profitableRatio') },
     hovertemplate: '%{y:.2%}',
     yaxis: 'y2',
   } as Data)
@@ -122,7 +124,7 @@ export function getHistoricalPerformanceData(
     traces.push({
       x: indices,
       y: profitableRolling[ws],
-      name: `Recent ${ws}`,
+      name: t('chart.historical.legend.recent', { window: ws }),
       mode: 'lines',
       legendgroup: 'profitableRatio',
       visible: ws > 25 ? 'legendonly' : true,
@@ -135,10 +137,10 @@ export function getHistoricalPerformanceData(
   traces.push({
     x: indices,
     y: avgBuyInExpanding,
-    name: 'Since #0',
+    name: t('chart.historical.legend.since0'),
     mode: 'lines',
     legendgroup: 'avgBuyIn',
-    legendgrouptitle: { text: 'Avg Buy-In' },
+    legendgrouptitle: { text: t('chart.historical.legendGroup.avgBuyIn') },
     hovertemplate: '%{y:$,.2f}',
     yaxis: 'y3',
   } as Data)
@@ -147,7 +149,7 @@ export function getHistoricalPerformanceData(
     traces.push({
       x: indices,
       y: avgBuyInRolling[ws],
-      name: `Recent ${ws}`,
+      name: t('chart.historical.legend.recent', { window: ws }),
       mode: 'lines',
       legendgroup: 'avgBuyIn',
       visible: ws > 25 ? 'legendonly' : true,
@@ -175,7 +177,7 @@ export function getHistoricalPerformanceData(
   const maxAvgBuyIn = Math.max(...allAvgBuyInValues)
 
   const layout: Partial<Layout> = {
-    title: { text: 'Historical Performance' },
+    title: { text: t('chart.historical.title') },
     hovermode: 'x unified',
     height: 800,
     grid: {
@@ -187,7 +189,7 @@ export function getHistoricalPerformanceData(
     xaxis: {
       showticklabels: false,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      unifiedhovertitle: { text: 'Tourney #%{x}' } as any,
+      unifiedhovertitle: { text: t('chart.historical.hover.tourney') } as any,
     } as Partial<Layout['xaxis']>,
     xaxis2: {
       showticklabels: false,
@@ -197,12 +199,12 @@ export function getHistoricalPerformanceData(
       showticklabels: true,
     },
     yaxis: {
-      title: { text: 'Net Profit & Rake' },
+      title: { text: t('chart.historical.axis.netProfitRake') },
       tickformat: '$',
       domain: [0.7, 1],
     },
     yaxis2: {
-      title: { text: 'Profitable Ratio' },
+      title: { text: t('chart.historical.axis.profitableRatio') },
       tickformat: '.0%',
       range: [
         Math.max(0, minProfitableRolling - 0.02),
@@ -211,7 +213,7 @@ export function getHistoricalPerformanceData(
       domain: [0.4, 0.65],
     },
     yaxis3: {
-      title: { text: 'Avg Buy-In' },
+      title: { text: t('chart.historical.axis.avgBuyIn') },
       type: 'log',
       tickformat: '$',
       range: [
@@ -297,7 +299,7 @@ export function getHistoricalPerformanceData(
     annotations: [
       // Break-even label (right side, below line)
       {
-        text: '<b>Break-even</b>',
+        text: t('chart.historical.annotation.breakEven'),
         xref: 'paper',
         x: 1,
         xanchor: 'right',
@@ -309,7 +311,7 @@ export function getHistoricalPerformanceData(
       },
       // Current net profit label (left side, above line)
       {
-        text: '<b>Current Net Profit</b>',
+        text: t('chart.historical.annotation.currentNetProfit'),
         xref: 'paper',
         x: 0,
         xanchor: 'left',
@@ -321,7 +323,7 @@ export function getHistoricalPerformanceData(
       },
       // Max drawdown label (left side, above line)
       {
-        text: '<b>Max Drawdown</b>',
+        text: t('chart.historical.annotation.maxDrawdown'),
         xref: 'paper',
         x: 0,
         xanchor: 'left',
@@ -334,7 +336,7 @@ export function getHistoricalPerformanceData(
       // Buy-in threshold labels (left side, below line)
       // Note: y3 is log scale, so y values need to be in log10
       {
-        text: '<b>Micro/Low</b>',
+        text: t('chart.historical.annotation.microLow'),
         xref: 'paper',
         x: 0,
         xanchor: 'left',
@@ -345,7 +347,7 @@ export function getHistoricalPerformanceData(
         font: { color: 'rgba(0,0,0,0.5)', size: 12 },
       },
       {
-        text: '<b>Low/Mid</b>',
+        text: t('chart.historical.annotation.lowMid'),
         xref: 'paper',
         x: 0,
         xanchor: 'left',
@@ -356,7 +358,7 @@ export function getHistoricalPerformanceData(
         font: { color: 'rgba(0,0,0,0.5)', size: 12 },
       },
       {
-        text: '<b>Mid/High</b>',
+        text: t('chart.historical.annotation.midHigh'),
         xref: 'paper',
         x: 0,
         xanchor: 'left',

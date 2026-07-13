@@ -1,6 +1,6 @@
-# NOTE: Currently all web tests are pure TypeScript (parsers, utils, visualization).
-# If WASM-dependent test code is added, this workflow must also trigger on Rust
-# changes (crates/**, Cargo.toml, Cargo.lock) and include a wasm-pack build step.
+# The tests themselves are pure TypeScript, but the typecheck step below needs the
+# generated WASM bindings in web/src/wasm/ (gitignored) to resolve, so this workflow
+# builds the wasm crate and therefore also has to trigger on Rust changes.
 name: Web Testing
 
 on:
@@ -11,12 +11,20 @@ on:
       - "**"
     paths:
       - "web/**"
+      - "crates/core/**"
+      - "crates/wasm/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
       - ".github/workflows/test-web.yml"
   pull_request:
     branches:
       - "**"
     paths:
       - "web/**"
+      - "crates/core/**"
+      - "crates/wasm/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
       - ".github/workflows/test-web.yml"
   workflow_dispatch:
 
@@ -25,6 +33,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          shared-key: "wasm-build"
+
+      # Prebuilt binary. `cargo install wasm-pack` compiles it from source and costs
+      # minutes on every run, which is too much for a workflow that gates every PR.
+      - name: Install wasm-pack
+        uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: 'latest'
+
+      # web/src/wasm/ is generated and gitignored, so tsc cannot resolve the module
+      # without this.
+      - name: Build WASM
+        run: ./scripts/build-wasm.sh
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -36,6 +67,13 @@ jobs:
       - name: Install dependencies
         working-directory: web
         run: npm ci
+
+      # Typechecking used to run only in the deploy workflow, on master. That is too
+      # late: i18n keys are checked by the type system, so a mistyped key would go
+      # green on the PR and only break the deploy.
+      - name: Typecheck
+        working-directory: web
+        run: npx tsc -b
 
       - name: Run tests
         working-directory: web

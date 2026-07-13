@@ -10,6 +10,7 @@ import {
   getTournamentTimeOfWeek,
 } from '../../types'
 import { log2OrNaN } from '../../analytics'
+import type { Translate } from '../../i18n'
 import type { Data, Layout } from 'plotly.js-dist-min'
 
 export interface RREHeatmapData {
@@ -20,13 +21,13 @@ export interface RREHeatmapData {
 /**
  * Generate RRE heatmap chart data
  */
-export function getRREHeatmapData(tournaments: TournamentSummary[]): RREHeatmapData {
+export function getRREHeatmapData(tournaments: TournamentSummary[], t: Translate): RREHeatmapData {
   // Calculate data for each tournament
-  const data = tournaments.map(t => ({
-    buyIn: getTournamentBuyIn(t),
-    rre: getTournamentRRE(t),
-    totalEntries: t.totalPlayers,
-    timeOfDay: getTournamentTimeOfWeek(t)[1], // minutes of day
+  const data = tournaments.map(tour => ({
+    buyIn: getTournamentBuyIn(tour),
+    rre: getTournamentRRE(tour),
+    totalEntries: tour.totalPlayers,
+    timeOfDay: getTournamentTimeOfWeek(tour)[1], // minutes of day
   }))
 
   const log2RRE = data.map(d => log2OrNaN(d.rre))
@@ -56,8 +57,8 @@ export function getRREHeatmapData(tournaments: TournamentSummary[]): RREHeatmapD
     x: log2BuyIn,
     y: log2RRE,
     z: rreValues,
-    name: 'RRE by Buy-In',
-    hovertemplate: 'Log2(RRE) = [%{y}]<br>Log2(Buy-In) = [%{x}]<br>Sum RRE: %{z:.3f}<extra></extra>',
+    name: t('chart.rre.legend.byBuyIn'),
+    hovertemplate: t('chart.rre.hover.byBuyIn'),
     xaxis: 'x',
     yaxis: 'y',
     ...commonOptions,
@@ -70,8 +71,8 @@ export function getRREHeatmapData(tournaments: TournamentSummary[]): RREHeatmapD
     y: log2RRE,
     z: rreValues,
     xbins: { start: 1.0, size: 1.0 },
-    name: 'RRE by Entries',
-    hovertemplate: 'Log2(RRE) = [%{y}]<br>Log2(Entries) = [%{x}]<br>Sum RRE: %{z:.3f}<extra></extra>',
+    name: t('chart.rre.legend.byEntries'),
+    hovertemplate: t('chart.rre.hover.byEntries'),
     xaxis: 'x2',
     yaxis: 'y',
     ...commonOptions,
@@ -84,8 +85,8 @@ export function getRREHeatmapData(tournaments: TournamentSummary[]): RREHeatmapD
     y: log2RRE,
     z: rreValues,
     xbins: { start: 0.0, size: 120, end: 1440 }, // 2-hour bins, 24 hours
-    name: 'RRE by Time',
-    hovertemplate: 'Log2(RRE) = [%{y}]<br>Time = [%{x}] mins<br>Sum RRE: %{z:.3f}<extra></extra>',
+    name: t('chart.rre.legend.byTime'),
+    hovertemplate: t('chart.rre.hover.byTime'),
     xaxis: 'x3',
     yaxis: 'y',
     ...commonOptions,
@@ -100,14 +101,14 @@ export function getRREHeatmapData(tournaments: TournamentSummary[]): RREHeatmapD
     orientation: 'h',
     ybins: { size: 0.5, start: -3 },
     marker: { color: 'rgba(70,70,70,0.35)' },
-    name: 'Marginal RRE',
-    hovertemplate: 'Log2(RRE) = [%{y}]<br>Sum RRE: %{x:.3f}<extra></extra>',
+    name: t('chart.rre.legend.marginal'),
+    hovertemplate: t('chart.rre.hover.marginal'),
     xaxis: 'x4',
     yaxis: 'y',
   } as unknown as Data)
 
   const layout = {
-    title: { text: 'RRE (Relative Return of Entry) Distribution' },
+    title: { text: t('chart.rre.title') },
     height: 500,
     grid: {
       rows: 1,
@@ -116,31 +117,31 @@ export function getRREHeatmapData(tournaments: TournamentSummary[]): RREHeatmapD
     },
     // Column widths ratio 2:2:2:1 (matching Python version)
     xaxis: {
-      title: { text: 'Log2(Buy-In)' },
+      title: { text: t('chart.rre.axis.log2BuyIn') },
       domain: [0, 0.27],
       fixedrange: true,
       zeroline: false,
     },
     xaxis2: {
-      title: { text: 'Log2(Entries)' },
+      title: { text: t('chart.rre.axis.log2Entries') },
       domain: [0.29, 0.56],
       fixedrange: true,
       zeroline: false,
     },
     xaxis3: {
-      title: { text: 'Time of Day (mins)' },
+      title: { text: t('chart.rre.axis.timeOfDay') },
       domain: [0.58, 0.85],
       fixedrange: true,
       zeroline: false,
     },
     xaxis4: {
-      title: { text: 'Marginal' },
+      title: { text: t('chart.rre.axis.marginal') },
       domain: [0.87, 1],
       fixedrange: true,
       zeroline: false,
     },
     yaxis: {
-      title: { text: 'Log2(RRE)' },
+      title: { text: t('chart.rre.axis.log2Rre') },
       fixedrange: true,
     },
     coloraxis: {
@@ -213,9 +214,9 @@ export function getRREHeatmapData(tournaments: TournamentSummary[]): RREHeatmapD
       },
     ],
     annotations: [
-      { x: 0, y: 0, xref: 'paper', yref: 'y', text: 'Break-even', showarrow: false, xanchor: 'left', yanchor: 'bottom' },
-      { x: 0, y: 2, xref: 'paper', yref: 'y', text: 'Good run (4x)', showarrow: false, xanchor: 'left', yanchor: 'bottom' },
-      { x: 0, y: 5, xref: 'paper', yref: 'y', text: 'Deep run (32x)', showarrow: false, xanchor: 'left', yanchor: 'bottom' },
+      { x: 0, y: 0, xref: 'paper', yref: 'y', text: t('chart.rre.annotation.breakEven'), showarrow: false, xanchor: 'left', yanchor: 'bottom' },
+      { x: 0, y: 2, xref: 'paper', yref: 'y', text: t('chart.rre.annotation.goodRun'), showarrow: false, xanchor: 'left', yanchor: 'bottom' },
+      { x: 0, y: 5, xref: 'paper', yref: 'y', text: t('chart.rre.annotation.deepRun'), showarrow: false, xanchor: 'left', yanchor: 'bottom' },
     ],
   }
 

@@ -7,6 +7,10 @@ repos:
       - id: end-of-file-fixer
         exclude: (\.svg|\.nvmrc|^demo/.*\.html)$
       - id: check-yaml
+      - id: check-json
+        # tsconfig files are JSONC (they carry comments), which this hook cannot parse.
+        # TypeScript validates them anyway; the locale files are the point of this hook.
+        exclude: ^web/tsconfig.*\.json$
       - id: check-added-large-files
         exclude: (web/public/hu_preflop_cache\.bin|^demo/.*\.html$)
 

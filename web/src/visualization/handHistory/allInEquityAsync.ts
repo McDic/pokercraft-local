@@ -13,6 +13,7 @@ import type {
   EquityWorkerInput,
   EquityWorkerOutput,
 } from '../../workers/equityWorker'
+import type { Translate } from '../../i18n'
 
 export interface AllInHandData {
   handId: string
@@ -257,16 +258,17 @@ export async function calculateLuckScore(allInData: AllInHandData[]): Promise<Lu
  */
 export function createAllInEquityChart(
   allInData: AllInHandData[],
-  luckScore: LuckScore
+  luckScore: LuckScore,
+  t: Translate
 ): AllInEquityData {
   if (allInData.length === 0) {
     return {
       traces: [],
       layout: {
-        title: { text: 'All-in Equity Analysis' },
+        title: { text: t('chart.allInEquity.title') },
         annotations: [
           {
-            text: 'No all-in hands found with known opponent cards',
+            text: t('chart.allInEquity.noData'),
             xref: 'paper',
             yref: 'paper',
             x: 0.5,
@@ -319,9 +321,9 @@ export function createAllInEquityChart(
       y: winCounts,
       width: binWidths,
       customdata: binRanges.map((range, i) => [range, winCounts[i]]),
-      name: 'Hero Won',
+      name: t('chart.allInEquity.legend.won'),
       marker: { color: OPACITY_GREEN },
-      hovertemplate: 'Equity: %{customdata[0]}<br>Won: %{customdata[1]}<extra></extra>',
+      hovertemplate: t('chart.allInEquity.hover.won'),
       legendgroup: 'won',
       base: chopCounts.map(c => c / 2),
     } as Data,
@@ -331,9 +333,9 @@ export function createAllInEquityChart(
       y: chopCounts,
       width: binWidths,
       customdata: binRanges.map((range, i) => [range, chopCounts[i]]),
-      name: 'Chopped',
+      name: t('chart.allInEquity.legend.chopped'),
       marker: { color: OPACITY_YELLOW },
-      hovertemplate: 'Equity: %{customdata[0]}<br>Chopped: %{customdata[1]}<extra></extra>',
+      hovertemplate: t('chart.allInEquity.hover.chopped'),
       legendgroup: 'chop',
       base: chopCounts.map(c => -c / 2),
     } as Data,
@@ -343,9 +345,9 @@ export function createAllInEquityChart(
       y: loseCounts,
       width: binWidths,
       customdata: binRanges.map((range, i) => [range, loseCounts[i]]),
-      name: 'Hero Lost',
+      name: t('chart.allInEquity.legend.lost'),
       marker: { color: OPACITY_RED },
-      hovertemplate: 'Equity: %{customdata[0]}<br>Lost: %{customdata[1]}<extra></extra>',
+      hovertemplate: t('chart.allInEquity.hover.lost'),
       legendgroup: 'lost',
       base: chopCounts.map((c, i) => -(c / 2 + loseCounts[i])),
     } as Data,
@@ -355,9 +357,9 @@ export function createAllInEquityChart(
       y: winPcts,
       width: binWidths,
       customdata: binRanges.map((range, i) => [range, (winPcts[i] * 100).toFixed(1)]),
-      name: 'Hero Won',
+      name: t('chart.allInEquity.legend.won'),
       marker: { color: OPACITY_GREEN },
-      hovertemplate: 'Equity: %{customdata[0]}<br>Win Rate: %{customdata[1]}%<extra></extra>',
+      hovertemplate: t('chart.allInEquity.hover.winRate'),
       legendgroup: 'won',
       showlegend: false,
       xaxis: 'x2',
@@ -370,9 +372,9 @@ export function createAllInEquityChart(
       y: chopPcts,
       width: binWidths,
       customdata: binRanges.map((range, i) => [range, (chopPcts[i] * 100).toFixed(1)]),
-      name: 'Chopped',
+      name: t('chart.allInEquity.legend.chopped'),
       marker: { color: OPACITY_YELLOW },
-      hovertemplate: 'Equity: %{customdata[0]}<br>Chop Rate: %{customdata[1]}%<extra></extra>',
+      hovertemplate: t('chart.allInEquity.hover.chopRate'),
       legendgroup: 'chop',
       showlegend: false,
       xaxis: 'x2',
@@ -385,9 +387,9 @@ export function createAllInEquityChart(
       y: losePcts,
       width: binWidths,
       customdata: binRanges.map((range, i) => [range, (losePcts[i] * 100).toFixed(1)]),
-      name: 'Hero Lost',
+      name: t('chart.allInEquity.legend.lost'),
       marker: { color: OPACITY_RED },
-      hovertemplate: 'Equity: %{customdata[0]}<br>Loss Rate: %{customdata[1]}%<extra></extra>',
+      hovertemplate: t('chart.allInEquity.hover.lossRate'),
       legendgroup: 'lost',
       showlegend: false,
       xaxis: 'x2',
@@ -398,13 +400,16 @@ export function createAllInEquityChart(
   // Sentinel scores are unavailable cases, distinct from a neutral 0
   const luckText =
     luckScore === 'no-data'
-      ? 'No all-in data'
+      ? t('chart.allInEquity.luck.noData')
       : luckScore === 'failed'
-        ? 'Luck Score calculation failed'
-        : `Luck Score: ${luckScore.toFixed(2)} (Top ${(100 * (1 - (1 / (1 + Math.exp(-luckScore * 1.7))))).toFixed(1)}%)`
+        ? t('chart.allInEquity.luck.failed')
+        : t('chart.allInEquity.luck.score', {
+            score: luckScore.toFixed(2),
+            tail: (100 * (1 - 1 / (1 + Math.exp(-luckScore * 1.7)))).toFixed(1),
+          })
 
   const layout: Partial<Layout> = {
-    title: { text: 'All-in Equity Analysis' },
+    title: { text: t('chart.allInEquity.title') },
     height: 700,
     barmode: 'overlay',
     grid: {
@@ -421,7 +426,7 @@ export function createAllInEquityChart(
       matches: 'x2',
     },
     yaxis: {
-      title: { text: 'Count' },
+      title: { text: t('chart.allInEquity.axis.count') },
       fixedrange: true,
       domain: [0.58, 1],
       anchor: 'x',
@@ -429,7 +434,7 @@ export function createAllInEquityChart(
       showticklabels: false,
     },
     xaxis2: {
-      title: { text: 'Hero Equity at All-in' },
+      title: { text: t('chart.allInEquity.axis.heroEquity') },
       tickformat: '.0%',
       range: [0, 1],
       fixedrange: true,
@@ -437,7 +442,7 @@ export function createAllInEquityChart(
       anchor: 'y2',
     },
     yaxis2: {
-      title: { text: 'Win/Chop/Loss Rate' },
+      title: { text: t('chart.allInEquity.axis.winChopLossRate') },
       tickformat: '.0%',
       range: [0, 1],
       fixedrange: true,
@@ -453,7 +458,10 @@ export function createAllInEquityChart(
     },
     annotations: [
       {
-        text: `${allInData.length} all-ins | ${luckText}`,
+        text: t('chart.allInEquity.annotation.summary', {
+          total: allInData.length,
+          luck: luckText,
+        }),
         xref: 'paper',
         yref: 'paper',
         x: 0.5,

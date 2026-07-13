@@ -3,6 +3,7 @@
  */
 
 import { useCallback, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import type { AnalysisProgress } from '../hooks/useAnalysisWorker'
 
 interface FileUploaderProps {
@@ -20,6 +21,7 @@ export function FileUploader({
   tournamentCount,
   handHistoryCount,
 }: FileUploaderProps) {
+  const { t } = useTranslation()
   const [dragOver, setDragOver] = useState(false)
 
   const handleDrop = useCallback(
@@ -69,17 +71,15 @@ export function FileUploader({
                 style={{ width: `${progress?.percentage ?? 0}%` }}
               />
             </div>
-            <p className="progress-message">{progress?.message ?? 'Loading...'}</p>
+            <p className="progress-message">
+              {progress ? t(progress.messageKey, progress.messageParams) : t('uploader.loading')}
+            </p>
           </div>
         ) : (
           <>
             <div className="upload-icon">📁</div>
-            <p className="upload-primary">
-              Drag & drop tournament files here
-            </p>
-            <p className="upload-secondary">
-              Supports .txt and .zip files from GG Poker
-            </p>
+            <p className="upload-primary">{t('uploader.dragDrop')}</p>
+            <p className="upload-secondary">{t('uploader.supports')}</p>
             <input
               type="file"
               multiple
@@ -89,7 +89,7 @@ export function FileUploader({
               disabled={isLoading}
             />
             <label htmlFor="file-input" className="file-button">
-              Choose Files
+              {t('uploader.chooseFiles')}
             </label>
           </>
         )}
@@ -97,12 +97,23 @@ export function FileUploader({
 
       {hasData && !isLoading && (
         <div className="stats-bar">
+          {/* <Trans> rather than a plain t(): languages disagree on where the number
+              goes relative to the noun ("5 tournaments" vs "토너먼트 5개"), and only
+              the translation itself can decide. */}
           <span className="stat">
-            <strong>{tournamentCount}</strong> tournaments
+            <Trans
+              i18nKey="uploader.stat.tournaments"
+              values={{ value: tournamentCount }}
+              components={{ b: <strong /> }}
+            />
           </span>
           {handHistoryCount > 0 && (
             <span className="stat">
-              <strong>{handHistoryCount}</strong> hand histories
+              <Trans
+                i18nKey="uploader.stat.handHistories"
+                values={{ value: handHistoryCount }}
+                components={{ b: <strong /> }}
+              />
             </span>
           )}
         </div>

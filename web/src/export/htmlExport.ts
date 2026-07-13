@@ -4,8 +4,10 @@
 
 import type { Data, Layout } from 'plotly.js-dist-min'
 import { getVersionInfo } from '../utils/version'
+import type { Translate } from '../i18n'
 
 export interface ExportChart {
+  /** Already translated; rendered as the chart's heading in the exported file. */
   name: string
   traces: Data[]
   layout: Partial<Layout>
@@ -36,6 +38,12 @@ const THEME_CSS = `
     padding-bottom: 0.5rem;
     border-bottom: 1px solid #282828;
   }
+  .chart-title {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #888;
+    margin: 1.5rem 0 0.5rem 0;
+  }
   .chart-container {
     background: #fff;
     border-radius: 12px;
@@ -53,10 +61,26 @@ function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;')
 }
 
+/**
+ * Serialize a value for embedding inside an inline `<script>` element.
+ *
+ * `JSON.stringify` escapes neither `<` nor `/`, so a tournament named
+ * `"</script>..."` — the name is copied verbatim out of the uploaded summary file,
+ * and reaches the export through trace names and `customdata` — would close the
+ * script element early, leaving a chart-less page. Escaping `<` as the `<`
+ * escape keeps the JSON semantically identical while making `</script>`
+ * unrepresentable, so the tokenizer can never leave the script-data state.
+ */
+function embedJson(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, '\\u003c')
+}
+
 function buildChartDivs(charts: ExportChart[], prefix: string): string {
   return charts
     .map(
-      (_, i) => `<div class="chart-container"><div id="${prefix}-${i}" style="width:100%;"></div></div>`
+      (chart, i) =>
+        `<h3 class="chart-title">${escapeHtml(chart.name)}</h3>\n      ` +
+        `<div class="chart-container"><div id="${prefix}-${i}" style="width:100%;"></div></div>`
     )
     .join('\n      ')
 }
@@ -87,21 +111,30 @@ function buildPlotCalls(charts: ExportChart[], prefix: string): string {
         font: { ...((chart.layout as Record<string, unknown>).font as object), color: '#333' },
       }
       return `Plotly.newPlot(
-        ${JSON.stringify(divId)},
-        ${JSON.stringify(chart.traces)},
-        ${JSON.stringify(layout)},
+        ${embedJson(divId)},
+        ${embedJson(chart.traces)},
+        ${embedJson(layout)},
         {responsive: true}
       );`
     })
     .join('\n      ')
 }
 
+/**
+ * Build the standalone HTML file.
+ *
+ * The charts' own text needs no work here: every title, axis, legend and hover
+ * template was already translated when the figure was built, and the layouts are
+ * serialized wholesale below. Only the page's own chrome is translated here.
+ */
 export function generateExportHTML(
   tournamentCharts: ExportChart[],
-  handHistoryCharts: ExportChart[]
+  handHistoryCharts: ExportChart[],
+  t: Translate,
+  language: string
 ): string {
-  const timestamp = new Date().toLocaleString()
-  const version = getVersionInfo()
+  const timestamp = new Date().toLocaleString(language)
+  const version = getVersionInfo(t)
   const versionHtml = version.url
     ? `<a href="${escapeHtml(version.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(version.text)}</a>`
     : escapeHtml(version.text)
@@ -110,28 +143,28 @@ export function generateExportHTML(
   const hasHandHistory = handHistoryCharts.length > 0
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${escapeHtml(language)}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pokercraft Local - Exported Charts</title>
+  <title>${escapeHtml(t('export.title'))}</title>
   <script src="${escapeHtml(PLOTLY_CDN)}"><\/script>
   <style>${THEME_CSS}</style>
 </head>
 <body>
   <div class="export-header">
-    <h1>Pokercraft Local</h1>
-    <div class="meta">Exported on ${escapeHtml(timestamp)} &middot; ${versionHtml}</div>
+    <h1>${escapeHtml(t('export.heading'))}</h1>
+    <div class="meta">${escapeHtml(t('export.meta.exportedOn', { timestamp }))} &middot; ${versionHtml}</div>
   </div>
   ${
     hasTournament
-      ? `<h2 class="section-title">Tournament Summary</h2>
+      ? `<h2 class="section-title">${escapeHtml(t('export.section.tournament'))}</h2>
       ${buildChartDivs(tournamentCharts, 'tournament')}`
       : ''
   }
   ${
     hasHandHistory
-      ? `<h2 class="section-title">Hand History</h2>
+      ? `<h2 class="section-title">${escapeHtml(t('export.section.handHistory'))}</h2>
       ${buildChartDivs(handHistoryCharts, 'hand')}`
       : ''
   }
