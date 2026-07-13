@@ -59,7 +59,9 @@ const EXPORT_BY_TAB: Record<
   situation: {
     titleKey: 'export.section.situation',
     prefix: 'situation',
-    filename: 'situation',
+    // Matches what the tab and the export heading both call it ("Preflop Situations").
+    // `prefix` is a DOM id and need not, but a filename is read by a person.
+    filename: 'preflop-situations',
   },
 }
 

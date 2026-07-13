@@ -17,6 +17,7 @@ import {
   DEFAULT_FILTERS,
   LEDGER_FAMILIES,
   buildLedgerRows,
+  getSituationLedgerData,
 } from './situationLedger'
 
 /** A stub translator: the ledger only ever uses keys for labels, so echoing them is enough. */
@@ -162,6 +163,22 @@ describe('buildLedgerRows', () => {
     )
     expect(six.rows).toHaveLength(1)
     expect(six.rows[0].mean).toBeCloseTo(1)
+  })
+
+  it('pins the row axis, and leaves the value axes zoomable', () => {
+    // The rows are named categories, not a scale: the chart is sized to show all of them,
+    // so a vertical zoom can only ever hide rows. The value axes are a real scale and stay
+    // zoomable, which is the zoom that is actually useful when the low-sample rows have
+    // intervals wide enough to squash everything else against zero.
+    const { layout } = getSituationLedgerData(
+      many(30, { context: 'unopened', action: 'raise', heroOffset: 0 }),
+      DEFAULT_FILTERS,
+      t
+    )
+    const l = layout as Record<string, { fixedrange?: boolean }>
+    expect(l.yaxis.fixedrange).toBe(true)
+    expect(l.xaxis.fixedrange).toBeUndefined()
+    expect(l.xaxis2.fixedrange).toBeUndefined()
   })
 
   it('emits rows in family order, not in the order the data happened to arrive', () => {

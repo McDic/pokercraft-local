@@ -402,6 +402,11 @@ export function getSituationLedgerData(
       autorange: 'reversed',
       showgrid: false,
       tickfont: { size: 11 },
+      // The y axis is a *list*, not a scale — the rows are named categories, and the chart
+      // is already tall enough to show every one of them. Zooming it only ever loses rows,
+      // and the row you drag away is the one whose label you needed to read. Zooming the
+      // value axes still works, which is the zoom anyone actually wants here.
+      fixedrange: true,
     },
   }
 
