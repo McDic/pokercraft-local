@@ -57,12 +57,12 @@
   "progress.chart.handUsage": "Generating hand usage heatmaps...",
   "progress.chart.equityCache": "Checking equity cache...",
   "progress.chart.allInEquity": "Generating all-in equity...",
-  "progress.chart.equityCached": "Found {{cached}} cached, calculating {{pending}} new...",
   "progress.chart.equity": "Calculating equity: {{current}}/{{total}} all-ins...",
   "progress.chart.complete": "Complete",
-  "progress.chart.error": "Error generating charts",
 
   "charts.noTournamentData": "No tournament data loaded",
+  "charts.buildFailed": "Some charts could not be generated. See the browser console for details.",
+  "charts.equityFailed": "All-in equity could not be calculated. See the browser console for details.",
   "charts.noHandHistoryData": "No hand history data loaded",
 
   "chart.historical.name": "Historical Performance",

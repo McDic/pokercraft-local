@@ -155,6 +155,15 @@ describe('translation key usages', () => {
     expect(byKey('charts.noHandHistoryData')).toEqual(new Set())
   })
 
+  // A key nobody uses is worse than clutter: translators spend real effort on it, and it
+  // is invisible — the type system only checks the other direction, that a key used
+  // exists. Every key here is named as a literal somewhere (including the ones that
+  // travel as `messageKey` data), so anything unreferenced is genuinely dead.
+  it('has no key that the source never names', () => {
+    const used = new Set(sites.map(s => s.key))
+    expect(Object.keys(en).filter(key => !used.has(key))).toEqual([])
+  })
+
   it('passes exactly the values each key interpolates', () => {
     const wrong: string[] = []
     for (const { file, key, values } of sites) {

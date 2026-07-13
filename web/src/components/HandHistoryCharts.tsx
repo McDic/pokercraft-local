@@ -72,9 +72,6 @@ export interface HandHistoryChartsRef {
   isComputing: () => boolean
 }
 
-// Global cache for equity results (persists across re-renders)
-const equityCache = new Map<string, AllInHandData>()
-
 export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryChartsProps>(
   function HandHistoryCharts({ handHistories }, ref) {
   const { t, i18n } = useTranslation()
@@ -90,6 +87,11 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
   > | null>(null)
   const [equityFigure, setEquityFigure] = useState<Built<ChartData, EquityData> | null>(null)
   const [drawProgress, setDrawProgress] = useState<Progress>({ messageKey: null, percentage: 0 })
+
+  // Kept apart from `progress`, because the progress block only renders while work is
+  // outstanding — so writing a failure into it was exactly what hid the failure. The
+  // only trace a user got of a broken chart was a console line they never opened.
+  const [error, setError] = useState<TranslationKey | null>(null)
 
   const calcIdRef = useRef(0)
   const handsIdRef = useRef(0)
@@ -161,50 +163,29 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
 
     const calculate = async () => {
       setIsCalculating(true)
+      setError(null)
       setDataProgress({ messageKey: 'progress.chart.equityCache', percentage: 25 })
       await yieldToBrowser()
 
       try {
-        const { collectAllInDataAsync, calculateLuckScore } = await import(
-          '../visualization/handHistory/allInEquityAsync'
-        )
+        const [{ loadEquity }, { calculateLuckScore }] = await Promise.all([
+          import('../visualization/handHistory/equityStore'),
+          import('../visualization/handHistory/allInEquityAsync'),
+        ])
         if (isStale()) return
 
-        const uncachedHands = handHistories.filter(h => !equityCache.has(h.id))
-        const cachedCount = handHistories.length - uncachedHands.length
-
-        if (uncachedHands.length > 0) {
-          setDataProgress({
-            messageKey: 'progress.chart.equityCached',
-            messageParams: { cached: cachedCount, pending: uncachedHands.length },
-            percentage: 30,
-          })
-
-          const { data: newAllInData } = await collectAllInDataAsync(
-            uncachedHands,
-            (current, total) => {
-              if (isStale()) return
-              setDataProgress({
-                messageKey: 'progress.chart.equity',
-                messageParams: { current, total },
-                percentage: 30 + Math.floor((current / total) * 55),
-              })
-            }
-          )
-
-          // Bank before the staleness check. Equity is keyed by hand id and does not
-          // depend on which pass produced it, so results are always worth keeping —
-          // returning first would throw away every hand this pass already paid WASM
-          // for, and a pass does get superseded, by a second upload landing mid-pass.
-          for (const data of newAllInData) {
-            equityCache.set(data.handId, data)
-          }
+        // `loadEquity` owns both the cache and the record of what is currently being
+        // computed, so this pass never re-does a hand that an earlier, still-running
+        // pass is already working on — it waits for it instead.
+        const allInData = await loadEquity(handHistories, (current, total) => {
           if (isStale()) return
-        }
-
-        const allInData = handHistories
-          .map(h => equityCache.get(h.id))
-          .filter((d): d is AllInHandData => d !== undefined)
+          setDataProgress({
+            messageKey: 'progress.chart.equity',
+            messageParams: { current, total },
+            percentage: 30 + Math.floor((current / total) * 55),
+          })
+        })
+        if (isStale()) return
 
         // Luck is scored over every loaded hand, not just the latest batch.
         const luckScore = await calculateLuckScore(allInData)
@@ -216,12 +197,12 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
         setDrawProgress({ messageKey: 'progress.chart.allInEquity', percentage: 90 })
         setEquity({ allInData, luckScore })
         setIsCalculating(false)
-      } catch (error) {
-        console.error('Equity calculation failed:', error)
+      } catch (err) {
+        console.error('Equity calculation failed:', err)
         if (isStale()) return
         lastComputedRef.current = new Set() // Allow a retry on the next upload
         setIsCalculating(false)
-        setDataProgress({ messageKey: 'progress.chart.error', percentage: 0 })
+        setError('charts.equityFailed')
       }
     }
 
@@ -270,10 +251,10 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
           from: handHistories,
           language,
         })
-      } catch (error) {
-        console.error('Chart generation failed:', error)
+      } catch (err) {
+        console.error('Chart generation failed:', err)
         if (isStale()) return
-        setDrawProgress({ messageKey: 'progress.chart.error', percentage: 0 })
+        setError('charts.buildFailed')
       }
     }
 
@@ -305,10 +286,10 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
         if (isStale()) return
 
         setEquityFigure({ figure, from: equity, language })
-      } catch (error) {
-        console.error('All-in equity chart failed:', error)
+      } catch (err) {
+        console.error('All-in equity chart failed:', err)
         if (isStale()) return
-        setDrawProgress({ messageKey: 'progress.chart.error', percentage: 0 })
+        setError('charts.buildFailed')
       }
     }
 
@@ -344,6 +325,12 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
 
   return (
     <div className="charts-container">
+      {error && (
+        <div className="chart-error" role="alert">
+          <p>{t(error)}</p>
+        </div>
+      )}
+
       {isComputing && (
         <div className="chart-loading">
           <div className="progress-bar">

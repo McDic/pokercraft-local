@@ -33,9 +33,9 @@ vi.mock('../visualization', () => viz)
 const equity = vi.hoisted(() => {
   let release: ((data: Array<{ handId: string }>) => void) | null = null
   return {
-    collectAllInDataAsync: vi.fn(
+    loadEquity: vi.fn(
       () => new Promise(resolve => {
-        release = data => resolve({ data })
+        release = data => resolve(data)
       })
     ),
     calculateLuckScore: vi.fn(async () => 1.5),
@@ -56,6 +56,7 @@ const equity = vi.hoisted(() => {
   }
 })
 vi.mock('../visualization/handHistory/allInEquityAsync', () => equity)
+vi.mock('../visualization/handHistory/equityStore', () => equity)
 
 const gates = vi.hoisted(() => {
   let waiting: Array<() => void> = []
@@ -74,8 +75,8 @@ let container: HTMLDivElement
 let root: Root
 let ref: RefObject<HandHistoryChartsRef | null>
 
-// `equityCache` is module-level and survives between tests, so every test needs hand ids
-// of its own — otherwise the second test finds the first test's equity already cached.
+// The equity store is module-level and survives between tests, so every test needs hand
+// ids of its own — otherwise the second test finds the first test's equity already there.
 let idSeq = 0
 function makeHands(count: number): HandHistory[] {
   const batch = ++idSeq
@@ -158,7 +159,7 @@ describe('HandHistoryCharts', () => {
     await drain()
 
     expect(isIdle()).toBe(true)
-    expect(equity.collectAllInDataAsync).toHaveBeenCalledTimes(1)
+    expect(equity.loadEquity).toHaveBeenCalledTimes(1)
 
     await act(async () => {
       await i18n.changeLanguage('ko')
@@ -172,7 +173,7 @@ describe('HandHistoryCharts', () => {
 
     expect(isIdle()).toBe(true)
     // The expensive pass ran once, for the upload. The switch did not touch it.
-    expect(equity.collectAllInDataAsync).toHaveBeenCalledTimes(1)
+    expect(equity.loadEquity).toHaveBeenCalledTimes(1)
     // All three figures were rebuilt in the new language.
     expect(viz.getChipHistoriesData).toHaveBeenCalledTimes(2)
     expect(viz.getHandUsageHeatmapsData).toHaveBeenCalledTimes(2)

@@ -352,6 +352,18 @@
   color: #666;
 }
 
+/* Chart Failure State — shown independently of the progress bar, which only exists
+   while work is still outstanding. */
+.chart-error {
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  background: #2a1a1a;
+  border: 1px solid #5a2a2a;
+  border-radius: 12px;
+  color: #f2a0a0;
+  text-align: center;
+}
+
 /* Chart Loading State */
 .chart-loading {
   padding: 2rem;
