@@ -26,10 +26,11 @@
  * ## Rows are comparable *within* a family, not down the whole chart
  *
  * Δ is measured against folding, and what folding costs depends on how much is already in
- * front of you. Open the pot and folding costs nothing, so an RFI scores near zero — on a
- * real 73k-hand sample, +0.99bb. Face a 4-bet after 3-betting and folding surrenders the
- * 3-bet into a large pot, so almost any continuation beats it: +18.17bb, and +29.77bb when
- * it goes in. That is the geometry of the spot, not a talent for calling 4-bets.
+ * front of you. Open the pot and folding costs nothing, so "Open raise · BTN" scores near
+ * zero — on a real 73k-hand sample, around +1bb. Face a 4-bet after 3-betting and folding
+ * surrenders the 3-bet into a large pot, so almost any continuation beats it: "Call vs.
+ * 4-bet · BTN" scores +31bb on the same sample. That is the geometry of the spot, not a
+ * talent for calling 4-bets.
  *
  * So the ledger is not a leaderboard. Families are ordered by depth, and the honest read is
  * *across positions within one family* — where the pot is the same size and the comparison
