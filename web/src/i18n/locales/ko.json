@@ -67,6 +67,7 @@
 
   "chart.historical.name": "과거 성적",
   "chart.historical.title": "과거 성적",
+  "chart.historical.noData": "표시할 토너먼트가 없습니다",
   "chart.historical.legendGroup.profitsRakes": "수익 & 레이크",
   "chart.historical.legendGroup.profitableRatio": "멘징 이상 벌은 비율",
   "chart.historical.legendGroup.avgBuyIn": "평균 바이인 금액",
@@ -124,6 +125,7 @@
 
   "chart.rrByRank.name": "순위 백분위별 RR",
   "chart.rrByRank.title": "랭킹 백분위수별 RR",
+  "chart.rrByRank.noData": "아직 상금을 획득한 토너먼트가 없습니다",
   "chart.rrByRank.legend.rrByPercentile": "백분위별 RR",
   "chart.rrByRank.legend.perr": "PERR (백분위 × RR)",
   "chart.rrByRank.legend.trendline": "RR 추세선 (상위 12.5%)",

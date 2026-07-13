@@ -67,6 +67,7 @@
 
   "chart.historical.name": "Historical Performance",
   "chart.historical.title": "Historical Performance",
+  "chart.historical.noData": "No tournaments to plot",
   "chart.historical.legendGroup.profitsRakes": "Profits & Rakes",
   "chart.historical.legendGroup.profitableRatio": "Profitable Ratio",
   "chart.historical.legendGroup.avgBuyIn": "Avg Buy-In",
@@ -124,6 +125,7 @@
 
   "chart.rrByRank.name": "RR by Rank",
   "chart.rrByRank.title": "RR by Rank Percentile",
+  "chart.rrByRank.noData": "No cashes yet — nothing to plot",
   "chart.rrByRank.legend.rrByPercentile": "RR by Percentile",
   "chart.rrByRank.legend.perr": "PERR (Percentile × RR)",
   "chart.rrByRank.legend.trendline": "RR Trendline (top 12.5%)",

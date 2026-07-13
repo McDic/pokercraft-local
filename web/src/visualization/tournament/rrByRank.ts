@@ -32,7 +32,38 @@ export function getRRByRankData(tournaments: TournamentSummary[], t: Translate):
         peRR: (tour.myRank / tour.totalPlayers) * rr, // Percentile * RR
       }
     })
-    .filter(d => d.rr > 0 && !isNaN(d.rr))
+    // Every axis bound, and every plotted point, is derived from what survives here — so
+    // this filter is where non-finite values have to be stopped. `rankPercentile` is
+    // `myRank / totalPlayers`, which a zero field would make Infinity or NaN, and that
+    // then reaches `minPercentile`, the x-axis range, `customdata`, and the export.
+    .filter(
+      d => d.rr > 0 && !isNaN(d.rr) && d.rankPercentile > 0 && Number.isFinite(d.rankPercentile)
+    )
+
+  // Every axis bound below is computed from this data, so with none of it `minPercentile`
+  // stays Infinity and the x-axis range becomes [0, Infinity] — which Plotly cannot use,
+  // and which `JSON.stringify` turns into [0, null] on the way into the HTML export.
+  // A player who has never cashed sees this: the filter above keeps only paying finishes.
+  if (data.length === 0) {
+    return {
+      traces: [],
+      layout: {
+        title: { text: t('chart.rrByRank.title') },
+        height: 500,
+        annotations: [
+          {
+            text: t('chart.rrByRank.noData'),
+            xref: 'paper',
+            yref: 'paper',
+            x: 0.5,
+            y: 0.5,
+            showarrow: false,
+            font: { size: 16 },
+          },
+        ],
+      },
+    }
+  }
 
   const rankPercentiles = data.map(d => d.rankPercentile)
   const rrValues = data.map(d => d.rr)
@@ -153,7 +184,10 @@ export function getRRByRankData(tournaments: TournamentSummary[], t: Translate):
       // ITM cutoff vertical line (12.5%)
       {
         type: 'line',
+        name: 'itm-cut', // so a test can name the shape it means, rather than describe it
         xref: 'x',
+        // Data coordinates — a shape's, unlike an annotation's, are NOT log10. See the
+        // note on the matching label below.
         x0: 1 / 8,
         x1: 1 / 8,
         yref: 'paper',
@@ -188,7 +222,12 @@ export function getRRByRankData(tournaments: TournamentSummary[], t: Translate):
       {
         text: t('chart.rrByRank.annotation.itmCut'),
         xref: 'x',
-        x: 1 / 8,
+        // log10, unlike the shape above that draws the very same cut-off at `1 / 8`.
+        // On a log axis Plotly reads a shape's coordinates as data but an annotation's
+        // as log10 — verified against a rendered plot, not assumed. Passing 1/8 here put
+        // the label at 10^0.125 ≈ 133%, outside the axis range, where it never drew at
+        // all. The break-even annotation below already does this (`Math.log10(1)`).
+        x: Math.log10(1 / 8),
         yref: 'paper',
         y: 0.98,
         showarrow: false,

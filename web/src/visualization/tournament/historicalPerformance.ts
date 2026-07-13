@@ -33,6 +33,32 @@ export function getHistoricalPerformanceData(
 ): HistoricalPerformanceData {
   const { windowSizes = DEFAULT_WINDOW_SIZES } = options
 
+  // With no tournaments every bound below degenerates: `Math.min(...[])` is Infinity and
+  // `Math.max(...[])` is -Infinity, giving `yaxis3.range = [Infinity, -0.95]`, and the
+  // shapes anchor to `netProfit[-1]`, which is `undefined`. Plotly discards both, and the
+  // HTML export writes them out as `null`. Unreachable from the app today — TournamentCharts
+  // returns early on an empty set — but a chart builder should be safe on its own inputs.
+  if (tournaments.length === 0) {
+    return {
+      traces: [],
+      layout: {
+        title: { text: t('chart.historical.title') },
+        height: 800,
+        annotations: [
+          {
+            text: t('chart.historical.noData'),
+            xref: 'paper',
+            yref: 'paper',
+            x: 0.5,
+            y: 0.5,
+            showarrow: false,
+            font: { size: 16 },
+          },
+        ],
+      },
+    }
+  }
+
   // Base data
   const indices = tournaments.map((_, i) => i + 1)
   const profits = tournaments.map(tour => getTournamentProfit(tour))
