@@ -13,9 +13,11 @@
 
 import { describe, it, expect } from 'vitest'
 import type { PreflopContext, HeroPreflopAction, PreflopSituation } from '../../analysis/preflopSituation'
+import { DEFAULT_FILTERS } from './situationFilters'
 import {
-  DEFAULT_FILTERS,
-  LEDGER_FAMILIES,
+  EXCLUSIONS,
+  FAMILIES,
+  POSITIONS,
   buildLedgerRows,
   getSituationLedgerData,
 } from './situationLedger'
@@ -68,31 +70,78 @@ const REACHABLE: Array<[PreflopContext, HeroPreflopAction]> = [
   ['limped', 'check'],
 ]
 
-describe('family coverage', () => {
-  it.each(REACHABLE)('%s / %s is matched by exactly one family (or is a fold)', (context, action) => {
-    for (const allIn of [false, true]) {
-      const s = situation({ context, action, allIn })
-      const matched = LEDGER_FAMILIES.filter(f => f.match(s))
+/** Every seat the ledger has a row for. An exclusion may carve out just one of them. */
+const OFFSETS = POSITIONS.map(([offset]) => offset)
 
-      if (action === 'fold') {
+function everySituation(): PreflopSituation[] {
+  return REACHABLE.flatMap(([context, action]) =>
+    [false, true].flatMap(allIn =>
+      OFFSETS.map(heroOffset => situation({ context, action, allIn, heroOffset }))
+    )
+  )
+}
+
+describe('family coverage', () => {
+  it('gives every reachable decision exactly one home', () => {
+    // The invariant, and the reason this file exists. `buildLedgerRows` tests exclusions
+    // first, so an exclusion *overrides* a family it overlaps — that is how a single seat
+    // (the big blind's iso-raise) is carved out of a family that is otherwise sound. What
+    // must never happen is a decision that is neither charted nor excluded: it would be
+    // computed, correct, and gone without a trace.
+    const wrong: string[] = []
+
+    for (const s of everySituation()) {
+      const families = FAMILIES.filter(f => f.match(s))
+      const exclusions = EXCLUSIONS.filter(e => e.match(s))
+      const label = `${s.context}/${s.action}${s.allIn ? '+allin' : ''} @${s.heroOffset}`
+
+      if (exclusions.length > 1) {
+        wrong.push(`${label}: matched ${exclusions.length} exclusions, which double-counts it`)
+        continue
+      }
+      if (s.action === 'fold') {
         // Folds are the baseline: Δ is 0 by construction, so a fold row would be a row of
-        // zeros. They are excluded on purpose, not by omission.
-        expect(matched, `fold should match no family`).toHaveLength(0)
-      } else {
-        expect(
-          matched.length,
-          `${context}/${action}${allIn ? ' (all-in)' : ''} matched ${matched.length} families`
-        ).toBe(1)
+        // zeros. They are left out on purpose, not by omission.
+        if (families.length || exclusions.length) wrong.push(`${label}: a fold needs no home`)
+        continue
+      }
+      // Two families matching is a bug whether or not an exclusion also covers it: the
+      // exclusion could later be narrowed, and the double-match would surface only then.
+      if (families.length > 1) {
+        wrong.push(`${label}: matched ${families.length} families, which double-counts it`)
+        continue
+      }
+      if (exclusions.length === 1) continue // deliberately withheld, and counted in the caption
+      if (families.length !== 1) {
+        wrong.push(`${label}: matched ${families.length} families and no exclusion`)
       }
     }
+
+    expect(wrong).toEqual([])
   })
 
   it('has no family that nothing can reach', () => {
-    const reachable = REACHABLE.flatMap(([context, action]) =>
-      [false, true].map(allIn => situation({ context, action, allIn }))
-    )
-    const orphans = LEDGER_FAMILIES.filter(f => !reachable.some(s => f.match(s)))
+    const orphans = FAMILIES.filter(f => !everySituation().some(s => f.match(s)))
     expect(orphans.map(f => f.key)).toEqual([])
+  })
+
+  it('has no exclusion that nothing can reach', () => {
+    // An exclusion for a decision that cannot happen is a claim in the caption about
+    // nothing — and worse, it would hide the fact that the real decision is uncovered.
+    const orphans = EXCLUSIONS.filter(e => !everySituation().some(s => e.match(s)))
+    expect(orphans.map(e => e.key)).toEqual([])
+  })
+
+  it('leaves the iso-raise family alive everywhere but the big blind', () => {
+    // The exclusion is a seat, not the whole family: raising over limpers from the cutoff is
+    // a decision against folding and stays on the chart.
+    const isoAt = (heroOffset: number) =>
+      EXCLUSIONS.some(e => e.match(situation({ context: 'limped', action: 'raise', heroOffset })))
+
+    expect(isoAt(2)).toBe(true) // BB — the only seat that can check for free
+    expect(isoAt(1)).toBe(false) // SB — folding forfeits half a blind, so it is a real line
+    expect(isoAt(-1)).toBe(false) // CO
+    expect(isoAt(0)).toBe(false) // BTN
   })
 })
 
@@ -118,6 +167,93 @@ describe('buildLedgerRows', () => {
     )
     expect(rows).toEqual([])
     expect(hidden).toBe(0)
+  })
+
+  it('does not chart an excluded decision, and does not call it hidden either', () => {
+    // Three exclusions, and the third is the one with teeth. `limped/check` and
+    // `fourBetPlus/raise` match no family at all, so they would fall out of the fold path
+    // even with the exclusion gate deleted — asserting on them alone would be vacuous, which
+    // is exactly what this test was until review caught it. `limped/raise` at the BB *does*
+    // match a family (iso-raise), so it can only be missing because an exclusion removed it:
+    // delete the gate and this row comes back, forty strong, well over the threshold.
+    //
+    // `hidden` matters as much as `rows`. It means "a row you could get back by lowering the
+    // threshold". An exclusion never comes back, so counting one as hidden would be a lie
+    // the reader could act on.
+    const { rows, hidden } = buildLedgerRows(
+      [
+        ...many(40, { context: 'limped', action: 'check', heroOffset: 2 }),
+        ...many(40, { context: 'fourBetPlus', action: 'raise', heroOffset: 0 }),
+        ...many(40, { context: 'limped', action: 'raise', heroOffset: 2 }), // iso-raise · BB
+        ...many(40, { context: 'unopened', action: 'raise', heroOffset: 0 }),
+      ],
+      { ...DEFAULT_FILTERS, minSample: 30 },
+      t
+    )
+
+    expect(rows).toHaveLength(1) // only the RFI
+    expect(rows[0].label).toContain('chart.situation.family.rfi')
+    expect(hidden).toBe(0)
+  })
+
+  it('says nothing in the caption about what it excludes', () => {
+    // The ledger's other caption counts are contingent — `hidden` moves with your filters,
+    // `droppedHands` should be zero. An exclusion is neither: it is a permanent property of
+    // what this chart is, true of every dataset, and nothing the reader can act on. Stacking
+    // "Not shown (536): free checks in a limped big blind…" into the caption on every render
+    // was noise. (The hand-class chart still reports it — there the reader can *select* an
+    // excluded scope, and a blank panel then owes them an answer.)
+    const { caption } = getSituationLedgerData(
+      [
+        ...many(40, { context: 'limped', action: 'check', heroOffset: 2 }),
+        ...many(40, { context: 'unopened', action: 'raise', heroOffset: 0 }),
+      ],
+      DEFAULT_FILTERS,
+      t
+    )
+    expect(caption.join('\n')).not.toContain('excluded')
+    expect(caption.join('\n')).not.toContain('Not shown')
+  })
+
+  it('lets an exclusion override the family it overlaps, and keeps the rest of that family', () => {
+    // The one behaviour in this file that a plausible refactor silently undoes. `buildLedgerRows`
+    // tests exclusions *before* families; hoist the family lookup above it — a natural
+    // micro-optimisation, since the family path is the common one — and "Iso-raise · BB"
+    // quietly returns as a row. Every other test in the suite passes either way, because they
+    // interrogate the FAMILIES and EXCLUSIONS tables directly and never go through the
+    // builder. This one goes through the builder, and it is what kills that mutant.
+    const { rows, hidden } = buildLedgerRows(
+      [
+        ...many(40, { context: 'limped', action: 'raise', heroOffset: 2, deltaBB: 10 }), // BB: excluded
+        ...many(40, { context: 'limped', action: 'raise', heroOffset: -1, deltaBB: 0 }), // CO: charted
+      ],
+      { ...DEFAULT_FILTERS, minSample: 30 },
+      t
+    )
+
+    // The seat is carved out; the family survives everywhere else.
+    expect(rows).toHaveLength(1)
+    expect(rows[0].label).toContain('chart.situation.family.isoRaise')
+    expect(rows[0].label).toContain('position.co')
+    expect(rows[0].n).toBe(40)
+    expect(rows[0].mean).toBeCloseTo(0) // not 5 — the +10 BB hands are not averaged in
+    expect(hidden).toBe(0) // withheld on principle, not for sample size
+  })
+
+  it('still says the things the reader *can* act on', () => {
+    // Dropping the exclusion lines must not take the contingent counts with them: `hidden`
+    // moves with the sample threshold and `droppedHands` means the corpus has a hole.
+    const { caption } = getSituationLedgerData(
+      [
+        ...many(5, { context: 'unopened', action: 'raise', heroOffset: 0 }),
+        ...many(40, { context: 'raised', action: 'call', heroOffset: 2 }),
+      ],
+      DEFAULT_FILTERS,
+      t,
+      3
+    )
+    expect(caption.join('\n')).toContain('chart.situation.ledger.caption.hidden')
+    expect(caption.join('\n')).toContain('chart.situation.ledger.caption.dropped')
   })
 
   it('summarises a bucket, and puts the sample size in the label', () => {
