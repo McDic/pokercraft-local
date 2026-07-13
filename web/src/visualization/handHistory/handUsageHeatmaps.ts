@@ -214,15 +214,15 @@ export async function getHandUsageHeatmapsData(
 
   // Position configurations (row, col, offset, translation key)
   const positions: [number, number, number | null, TranslationKey][] = [
-    [1, 1, -5, 'chart.handUsage.position.utg'],
-    [1, 2, -4, 'chart.handUsage.position.utg1'],
-    [1, 3, -3, 'chart.handUsage.position.mp'],
-    [2, 1, -2, 'chart.handUsage.position.mp1'],
-    [2, 2, -1, 'chart.handUsage.position.co'],
-    [2, 3, 0, 'chart.handUsage.position.btn'],
-    [3, 1, 1, 'chart.handUsage.position.sb'],
-    [3, 2, 2, 'chart.handUsage.position.bb'],
-    [3, 3, null, 'chart.handUsage.position.all'],
+    [1, 1, -5, 'position.utg'],
+    [1, 2, -4, 'position.utg1'],
+    [1, 3, -3, 'position.mp'],
+    [2, 1, -2, 'position.mp1'],
+    [2, 2, -1, 'position.co'],
+    [2, 3, 0, 'position.btn'],
+    [3, 1, 1, 'position.sb'],
+    [3, 2, 2, 'position.bb'],
+    [3, 3, null, 'position.all'],
   ]
 
   /** The label under each heatmap, e.g. "BTN (VPIP 42.1%, Range 30.0%)". */

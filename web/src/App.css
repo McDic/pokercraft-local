@@ -289,6 +289,47 @@
   overflow: hidden;
 }
 
+/* Situation filters: one row above the chart, so the controls that change what is
+   plotted are never mistaken for part of the plot. */
+.situation-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  padding: 0.875rem 1rem;
+  background: #1a1a1a;
+  border-radius: 12px;
+}
+
+.situation-filters label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #c3c2b7;
+}
+
+.situation-filters select {
+  background: #2c2c2a;
+  color: #fff;
+  border: 1px solid #3d3d3a;
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.chart-empty {
+  padding: 2rem;
+  text-align: center;
+  color: #898781;
+}
+
+@media (max-width: 768px) {
+  .situation-filters {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
+
 /* Errors */
 .errors {
   background: rgba(255, 100, 100, 0.1);

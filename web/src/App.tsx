@@ -12,6 +12,8 @@ import {
   type TournamentChartsRef,
   HandHistoryCharts,
   type HandHistoryChartsRef,
+  SituationCharts,
+  type SituationChartsRef,
   ConfirmModal,
   ErrorBoundary,
 } from './components'
@@ -40,6 +42,7 @@ function App() {
   >(null)
   const tournamentChartsRef = useRef<TournamentChartsRef>(null)
   const handHistoryChartsRef = useRef<HandHistoryChartsRef>(null)
+  const situationChartsRef = useRef<SituationChartsRef>(null)
 
   const {
     isLoading,
@@ -77,9 +80,16 @@ function App() {
   )
 
   const handleExport = useCallback(() => {
-    // Export only the currently-active tab's charts.
+    // Export only the currently-active tab's charts. Situations are derived from the hand
+    // histories, so they export under the hand-history heading — but they have their own
+    // ref, and picking it by "not tournament" would quietly export the wrong tab's charts.
     const isTournament = activeTab === 'tournament'
-    const activeRef = isTournament ? tournamentChartsRef.current : handHistoryChartsRef.current
+    const activeRef =
+      activeTab === 'tournament'
+        ? tournamentChartsRef.current
+        : activeTab === 'handHistory'
+          ? handHistoryChartsRef.current
+          : situationChartsRef.current
     const charts = activeRef?.getChartData() ?? []
     if (charts.length === 0) return
 
@@ -157,6 +167,12 @@ function App() {
       <div style={{ display: activeTab === 'handHistory' ? 'block' : 'none' }}>
         <ErrorBoundary labelKey="errorBoundary.label.handHistoryCharts" resetKeys={[handHistories]}>
           <HandHistoryCharts ref={handHistoryChartsRef} handHistories={handHistories} />
+        </ErrorBoundary>
+      </div>
+
+      <div style={{ display: activeTab === 'situation' ? 'block' : 'none' }}>
+        <ErrorBoundary labelKey="errorBoundary.label.situationCharts" resetKeys={[handHistories]}>
+          <SituationCharts ref={situationChartsRef} handHistories={handHistories} />
         </ErrorBoundary>
       </div>
 
