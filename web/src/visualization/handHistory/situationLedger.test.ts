@@ -64,34 +64,49 @@ const REACHABLE: Array<[PreflopContext, HeroPreflopAction]> = [
   ['limped', 'check'],
 ]
 
+/** Every seat the ledger has a row for. An exclusion may carve out just one of them. */
+const OFFSETS = [-5, -4, -3, -2, -1, 0, 1, 2]
+
+function everySituation(): PreflopSituation[] {
+  return REACHABLE.flatMap(([context, action]) =>
+    [false, true].flatMap(allIn =>
+      OFFSETS.map(heroOffset => situation({ context, action, allIn, heroOffset }))
+    )
+  )
+}
+
 describe('family coverage', () => {
-  it.each(REACHABLE)(
-    '%s / %s is a fold, or matched by exactly one family, or explicitly excluded',
-    (context, action) => {
-      for (const allIn of [false, true]) {
-        const s = situation({ context, action, allIn })
-        const families = FAMILIES.filter(f => f.match(s))
-        const exclusions = EXCLUSIONS.filter(e => e.match(s))
-        const label = `${context}/${action}${allIn ? ' (all-in)' : ''}`
+  it('gives every reachable decision exactly one home', () => {
+    // The invariant, and the reason this file exists. `buildLedgerRows` tests exclusions
+    // first, so an exclusion *overrides* a family it overlaps — that is how a single seat
+    // (the big blind's iso-raise) is carved out of a family that is otherwise sound. What
+    // must never happen is a decision that is neither charted nor excluded: it would be
+    // computed, correct, and gone without a trace.
+    const wrong: string[] = []
 
-        if (action === 'fold') {
-          // Folds are the baseline: Δ is 0 by construction, so a fold row would be a row of
-          // zeros. They are left out on purpose, not by omission.
-          expect(families, `${label}: fold should match no family`).toHaveLength(0)
-          expect(exclusions, `${label}: fold needs no exclusion`).toHaveLength(0)
-          continue
-        }
+    for (const s of everySituation()) {
+      const families = FAMILIES.filter(f => f.match(s))
+      const exclusions = EXCLUSIONS.filter(e => e.match(s))
+      const label = `${s.context}/${s.action}${s.allIn ? '+allin' : ''} @${s.heroOffset}`
 
-        // Exactly one home, and never two. A decision that is both charted and excluded
-        // would be counted twice; one that is neither would vanish without a trace, which
-        // is the whole reason this test exists.
-        expect(
-          families.length + exclusions.length,
-          `${label} matched ${families.length} families and ${exclusions.length} exclusions`
-        ).toBe(1)
+      if (exclusions.length > 1) {
+        wrong.push(`${label}: matched ${exclusions.length} exclusions, which double-counts it`)
+        continue
+      }
+      if (s.action === 'fold') {
+        // Folds are the baseline: Δ is 0 by construction, so a fold row would be a row of
+        // zeros. They are left out on purpose, not by omission.
+        if (families.length || exclusions.length) wrong.push(`${label}: a fold needs no home`)
+        continue
+      }
+      if (exclusions.length === 1) continue // deliberately withheld, and counted in the caption
+      if (families.length !== 1) {
+        wrong.push(`${label}: matched ${families.length} families and no exclusion`)
       }
     }
-  )
+
+    expect(wrong).toEqual([])
+  })
 
   it('has no family that nothing can reach', () => {
     const orphans = FAMILIES.filter(f => !everySituation().some(s => f.match(s)))
@@ -104,13 +119,19 @@ describe('family coverage', () => {
     const orphans = EXCLUSIONS.filter(e => !everySituation().some(s => e.match(s)))
     expect(orphans.map(e => e.key)).toEqual([])
   })
-})
 
-function everySituation(): PreflopSituation[] {
-  return REACHABLE.flatMap(([context, action]) =>
-    [false, true].map(allIn => situation({ context, action, allIn }))
-  )
-}
+  it('leaves the iso-raise family alive everywhere but the big blind', () => {
+    // The exclusion is a seat, not the whole family: raising over limpers from the cutoff is
+    // a decision against folding and stays on the chart.
+    const isoAt = (heroOffset: number) =>
+      EXCLUSIONS.some(e => e.match(situation({ context: 'limped', action: 'raise', heroOffset })))
+
+    expect(isoAt(2)).toBe(true) // BB — the only seat that can check for free
+    expect(isoAt(1)).toBe(false) // SB — folding forfeits half a blind, so it is a real line
+    expect(isoAt(-1)).toBe(false) // CO
+    expect(isoAt(0)).toBe(false) // BTN
+  })
+})
 
 describe('buildLedgerRows', () => {
   const many = (n: number, over: Partial<PreflopSituation>) =>

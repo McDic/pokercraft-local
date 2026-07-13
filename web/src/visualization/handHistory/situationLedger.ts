@@ -67,9 +67,19 @@ export const FAMILIES: Family[] = [
  *
  * A family list that simply omitted these would *orphan* them: computed, correct, and then
  * dropped without a trace. That is the exact bug the coverage test was written to catch, so
- * an exclusion has to be declared, not implied. The coverage test asserts every reachable
- * decision is a fold, or matched by exactly one family, or matched by exactly one of these —
- * never nothing.
+ * an exclusion has to be declared, not implied. Checked *before* the families, so an
+ * exclusion overrides a family it overlaps — which is how a single seat can be carved out
+ * of a family that is otherwise sound.
+ *
+ * The coverage test asserts the surviving invariant: every reachable decision is a fold, or
+ * excluded, or matched by exactly one family. Never nothing.
+ *
+ * ## Two of these are the same mistake
+ *
+ * Δ scores every decision against folding. That is only meaningful where folding is a line
+ * you might actually take — and in a limped pot, the big blind can check *for free*. Both
+ * of its options therefore beat folding automatically, and the number says nothing about
+ * either. It is a category error, not a thin sample, and no amount of data fixes it.
  */
 export interface Exclusion {
   /** Why, shown in the caption with its count. */
@@ -77,14 +87,24 @@ export interface Exclusion {
   match: (s: PreflopSituation) => boolean
 }
 
+/** The big blind, where a limped pot can be checked for nothing. */
+const BB = 2
+
 export const EXCLUSIONS: Exclusion[] = [
   {
-    // Checking a limped pot in the big blind is *free*, so folding is a line nobody would
-    // ever take. Δ is defined as the gain over folding, which makes "beat folding" a bar
-    // that clears itself — the row was +1.35bb and could not have been anything else. There
-    // is no decision here to score, so scoring it was a category error, not a thin sample.
+    // "Beat folding" is a bar that clears itself here: the row read +1.35bb and could not
+    // have read anything else.
     key: 'chart.situation.excluded.limpedCheck',
     match: s => s.context === 'limped' && s.action === 'check',
+  },
+  {
+    // The same trap, one action over. Raising a limped pot from the big blind is a real
+    // decision — but it is a decision against *checking*, not against folding, so scoring it
+    // against folding inflates it for a structural reason and makes it incomparable with an
+    // iso-raise from a seat where folding is what you would genuinely have done instead.
+    // (The small blind is fine: folding there forfeits half a blind, so it is a real line.)
+    key: 'chart.situation.excluded.isoRaiseBB',
+    match: s => s.context === 'limped' && s.action === 'raise' && s.heroOffset === BB,
   },
   {
     // 5-bets and beyond. 62 of them in a 72,840-hand sample, which clears no sample

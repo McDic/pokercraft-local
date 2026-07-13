@@ -144,6 +144,10 @@ export function getHandClassProfitData(
 
   const caption = [
     t('chart.handClass.caption.reading'),
+    // The class names have to stay short enough to fit the row gutter, so what they *mean*
+    // lives here rather than in a parenthetical on every label. A label like
+    // "Suited broadway-x (K9s, Q7s…) (n=161)" nests brackets and runs off a narrow window.
+    t('chart.handClass.caption.classes'),
     t('chart.handClass.caption.grid'),
     t('chart.handClass.caption.caveat'),
     // Always, not only when rows survive: it is the one number that tells an empty chart
