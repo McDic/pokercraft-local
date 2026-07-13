@@ -12,6 +12,8 @@ import {
   type TournamentChartsRef,
   HandHistoryCharts,
   type HandHistoryChartsRef,
+  SituationCharts,
+  type SituationChartsRef,
   ConfirmModal,
   ErrorBoundary,
 } from './components'
@@ -21,6 +23,7 @@ import { useAnalysisWorker } from './hooks/useAnalysisWorker'
 
 // Export
 import { generateExportHTML, downloadHTML, type ExportChart } from './export/htmlExport'
+import type { TranslationKey } from './i18n'
 
 /** Local timestamp `YYYY-MM-DD_HH-MM-SS` for export filenames (colon-free for all OSes). */
 function exportTimestamp(): string {
@@ -32,14 +35,45 @@ function exportTimestamp(): string {
   )
 }
 
+/**
+ * How each tab exports: its heading, its div-id prefix, and the word in the filename.
+ *
+ * One table rather than three ternaries, because the previous shape — "tournament, or else
+ * hand history" — silently mislabelled the situation tab's export the moment a third tab
+ * existed: right charts, wrong filename, wrong heading.
+ */
+const EXPORT_BY_TAB: Record<
+  ChartTab,
+  { titleKey: TranslationKey; prefix: string; filename: string }
+> = {
+  tournament: {
+    titleKey: 'export.section.tournament',
+    prefix: 'tournament',
+    filename: 'tournament',
+  },
+  handHistory: {
+    titleKey: 'export.section.handHistory',
+    prefix: 'hand',
+    filename: 'handhistory',
+  },
+  situation: {
+    titleKey: 'export.section.situation',
+    prefix: 'situation',
+    // Matches what the tab and the export heading both call it ("Preflop Situations").
+    // `prefix` is a DOM id and need not, but a filename is read by a person.
+    filename: 'preflop-situations',
+  },
+}
+
 function App() {
   const { t, i18n } = useTranslation()
   const [activeTab, setActiveTab] = useState<ChartTab>('tournament')
   const [pendingExport, setPendingExport] = useState<
-    { charts: ExportChart[]; isTournament: boolean } | null
+    { charts: ExportChart[]; tab: ChartTab } | null
   >(null)
   const tournamentChartsRef = useRef<TournamentChartsRef>(null)
   const handHistoryChartsRef = useRef<HandHistoryChartsRef>(null)
+  const situationChartsRef = useRef<SituationChartsRef>(null)
 
   const {
     isLoading,
@@ -66,12 +100,10 @@ function App() {
   // built in it, so anything else would mean rebuilding every figure.
   const language = i18n.resolvedLanguage ?? 'en'
   const runExport = useCallback(
-    (charts: ExportChart[], isTournament: boolean) => {
-      const html = isTournament
-        ? generateExportHTML(charts, [], t, language)
-        : generateExportHTML([], charts, t, language)
-      const label = isTournament ? 'tournament' : 'handhistory'
-      downloadHTML(html, `pokercraft-${label}-${exportTimestamp()}.html`)
+    (charts: ExportChart[], tab: ChartTab) => {
+      const { titleKey, prefix, filename } = EXPORT_BY_TAB[tab]
+      const html = generateExportHTML([{ titleKey, prefix, charts }], t, language)
+      downloadHTML(html, `pokercraft-${filename}-${exportTimestamp()}.html`)
     },
     [t, language]
   )
@@ -79,7 +111,11 @@ function App() {
   const handleExport = useCallback(() => {
     // Export only the currently-active tab's charts.
     const isTournament = activeTab === 'tournament'
-    const activeRef = isTournament ? tournamentChartsRef.current : handHistoryChartsRef.current
+    const activeRef = isTournament
+      ? tournamentChartsRef.current
+      : activeTab === 'handHistory'
+        ? handHistoryChartsRef.current
+        : situationChartsRef.current
     const charts = activeRef?.getChartData() ?? []
     if (charts.length === 0) return
 
@@ -90,11 +126,11 @@ function App() {
     // isLoading is only relevant to the tournament tab — gating it there avoids a
     // false "still calculating" warning when exporting hand history during analysis.
     if ((isTournament && isLoading) || activeRef?.isComputing()) {
-      setPendingExport({ charts, isTournament })
+      setPendingExport({ charts, tab: activeTab })
       return
     }
 
-    runExport(charts, isTournament)
+    runExport(charts, activeTab)
   }, [activeTab, isLoading, runExport])
 
   // Auto-switch tab when data changes
@@ -160,6 +196,12 @@ function App() {
         </ErrorBoundary>
       </div>
 
+      <div style={{ display: activeTab === 'situation' ? 'block' : 'none' }}>
+        <ErrorBoundary labelKey="errorBoundary.label.situationCharts" resetKeys={[handHistories]}>
+          <SituationCharts ref={situationChartsRef} handHistories={handHistories} />
+        </ErrorBoundary>
+      </div>
+
       <ConfirmModal
         open={pendingExport !== null}
         title={t('modal.export.title')}
@@ -167,7 +209,7 @@ function App() {
         confirmLabel={t('modal.export.confirm')}
         cancelLabel={t('modal.cancel')}
         onConfirm={() => {
-          if (pendingExport) runExport(pendingExport.charts, pendingExport.isTournament)
+          if (pendingExport) runExport(pendingExport.charts, pendingExport.tab)
           setPendingExport(null)
         }}
         onCancel={() => setPendingExport(null)}

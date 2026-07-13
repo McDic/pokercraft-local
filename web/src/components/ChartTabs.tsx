@@ -4,7 +4,7 @@
 
 import { useTranslation } from 'react-i18next'
 
-export type ChartTab = 'tournament' | 'handHistory'
+export type ChartTab = 'tournament' | 'handHistory' | 'situation'
 
 interface ChartTabsProps {
   activeTab: ChartTab
@@ -45,6 +45,15 @@ export function ChartTabs({
       >
         <span className="tab-icon">🃏</span>
         <span className="tab-label">{t('tabs.handHistory')}</span>
+        {hasHandHistories && <span className="tab-count">{handHistoryCount}</span>}
+      </button>
+      <button
+        className={`tab ${activeTab === 'situation' ? 'active' : ''} ${!hasHandHistories ? 'disabled' : ''}`}
+        onClick={() => hasHandHistories && onTabChange('situation')}
+        disabled={!hasHandHistories}
+      >
+        <span className="tab-icon">🎯</span>
+        <span className="tab-label">{t('tabs.situation')}</span>
         {hasHandHistories && <span className="tab-count">{handHistoryCount}</span>}
       </button>
     </nav>

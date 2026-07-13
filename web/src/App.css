@@ -289,6 +289,57 @@
   overflow: hidden;
 }
 
+/* Prose, so it wraps — which is the whole reason it is not a Plotly annotation.
+   Full width, deliberately: a reading measure (~75-100ch) guards the eye's return sweep
+   across many lines of body text, but these are one-liners that sit above the figure they
+   describe. Capping them just left the caption visibly narrower than its own chart. */
+.chart-caption {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #898781;
+  max-width: 100%;
+  margin: 0 0 0.4rem 0;
+}
+
+.chart-caption:last-of-type {
+  margin-bottom: 1rem;
+}
+
+/* Situation filters: one row above the chart, so the controls that change what is
+   plotted are never mistaken for part of the plot. */
+.situation-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  padding: 0.875rem 1rem;
+  background: #1a1a1a;
+  border-radius: 12px;
+}
+
+.situation-filters label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #c3c2b7;
+}
+
+.situation-filters select {
+  background: #2c2c2a;
+  color: #fff;
+  border: 1px solid #3d3d3a;
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+  .situation-filters {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
+
 /* Errors */
 .errors {
   background: rgba(255, 100, 100, 0.1);
