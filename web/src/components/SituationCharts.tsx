@@ -25,37 +25,76 @@ import { useState, useEffect, useMemo, forwardRef, useImperativeHandle } from 'r
 import { useTranslation } from 'react-i18next'
 import Plot from './plot'
 import type { HandHistory } from '../types'
-import type { Classification, OpenerBucket } from '../analysis/preflopSituation'
+import type { Classification } from '../analysis/preflopSituation'
 import { classifyHandHistories } from '../analysis/preflopSituation'
-import type {
-  SituationFilters,
-  StackBucket,
-  TableBucket,
-} from '../visualization/handHistory/situationFilters'
+import type { SituationFilters } from '../visualization/handHistory/situationFilters'
+import { DEFAULT_FILTERS } from '../visualization/handHistory/situationFilters'
+import type { Control } from '../visualization/handHistory/situationControls'
 import {
-  DEFAULT_FILTERS,
-  MIN_SAMPLE_CHOICES,
-  OPENER_BUCKET_KEYS,
-  STACK_BUCKET_KEYS,
-  TABLE_BUCKET_KEYS,
-} from '../visualization/handHistory/situationFilters'
+  FILTER_CONTROLS,
+  SCOPE_CONTROLS,
+} from '../visualization/handHistory/situationControls'
 import type { DeltaFigure } from '../visualization/handHistory/deltaFigure'
-import { FAMILIES, getSituationLedgerData } from '../visualization/handHistory/situationLedger'
+import { getSituationLedgerData } from '../visualization/handHistory/situationLedger'
 import type { HandClassScope } from '../visualization/handHistory/handClassProfit'
-import {
-  DEFAULT_SCOPE,
-  SCOPE_POSITION_KEYS,
-  getHandClassProfitData,
-} from '../visualization/handHistory/handClassProfit'
-import type { ExportChart } from '../export/htmlExport'
+import { DEFAULT_SCOPE, getHandClassProfitData } from '../visualization/handHistory/handClassProfit'
+import type { SituationExport } from '../export/situationPayload'
+import { exportableSituations } from '../export/situationPayload'
+import en from '../i18n/locales/en.json'
 
 interface SituationChartsProps {
   handHistories: HandHistory[]
 }
 
 export interface SituationChartsRef {
-  getChartData: () => ExportChart[]
+  /**
+   * The decisions, not the pictures — see situationPayload.ts.
+   *
+   * Unlike the other two tabs, this one does not export figures. Its charts only mean
+   * anything next to the filters that produced them, so the exported file gets working
+   * dropdowns and the data to re-aggregate behind them.
+   */
+  getExportPayload: () => SituationExport | null
   isComputing: () => boolean
+}
+
+/**
+ * A row of `<select>`s, laid out from the shared control descriptors.
+ *
+ * The descriptors — the options, and what picking one does to the state — live in
+ * `situationControls.ts`, because the exported HTML has this same filter bar and had to be
+ * given the same answers. This component is only the JSX half; `renderControls` in
+ * `export/situationRuntime.ts` is the DOM half. Neither may decide anything.
+ */
+function ControlBar<S>({
+  controls,
+  state,
+  onChange,
+}: {
+  controls: Array<Control<S>>
+  state: S
+  onChange: (next: S) => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <div className="situation-filters">
+      {controls.map(control => (
+        <label key={control.id}>
+          {t(control.labelKey)}
+          <select
+            value={control.valueOf(state)}
+            onChange={e => onChange(control.apply(state, e.target.value))}
+          >
+            {control.options(t).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ))}
+    </div>
+  )
 }
 
 /**
@@ -92,7 +131,7 @@ function Figure({ figure, emptyMessage }: { figure: DeltaFigure; emptyMessage: s
 
 export const SituationCharts = forwardRef<SituationChartsRef, SituationChartsProps>(
   function SituationCharts({ handHistories }, ref) {
-    const { t } = useTranslation()
+    const { t, i18n } = useTranslation()
     const [filters, setFilters] = useState<SituationFilters>(DEFAULT_FILTERS)
     const [scope, setScope] = useState<HandClassScope>(DEFAULT_SCOPE)
 
@@ -138,17 +177,25 @@ export const SituationCharts = forwardRef<SituationChartsRef, SituationChartsPro
     )
 
     useImperativeHandle(ref, () => ({
-      getChartData(): ExportChart[] {
-        const charts: ExportChart[] = []
-        // `caption` rides along: how to read these charts is not optional context, and an
-        // exported figure that has lost it is the one a reader will misread.
-        if (ledger && ledger.traces.length > 0) {
-          charts.push({ name: t('chart.situation.name'), ...ledger })
+      getExportPayload(): SituationExport | null {
+        if (built === null) return null
+
+        return {
+          rows: exportableSituations(built.classification.situations),
+          // Whatever is on screen right now: the file opens showing the chart you exported,
+          // and the dropdowns then move from there.
+          filters,
+          scope,
+          // The whole dictionary, resolved the way i18next resolves it — the current
+          // language over the English fallback. Not the subset the charts use today: that
+          // list would fall behind the code, and the first thing it dropped would render in
+          // the exported file as a raw `chart.situation.family.squeeze`.
+          strings: {
+            ...(en as Record<string, string>),
+            ...(i18n.getResourceBundle(i18n.resolvedLanguage ?? 'en', 'translation') ?? {}),
+          },
+          droppedHands: built.classification.droppedHands,
         }
-        if (handClass && handClass.traces.length > 0) {
-          charts.push({ name: t('chart.handClass.name'), ...handClass })
-        }
-        return charts
       },
       isComputing() {
         return isComputing
@@ -161,111 +208,13 @@ export const SituationCharts = forwardRef<SituationChartsRef, SituationChartsPro
 
     return (
       <div className="charts-container">
-        <div className="situation-filters">
-          <label>
-            {t('chart.situation.filter.opener')}
-            <select
-              value={filters.openerBucket}
-              onChange={e =>
-                setFilters(f => ({ ...f, openerBucket: e.target.value as OpenerBucket | 'any' }))
-              }
-            >
-              <option value="any">{t('chart.situation.filter.any')}</option>
-              {OPENER_BUCKET_KEYS.map(([bucket, key]) => (
-                <option key={bucket} value={bucket}>
-                  {t(key)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            {t('chart.situation.filter.stack')}
-            <select
-              value={filters.stackBucket}
-              onChange={e =>
-                setFilters(f => ({ ...f, stackBucket: e.target.value as StackBucket | 'any' }))
-              }
-            >
-              <option value="any">{t('chart.situation.filter.any')}</option>
-              {STACK_BUCKET_KEYS.map(([bucket, key]) => (
-                <option key={bucket} value={bucket}>
-                  {t(key)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            {t('chart.situation.filter.table')}
-            <select
-              value={filters.tableBucket}
-              onChange={e =>
-                setFilters(f => ({ ...f, tableBucket: e.target.value as TableBucket | 'any' }))
-              }
-            >
-              <option value="any">{t('chart.situation.filter.any')}</option>
-              {TABLE_BUCKET_KEYS.map(([bucket, key]) => (
-                <option key={bucket} value={bucket}>
-                  {t(key)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            {t('chart.situation.filter.minSample')}
-            <select
-              value={filters.minSample}
-              onChange={e => setFilters(f => ({ ...f, minSample: Number(e.target.value) }))}
-            >
-              {MIN_SAMPLE_CHOICES.map(n => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+        <ControlBar controls={FILTER_CONTROLS} state={filters} onChange={setFilters} />
 
         {ledger && <Figure figure={ledger} emptyMessage={t('chart.situation.empty')} />}
 
         {/* The class chart's own two controls, kept beside it rather than in the bar above:
             they do not narrow the data, they choose which row of the ledger to open up. */}
-        <div className="situation-filters">
-          <label>
-            {t('chart.handClass.filter.action')}
-            <select
-              value={scope.familyIndex}
-              onChange={e => setScope(s => ({ ...s, familyIndex: Number(e.target.value) }))}
-            >
-              {FAMILIES.map((family, i) => (
-                <option key={family.key} value={i}>
-                  {t(family.key)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            {t('chart.handClass.filter.position')}
-            <select
-              value={scope.heroOffset ?? 'any'}
-              onChange={e =>
-                setScope(s => ({
-                  ...s,
-                  heroOffset: e.target.value === 'any' ? null : Number(e.target.value),
-                }))
-              }
-            >
-              {SCOPE_POSITION_KEYS.map(([offset, key]) => (
-                <option key={key} value={offset ?? 'any'}>
-                  {t(key)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+        <ControlBar controls={SCOPE_CONTROLS} state={scope} onChange={setScope} />
 
         {handClass && <Figure figure={handClass} emptyMessage={t('chart.handClass.empty')} />}
       </div>

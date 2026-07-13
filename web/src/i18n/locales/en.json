@@ -211,7 +211,6 @@
   "tabs.situation": "Preflop Situations",
   "charts.noSituationData": "No hand history data loaded",
 
-  "chart.situation.name": "Preflop Decision Profit",
   "chart.situation.ledger.title": "Preflop Decision Profit by Position (Δbb vs. Folding)",
   "chart.situation.ledger.caption.row": "Each row is one action of yours from one of your positions, over n decisions — \"3-bet vs. open · CO\" means you 3-bet from the cutoff. The position is always yours, never your opponent's; for theirs, use the \"Opponent's raise from\" filter above.",
   "chart.situation.ledger.caption.reading": "Zero is folding — right of the line, the decision beat folding. Grey = the 95% interval includes zero, so that row cannot be told apart from folding.",
@@ -274,7 +273,6 @@
   "chart.situation.table.shorthanded": "3–6 players",
   "chart.situation.table.full": "7+ players",
 
-  "chart.handClass.name": "Profit by Hand Class",
   "chart.handClass.title": "Profit by Hand Class — {{family}} · {{position}} (Δbb vs. Folding)",
   "chart.handClass.rowLabel": "{{handClass}} (n={{n}})",
   "chart.handClass.caption.reading": "This breaks one row of the ledger above into the hands it is made of. Zero is still folding, and grey still means the 95% interval includes zero.",

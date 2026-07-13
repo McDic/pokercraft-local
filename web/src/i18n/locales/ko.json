@@ -211,7 +211,6 @@
   "tabs.situation": "프리플랍 상황 분석",
   "charts.noSituationData": "불러온 핸드 히스토리 데이터가 없습니다",
 
-  "chart.situation.name": "프리플랍 의사결정 수익",
   "chart.situation.ledger.title": "포지션별 프리플랍 의사결정 수익 (폴드 대비 Δbb)",
   "chart.situation.ledger.caption.row": "각 행은 당신이 특정 포지션에서 한 하나의 액션이며, n번의 의사결정을 모은 것입니다 — '오픈 상대 3벳 · CO'는 당신이 컷오프에서 3벳했다는 뜻입니다. 포지션은 언제나 상대가 아니라 당신의 포지션입니다. 상대의 포지션으로 나눠 보려면 위의 '상대의 레이즈 포지션' 필터를 사용하세요.",
   "chart.situation.ledger.caption.reading": "0이 폴드입니다 — 선의 오른쪽에 있으면 그 의사결정이 폴드보다 이득이었다는 뜻입니다. 회색은 95% 신뢰구간이 0을 포함한다는 뜻이며, 그 행은 폴드와 구분할 수 없습니다.",
@@ -272,7 +271,6 @@
   "chart.situation.table.shorthanded": "3–6명",
   "chart.situation.table.full": "7명 이상",
 
-  "chart.handClass.name": "핸드 종류별 수익",
   "chart.handClass.title": "핸드 종류별 수익 — {{family}} · {{position}} (폴드 대비 Δbb)",
   "chart.handClass.rowLabel": "{{handClass}} (n={{n}})",
   "chart.handClass.caption.reading": "위 차트의 한 행을, 그 행을 이루는 핸드들로 쪼갠 것입니다. 여전히 0이 폴드이고, 회색은 여전히 95% 신뢰구간이 0을 포함한다는 뜻입니다.",
