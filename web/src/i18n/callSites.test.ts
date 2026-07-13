@@ -89,7 +89,8 @@ function objectKeys(source: string, open: number): Set<string> | null {
 interface CallSite {
   file: string
   key: string
-  values: Set<string>
+  /** `null` when the object literal could not be parsed — an error, never a skip. */
+  values: Set<string> | null
 }
 
 /**
@@ -108,7 +109,10 @@ function callSites(): CallSite[] {
 
     for (const match of source.matchAll(/['"]([\w.]+)['"]/g)) {
       const key = match[1]
-      if (!(key in en)) continue
+      // hasOwnProperty, not `in`: `in` walks the prototype chain, so a quoted
+      // 'toString' or 'constructor' anywhere in src/ would be taken for a key and then
+      // crash `placeholders()` with a function instead of a string.
+      if (!Object.prototype.hasOwnProperty.call(en, key)) continue
 
       const after = source.slice(match.index + match[0].length)
 
@@ -120,11 +124,15 @@ function callSites(): CallSite[] {
       // match ends on the inner one, which is the object we actually want.
       if (!object) object = /^\s*values=\{\{/.exec(after)
 
+      // A site whose values cannot be parsed is reported, never dropped. Skipping it
+      // would silently stop checking that key — the precise vacuity this file exists to
+      // avoid — and the trigger is ordinary: an apostrophe in a comment inside the
+      // object would send the string-skipper to the end of the file.
       const values = object
         ? objectKeys(source, match.index + match[0].length + object[0].length - 1)
         : new Set<string>()
 
-      if (values) found.push({ file: file.slice(SRC.length + 1), key, values })
+      found.push({ file: file.slice(SRC.length + 1), key, values })
     }
   }
   return found
@@ -138,18 +146,22 @@ describe('translation key usages', () => {
   it('actually finds the usages', () => {
     expect(sites.length).toBeGreaterThan(50)
 
-    const byKey = (key: string) => sites.find(s => s.key === key)
+    const byKey = (key: string) => sites.find(s => s.key === key)?.values
     // A direct t() call with values.
-    expect(byKey('chart.bankroll.tick.buyIns')?.values).toEqual(new Set(['capital']))
+    expect(byKey('chart.bankroll.tick.buyIns')).toEqual(new Set(['capital']))
     // A key travelling as data through the worker protocol.
-    expect(byKey('progress.chart.equity')?.values).toEqual(new Set(['current', 'total']))
+    expect(byKey('progress.chart.equity')).toEqual(new Set(['current', 'total']))
     // A key with no values at all.
-    expect(byKey('charts.noHandHistoryData')?.values).toEqual(new Set())
+    expect(byKey('charts.noHandHistoryData')).toEqual(new Set())
   })
 
   it('passes exactly the values each key interpolates', () => {
     const wrong: string[] = []
     for (const { file, key, values } of sites) {
+      if (values === null) {
+        wrong.push(`${file}: '${key}' — could not parse its values; this scanner needs fixing`)
+        continue
+      }
       const expected = placeholders((en as Record<string, string>)[key])
       const missing = [...expected].filter(name => !values.has(name))
       const extra = [...values].filter(name => !expected.has(name))

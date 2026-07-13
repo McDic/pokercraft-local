@@ -19,7 +19,6 @@ export {
   getBankrollAnalysisData,
 } from './bankrollAnalysis'
 export type {
-  BankrollAnalysisOptions,
   BankrollAnalysisData,
 } from './bankrollAnalysis'
 

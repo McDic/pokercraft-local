@@ -3,16 +3,8 @@
  * Shows bankruptcy/survival rates using Monte Carlo simulation (WASM)
  */
 
-import type { TournamentSummary } from '../../types'
-import { getTournamentRRs, getTournamentBuyIn } from '../../types'
 import type { Translate } from '../../i18n'
 import type { Data, Layout } from 'plotly.js-dist-min'
-
-export interface BankrollAnalysisOptions {
-  initialCapitals?: number[]
-  simulationCount?: number
-  minIterations?: number
-}
 
 export interface BankrollResult {
   initialCapital: number
@@ -23,55 +15,6 @@ export interface BankrollResult {
 export interface BankrollAnalysisData {
   traces: Data[]
   layout: Partial<Layout>
-}
-
-/**
- * Collect all relative returns from tournaments
- */
-export function collectRelativeReturns(tournaments: TournamentSummary[]): number[] {
-  const returns: number[] = []
-  for (const t of tournaments) {
-    const buyIn = getTournamentBuyIn(t)
-    if (buyIn > 0) {
-      returns.push(...getTournamentRRs(t))
-    }
-  }
-  return returns
-}
-
-/**
- * Run bankroll simulation using WASM
- * Returns null if simulation fails (e.g., negative expected returns)
- */
-export async function runBankrollSimulation(
-  relativeReturns: number[],
-  initialCapital: number,
-  maxIterations: number,
-  simulationCount: number,
-  simulate: (
-    initialCapital: number,
-    relativeReturns: Float64Array,
-    maxIterations: number,
-    profitExitMultiplier: number,
-    simulationCount: number
-  ) => { bankruptcy_rate: number; survival_rate: number }
-): Promise<BankrollResult | null> {
-  try {
-    const result = simulate(
-      initialCapital,
-      new Float64Array(relativeReturns),
-      maxIterations,
-      0.0, // No profit exit
-      simulationCount
-    )
-    return {
-      initialCapital,
-      bankruptcyRate: result.bankruptcy_rate,
-      survivalRate: result.survival_rate,
-    }
-  } catch {
-    return null
-  }
 }
 
 /**

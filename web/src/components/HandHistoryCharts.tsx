@@ -1,19 +1,27 @@
 /**
  * Hand history charts container.
  *
- * Deliberately two layers, in two effects:
+ * Three layers, in three effects, split along what each actually depends on:
  *
- *   data   — the WASM all-in equity pass. Depends on the hand histories and nothing
- *            else. Expensive: it spawns a pool of Web Workers that cannot be aborted.
- *   charts — the Plotly figures. Depends on that data plus the active language.
- *            Cheap, pure, and safe to redo.
+ *   data          — the WASM all-in equity pass. Depends on the hand histories, and
+ *                   nothing else. Expensive: a pool of Web Workers that cannot be
+ *                   aborted once started.
+ *   hand figures  — chip histories and hand-usage heatmaps. Depend on the hand
+ *                   histories and the language. Cheap and pure.
+ *   equity figure — the all-in equity chart. Depends on the equity data and the
+ *                   language. Cheap and pure.
  *
- * Keeping them apart is what makes a language switch free: it re-runs only the chart
- * layer, so no equity is ever recomputed and no worker is ever respawned. Folding the
- * two together — the obvious shape, since figures are what the component stores — means
- * the language has to be a dependency of the equity pass too, and switching mid-analysis
- * then supersedes a run whose workers keep going, while its replacement starts a second
- * pool for the same hands.
+ * Keeping the data layer separate is what makes a language switch free: it rebuilds
+ * only figures, so no equity is recomputed and no worker respawned. Keeping the two
+ * figure layers separate is what stops an equity result from pointlessly rebuilding
+ * the chip histories, which do not depend on it.
+ *
+ * `isComputing` is *derived* — "some figure on screen does not match the data and
+ * language it should have been built from" — rather than tracked as a flag per effect.
+ * Flags are what let the export gate read "idle" for one commit at the seam between two
+ * layers, which is enough to export a chart set with the equity figure silently missing.
+ * Derived state cannot dip: the moment `equity` changes, the equity figure is stale by
+ * definition, in the very same commit.
  */
 
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
@@ -47,6 +55,18 @@ interface EquityData {
   luckScore: LuckScore
 }
 
+/**
+ * A figure, together with the inputs it was built from.
+ *
+ * Carrying the provenance is what makes staleness a fact about the state rather than a
+ * flag someone has to remember to set and clear in every exit path.
+ */
+interface Built<T, From> {
+  figure: T
+  from: From
+  language: string | undefined
+}
+
 export interface HandHistoryChartsRef {
   getChartData: () => ExportChart[]
   isComputing: () => boolean
@@ -60,33 +80,61 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
   const { t, i18n } = useTranslation()
   const language = i18n.resolvedLanguage
 
-  // --- data layer ---
   const [equity, setEquity] = useState<EquityData | null>(null)
   const [isCalculating, setIsCalculating] = useState(false)
   const [dataProgress, setDataProgress] = useState<Progress>({ messageKey: null, percentage: 0 })
 
-  // --- chart layer ---
-  const [chipHistories, setChipHistories] = useState<ChartData | null>(null)
-  const [handUsage, setHandUsage] = useState<ChartData | null>(null)
-  const [allInEquity, setAllInEquity] = useState<ChartData | null>(null)
-  const [isDrawing, setIsDrawing] = useState(false)
+  const [handFigures, setHandFigures] = useState<Built<
+    { chipHistories: ChartData; handUsage: ChartData },
+    HandHistory[]
+  > | null>(null)
+  const [equityFigure, setEquityFigure] = useState<Built<ChartData, EquityData> | null>(null)
   const [drawProgress, setDrawProgress] = useState<Progress>({ messageKey: null, percentage: 0 })
 
   const calcIdRef = useRef(0)
-  const drawIdRef = useRef(0)
+  const handsIdRef = useRef(0)
+  const equityIdRef = useRef(0)
   const lastComputedRef = useRef<Set<string>>(new Set())
 
-  const isComputing = isCalculating || isDrawing
-  // While the equity pass is running, its progress is what the user cares about; the
-  // chart layer only ever reports the brief tail.
-  const progress = isCalculating ? dataProgress : drawProgress
+  const hasHands = handHistories.length > 0
+
+  // Derived staleness. A figure is stale when it was not built from the data and
+  // language currently in effect — which is true the instant those change, with no
+  // window in between.
+  const handFiguresStale =
+    hasHands &&
+    (handFigures === null ||
+      handFigures.from !== handHistories ||
+      handFigures.language !== language)
+
+  const equityFigureStale =
+    hasHands &&
+    equity !== null &&
+    (equityFigure === null || equityFigure.from !== equity || equityFigure.language !== language)
+
+  const isComputing = isCalculating || handFiguresStale || equityFigureStale
+
+  // The equity pass is the slow one, so its message is the one worth showing while it
+  // runs. The bar itself is derived rather than taken from whichever layer wrote last:
+  // the two figure layers run concurrently, so a shared percentage would jump backwards
+  // whenever the slower one reported after the faster one had already claimed 100%.
+  const progressMessage = isCalculating ? dataProgress : drawProgress
+  const progressPercentage = isCalculating
+    ? dataProgress.percentage // 25 → 85 across the WASM pass
+    : equity === null
+      ? 10 // before the pass starts, or after it failed
+      : 90 // figures being built or relabelled; brief, and never WASM
 
   useImperativeHandle(ref, () => ({
     getChartData() {
       const charts: ExportChart[] = []
-      if (chipHistories) charts.push({ name: t('chart.chipHistories.name'), ...chipHistories })
-      if (handUsage) charts.push({ name: t('chart.handUsage.name'), ...handUsage })
-      if (allInEquity) charts.push({ name: t('chart.allInEquity.name'), ...allInEquity })
+      if (handFigures) {
+        charts.push({ name: t('chart.chipHistories.name'), ...handFigures.figure.chipHistories })
+        charts.push({ name: t('chart.handUsage.name'), ...handFigures.figure.handUsage })
+      }
+      if (equityFigure) {
+        charts.push({ name: t('chart.allInEquity.name'), ...equityFigure.figure })
+      }
       return charts
     },
     isComputing() {
@@ -95,25 +143,25 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
   }))
 
   // ---------------------------------------------------------------------------
-  // Data layer: all-in equity. No `t`/`language` dependency, by design.
+  // Data layer: the all-in equity pass. No `t`/`language` dependency, by design.
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (handHistories.length === 0) return
+    if (!hasHands) return
 
     const hasNewHands = handHistories.some(h => !lastComputedRef.current.has(h.id))
     if (!hasNewHands && lastComputedRef.current.size > 0) {
       return // Nothing new to compute.
     }
-    // Claim these ids up front, so a re-render with the same data cannot start a
-    // second pass.
-    lastComputedRef.current = new Set(handHistories.map(h => h.id))
 
     const thisId = ++calcIdRef.current
     const isStale = () => calcIdRef.current !== thisId
+    // Claim these ids only once this pass is definitely going ahead, so the early
+    // return above can never leave them claimed by a pass that never ran.
+    lastComputedRef.current = new Set(handHistories.map(h => h.id))
 
     const calculate = async () => {
       setIsCalculating(true)
-      setDataProgress({ messageKey: 'progress.chart.equityCache', percentage: 20 })
+      setDataProgress({ messageKey: 'progress.chart.equityCache', percentage: 25 })
       await yieldToBrowser()
 
       try {
@@ -129,7 +177,7 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
           setDataProgress({
             messageKey: 'progress.chart.equityCached',
             messageParams: { cached: cachedCount, pending: uncachedHands.length },
-            percentage: 25,
+            percentage: 30,
           })
 
           const { data: newAllInData } = await collectAllInDataAsync(
@@ -139,15 +187,15 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
               setDataProgress({
                 messageKey: 'progress.chart.equity',
                 messageParams: { current, total },
-                percentage: 25 + Math.floor((current / total) * 70),
+                percentage: 30 + Math.floor((current / total) * 55),
               })
             }
           )
 
           // Bank before the staleness check. Equity is keyed by hand id and does not
-          // depend on which run produced it, so results are always worth keeping —
-          // returning first would throw away every hand this run already paid WASM
-          // for, and a run does get superseded, by a second upload landing mid-pass.
+          // depend on which pass produced it, so results are always worth keeping —
+          // returning first would throw away every hand this pass already paid WASM
+          // for, and a pass does get superseded, by a second upload landing mid-pass.
           for (const data of newAllInData) {
             equityCache.set(data.handId, data)
           }
@@ -162,12 +210,16 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
         const luckScore = await calculateLuckScore(allInData)
         if (isStale()) return
 
+        // Batched into one commit with the handover below, so the progress bar moves
+        // forwards into the equity figure's range instead of snapping back to whatever
+        // the hand figures left behind.
+        setDrawProgress({ messageKey: 'progress.chart.allInEquity', percentage: 90 })
         setEquity({ allInData, luckScore })
         setIsCalculating(false)
       } catch (error) {
         console.error('Equity calculation failed:', error)
         if (isStale()) return
-        lastComputedRef.current = new Set() // Allow retry on next render
+        lastComputedRef.current = new Set() // Allow a retry on the next upload
         setIsCalculating(false)
         setDataProgress({ messageKey: 'progress.chart.error', percentage: 0 })
       }
@@ -175,67 +227,52 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
 
     calculate()
 
-    return () => {
-      // Reading the ref's latest value is the intent, not a stale-capture mistake,
-      // so the rule's "copy it into a variable" advice does not apply.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      calcIdRef.current++ // Invalidate this pass
-    }
-  }, [handHistories])
+    // NOTE: no invalidation on cleanup. A pass that really is being replaced is
+    // superseded by its replacement incrementing the id above. Bumping here as well
+    // would also fire on an effect re-run that then *early-returns* — invalidating the
+    // pass in flight with nothing to take over from it, so `isCalculating` would stay
+    // true forever and the export would sit behind the "still calculating" modal for
+    // good. Unmount is handled by the dedicated effect below.
+  }, [handHistories, hasHands])
 
   // ---------------------------------------------------------------------------
-  // Chart layer: rebuilt whenever the data or the language changes. Pure and cheap —
-  // it never touches WASM, and never spawns a worker.
+  // Figures built from the hands. Independent of the equity pass, so an equity result
+  // landing does not rebuild them.
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (handHistories.length === 0) return
+    if (!hasHands) return
 
-    const thisId = ++drawIdRef.current
-    const isStale = () => drawIdRef.current !== thisId
+    const thisId = ++handsIdRef.current
+    const isStale = () => handsIdRef.current !== thisId
 
     const draw = async () => {
-      setIsDrawing(true)
       setDrawProgress({ messageKey: 'progress.chart.loadingModules', percentage: 5 })
       await yieldToBrowser()
 
       try {
-        const [
-          { getChipHistoriesData, getHandUsageHeatmapsData },
-          { createAllInEquityChart },
-        ] = await Promise.all([
-          import('../visualization'),
-          import('../visualization/handHistory/allInEquityAsync'),
-        ])
+        const { getChipHistoriesData, getHandUsageHeatmapsData } = await import(
+          '../visualization'
+        )
         if (isStale()) return
 
-        setDrawProgress({ messageKey: 'progress.chart.chipHistories', percentage: 35 })
+        setDrawProgress({ messageKey: 'progress.chart.chipHistories', percentage: 10 })
         await yieldToBrowser()
-        const chips = await getChipHistoriesData(handHistories, t)
+        const chipHistories = await getChipHistoriesData(handHistories, t)
         if (isStale()) return
-        setChipHistories(chips)
 
-        setDrawProgress({ messageKey: 'progress.chart.handUsage', percentage: 70 })
+        setDrawProgress({ messageKey: 'progress.chart.handUsage', percentage: 15 })
         await yieldToBrowser()
-        const usage = await getHandUsageHeatmapsData(handHistories, t)
+        const handUsage = await getHandUsageHeatmapsData(handHistories, t)
         if (isStale()) return
-        setHandUsage(usage)
 
-        // Absent only while the equity pass is still running; this effect reruns when
-        // it lands.
-        if (equity) {
-          setDrawProgress({ messageKey: 'progress.chart.allInEquity', percentage: 90 })
-          await yieldToBrowser()
-          const chart = createAllInEquityChart(equity.allInData, equity.luckScore, t)
-          if (isStale()) return
-          setAllInEquity(chart)
-        }
-
-        setIsDrawing(false)
-        setDrawProgress({ messageKey: 'progress.chart.complete', percentage: 100 })
+        setHandFigures({
+          figure: { chipHistories, handUsage },
+          from: handHistories,
+          language,
+        })
       } catch (error) {
         console.error('Chart generation failed:', error)
         if (isStale()) return
-        setIsDrawing(false)
         setDrawProgress({ messageKey: 'progress.chart.error', percentage: 0 })
       }
     }
@@ -244,17 +281,66 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
 
     return () => {
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      drawIdRef.current++ // Invalidate this redraw
+      handsIdRef.current++ // Supersede this redraw
     }
-  }, [handHistories, equity, t, language])
+  }, [handHistories, hasHands, t, language])
 
-  if (handHistories.length === 0) {
+  // ---------------------------------------------------------------------------
+  // The figure built from the equity data.
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (!hasHands || equity === null) return
+
+    const thisId = ++equityIdRef.current
+    const isStale = () => equityIdRef.current !== thisId
+
+    const draw = async () => {
+      try {
+        const { createAllInEquityChart } = await import(
+          '../visualization/handHistory/allInEquityAsync'
+        )
+        if (isStale()) return
+
+        const figure = createAllInEquityChart(equity.allInData, equity.luckScore, t)
+        if (isStale()) return
+
+        setEquityFigure({ figure, from: equity, language })
+      } catch (error) {
+        console.error('All-in equity chart failed:', error)
+        if (isStale()) return
+        setDrawProgress({ messageKey: 'progress.chart.error', percentage: 0 })
+      }
+    }
+
+    draw()
+
+    return () => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      equityIdRef.current++ // Supersede this redraw
+    }
+  }, [equity, hasHands, t, language])
+
+  // Invalidate anything in flight when the component actually goes away.
+  useEffect(
+    () => () => {
+      calcIdRef.current++
+      handsIdRef.current++
+      equityIdRef.current++
+    },
+    []
+  )
+
+  if (!hasHands) {
     return (
       <div className="no-data">
         <p>{t('charts.noHandHistoryData')}</p>
       </div>
     )
   }
+
+  const chipHistories = handFigures?.figure.chipHistories
+  const handUsage = handFigures?.figure.handUsage
+  const allInEquity = equityFigure?.figure
 
   return (
     <div className="charts-container">
@@ -263,11 +349,12 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
           <div className="progress-bar">
             <div
               className="progress-fill"
-              style={{ width: `${progress.percentage}%` }}
+              style={{ width: `${progressPercentage}%` }}
             />
           </div>
           <p className="progress-message">
-            {progress.messageKey && t(progress.messageKey, progress.messageParams)}
+            {progressMessage.messageKey &&
+              t(progressMessage.messageKey, progressMessage.messageParams)}
           </p>
         </div>
       )}

@@ -33,7 +33,9 @@ export async function getChipHistoriesData(
   let maxHandLength = 1
   const diedAt: number[] = []
   const deathThresholds = [3 / 4, 3 / 5, 1 / 2, 2 / 5, 1 / 3, 1 / 4, 1 / 5, 1 / 8, 1 / 10]
-  const deathThresholdCount: Map<number, number> = new Map(deathThresholds.map(t => [t, 0]))
+  const deathThresholdCount: Map<number, number> = new Map(
+    deathThresholds.map(threshold => [threshold, 0])
+  )
   let totalTourneys = 0
   let processedCount = 0
 
@@ -173,8 +175,10 @@ export async function getChipHistoriesData(
     const sortedThresholds = [...deathThresholds].sort((a, b) => b - a)
     traces.push({
       type: 'bar',
-      x: sortedThresholds.map(t => `${t.toFixed(2)}x`),
-      y: sortedThresholds.map(t => (deathThresholdCount.get(t) ?? 0) / totalTourneys),
+      x: sortedThresholds.map(threshold => `${threshold.toFixed(2)}x`),
+      y: sortedThresholds.map(
+        threshold => (deathThresholdCount.get(threshold) ?? 0) / totalTourneys
+      ),
       name: t('chart.chipHistories.legend.deathThreshold'),
       marker: { color: 'rgba(222,118,177,0.9)' },
       hovertemplate: t('chart.chipHistories.hover.deathThreshold'),

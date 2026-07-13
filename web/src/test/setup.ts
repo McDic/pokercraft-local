@@ -9,5 +9,6 @@
 import i18n from '../i18n'
 
 // Pin the language rather than inheriting whatever the detector reads out of jsdom's
-// navigator, so a test never depends on the environment's locale.
-i18n.changeLanguage('en')
+// navigator, so a test never depends on the environment's locale. Awaited, not
+// fire-and-forget: a setup file whose whole point is determinism should not race.
+await i18n.changeLanguage('en')
