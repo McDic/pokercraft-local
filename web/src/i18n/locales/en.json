@@ -229,14 +229,17 @@
   "chart.situation.family.rfi": "Open raise (RFI)",
   "chart.situation.family.openJam": "Open jam",
   "chart.situation.family.openLimp": "Open limp",
+  "chart.situation.family.overLimp": "Over-limp behind limpers",
   "chart.situation.family.isoRaise": "Iso-raise vs. limpers",
   "chart.situation.family.limpedCheck": "Check in a limped pot",
   "chart.situation.family.flat": "Flat / defend vs. open",
   "chart.situation.family.threeBet": "3-bet vs. open",
+  "chart.situation.family.callMultiway": "Call vs. open + caller(s)",
   "chart.situation.family.squeeze": "Squeeze",
-  "chart.situation.family.coldCall": "Cold-call multiway",
   "chart.situation.family.callVs3Bet": "Call vs. 3-bet",
   "chart.situation.family.fourBet": "4-bet",
+  "chart.situation.family.callVs4Bet": "Call vs. 4-bet",
+  "chart.situation.family.fiveBet": "5-bet or more",
 
   "chart.situation.opener.ep": "Early position",
   "chart.situation.opener.mp": "Middle position",
@@ -248,8 +251,13 @@
   "chart.situation.stack.deepish": "25–40bb",
   "chart.situation.stack.deep": "40bb+",
 
+  "chart.situation.table.headsUp": "Heads-up",
+  "chart.situation.table.shorthanded": "3–6 players",
+  "chart.situation.table.full": "7+ players",
+
   "chart.situation.filter.opener": "Opponent's raise from",
   "chart.situation.filter.stack": "Starting stack",
+  "chart.situation.filter.table": "Players dealt in",
   "chart.situation.filter.minSample": "Minimum sample",
   "chart.situation.filter.any": "Any",
   "chart.situation.empty": "No situation reached the minimum sample size. Try lowering it, or widening the filters."

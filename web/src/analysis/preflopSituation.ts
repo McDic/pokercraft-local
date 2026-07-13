@@ -81,7 +81,7 @@ export type PreflopContext =
   /** Three or more raises. */
   | 'fourBetPlus'
 
-/** What Hero did. Mirrors BetActionType minus the posts and minus `bet`, which cannot occur preflop. */
+/** What Hero did. Mirrors BetActionType minus the posts and minus `bet` — see `classifyHand`. */
 export type HeroPreflopAction = 'fold' | 'check' | 'call' | 'raise'
 
 /**
@@ -94,29 +94,35 @@ export type HeroPreflopAction = 'fold' | 'check' | 'call' | 'raise'
 export type OpenerBucket = 'ep' | 'mp' | 'lp' | 'blinds'
 
 export interface PreflopSituation {
-  handId: string
   context: PreflopContext
   action: HeroPreflopAction
   /** Hero's action was all-in — an open-jam when `context` is `unopened`. */
   allIn: boolean
   /** Offset from the button, clamped at -5 so 9-max UTG/UTG+1 share a bucket (as the VPIP heatmap does). */
   heroOffset: number
-  /** Offset of the last player to raise before Hero acted; null when Hero faces no raise. */
-  openerOffset: number | null
   openerBucket: OpenerBucket | null
   /** Size Hero is facing, as a multiple of the big blind ("did I call a 3bb open?"). */
   raiseToBB: number | null
   /** Hero's starting stack. In tournaments this governs which decisions are even available. */
   heroStackBB: number
+  /**
+   * How many players were dealt in.
+   *
+   * A button offset means a different game at a different table size: heads-up puts the
+   * button *on* the small blind, so an HU steal and a 6-max SB open land on the same
+   * offset and would otherwise be averaged together. Carried so the ledger can separate
+   * them — see `tableBucketOf`.
+   */
+  tableSize: number
   /** Profit relative to folding at this node, in big blinds. Zero for every fold. */
   deltaBB: number
   cards: [CardString, CardString] | null
 }
 
-const VOLUNTARY = new Set<BetAction['action']>(['fold', 'check', 'call', 'raise', 'bet'])
+const VOLUNTARY = new Set<BetAction['action']>(['fold', 'check', 'call', 'raise'])
 
 /** Everything from UTG back folds into one bucket; the tail is too thin to split. */
-export function clampOffset(offset: number): number {
+function clampOffset(offset: number): number {
   return offset <= -5 ? -5 : offset
 }
 
@@ -142,6 +148,16 @@ function contextOf(raises: number, callers: number): PreflopContext {
  * choice of Hero's produced.
  */
 export function classifyHand(h: HandHistory): PreflopSituation[] {
+  // A preflop `bet` is not a thing GG writes — preflop money moves as blind, call or
+  // raise — but the parser's action regex would accept one on any street, and this walk
+  // has no coherent reading for it: `bet` carries an increment where `raise` carries a
+  // *to* total, so there is no way to know what it did to the betting level. Rather than
+  // guess and desync Hero's commitment from getHandHistoryTotalChipsPut — which would put
+  // a nonzero Δ on every later node of the hand, folds included, and quietly break the one
+  // identity this module rests on — drop the hand. An empty chart is a visible failure; a
+  // subtly wrong one is not.
+  if (h.actionsPreflop.some(a => a.action === 'bet')) return []
+
   let heroOffset: number
   let heroStackBB: number
   try {
@@ -172,7 +188,8 @@ export function classifyHand(h: HandHistory): PreflopSituation[] {
     const isHero = a.playerId === HERO
 
     if (!VOLUNTARY.has(a.action)) {
-      // A post. It buys Hero no decision, but it is what folding would have cost them.
+      // An ante or a blind — the `bet` case is gone by the guard above. It buys Hero no
+      // decision, but it is exactly what folding would have cost them.
       if (isHero) {
         if (a.action === 'ante') heroAnte += a.amount
         else heroStreetCommit += a.amount
@@ -185,15 +202,14 @@ export function classifyHand(h: HandHistory): PreflopSituation[] {
       const openerOffset = lastRaiser === null ? null : offsetOrNull(h, lastRaiser)
 
       situations.push({
-        handId: h.id,
         context: contextOf(raises, callers),
         action: a.action as HeroPreflopAction,
         allIn: a.isAllIn,
         heroOffset,
-        openerOffset,
         openerBucket: openerOffset === null ? null : toOpenerBucket(openerOffset),
         raiseToBB: lastRaiseTo === null ? null : lastRaiseTo / h.bb,
         heroStackBB,
+        tableSize: h.seats.size,
         // Folding here would have returned −committedBefore, so this is the gain over folding.
         deltaBB: (net + committedBefore) / h.bb,
         cards,
@@ -217,7 +233,6 @@ export function classifyHand(h: HandHistory): PreflopSituation[] {
         break
       case 'fold':
       case 'check':
-      case 'bet':
         break
     }
   }

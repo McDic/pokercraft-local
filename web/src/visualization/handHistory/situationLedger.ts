@@ -61,15 +61,27 @@ export const DEFAULT_MIN_SAMPLE = 30
 
 export type StackBucket = 'short' | 'mid' | 'deepish' | 'deep'
 
+/**
+ * Table size, because a button offset means a different game at each one.
+ *
+ * Heads-up puts the button *on* the small blind, so `getHandHistoryOffsetFromButton`
+ * reports the HU button as SB. An HU steal — where opening most of the deck is correct —
+ * would otherwise be averaged into the same "Open raise · SB" row as a 6-max SB open, and
+ * late-MTT play is heavily short-handed, so that is not a corner case.
+ */
+export type TableBucket = 'headsUp' | 'shorthanded' | 'full'
+
 export interface LedgerFilters {
   openerBucket: OpenerBucket | 'any'
   stackBucket: StackBucket | 'any'
+  tableBucket: TableBucket | 'any'
   minSample: number
 }
 
 export const DEFAULT_FILTERS: LedgerFilters = {
   openerBucket: 'any',
   stackBucket: 'any',
+  tableBucket: 'any',
   minSample: DEFAULT_MIN_SAMPLE,
 }
 
@@ -79,22 +91,39 @@ interface Family {
 }
 
 /**
- * Declared, not derived. `callSites.test.ts` requires every translation key to appear as a
- * literal in the source, so these cannot be assembled from template strings.
+ * Every non-fold decision `classifyHand` can emit, matched by exactly one family.
+ *
+ * That "exactly one, and none left over" is not a style rule — it is asserted in
+ * situationLedger.test.ts, because the failure it guards against is invisible. A decision
+ * no family matches is computed, correct, and then silently dropped: it never becomes a
+ * row, and it is not counted among the hidden ones either. A player bleeding a big blind
+ * on every over-limp would open this chart, find no over-limp row, and conclude limping is
+ * not one of their leaks. (This is exactly what shipped in the first draft.)
+ *
+ * Ordered by how much is already in the pot when Hero acts — the axis the caption tells
+ * the reader to compare along. Declared rather than derived: `callSites.test.ts` requires
+ * every translation key to appear as a literal in the source, so these cannot be assembled
+ * from template strings.
  */
 const FAMILIES: Family[] = [
   { key: 'chart.situation.family.rfi', match: s => s.context === 'unopened' && s.action === 'raise' && !s.allIn },
   { key: 'chart.situation.family.openJam', match: s => s.context === 'unopened' && s.action === 'raise' && s.allIn },
   { key: 'chart.situation.family.openLimp', match: s => s.context === 'unopened' && s.action === 'call' },
+  { key: 'chart.situation.family.overLimp', match: s => s.context === 'limped' && s.action === 'call' },
   { key: 'chart.situation.family.isoRaise', match: s => s.context === 'limped' && s.action === 'raise' },
   { key: 'chart.situation.family.limpedCheck', match: s => s.context === 'limped' && s.action === 'check' },
   { key: 'chart.situation.family.flat', match: s => s.context === 'raised' && s.action === 'call' },
   { key: 'chart.situation.family.threeBet', match: s => s.context === 'raised' && s.action === 'raise' },
+  { key: 'chart.situation.family.callMultiway', match: s => s.context === 'raisedCalled' && s.action === 'call' },
   { key: 'chart.situation.family.squeeze', match: s => s.context === 'raisedCalled' && s.action === 'raise' },
-  { key: 'chart.situation.family.coldCall', match: s => s.context === 'raisedCalled' && s.action === 'call' },
   { key: 'chart.situation.family.callVs3Bet', match: s => s.context === 'threeBet' && s.action === 'call' },
   { key: 'chart.situation.family.fourBet', match: s => s.context === 'threeBet' && s.action === 'raise' },
+  { key: 'chart.situation.family.callVs4Bet', match: s => s.context === 'fourBetPlus' && s.action === 'call' },
+  { key: 'chart.situation.family.fiveBet', match: s => s.context === 'fourBetPlus' && s.action === 'raise' },
 ]
+
+/** Exposed for the coverage test, which is the only thing that can keep FAMILIES honest. */
+export const LEDGER_FAMILIES: ReadonlyArray<Family> = FAMILIES
 
 const POSITIONS: Array<[number, TranslationKey]> = [
   [-5, 'position.utg'],
@@ -121,11 +150,23 @@ export const STACK_BUCKET_KEYS: Array<[StackBucket, TranslationKey]> = [
   ['deep', 'chart.situation.stack.deep'],
 ]
 
+export const TABLE_BUCKET_KEYS: Array<[TableBucket, TranslationKey]> = [
+  ['headsUp', 'chart.situation.table.headsUp'],
+  ['shorthanded', 'chart.situation.table.shorthanded'],
+  ['full', 'chart.situation.table.full'],
+]
+
 function stackBucketOf(stackBB: number): StackBucket {
   if (stackBB < 15) return 'short'
   if (stackBB < 25) return 'mid'
   if (stackBB < 40) return 'deepish'
   return 'deep'
+}
+
+function tableBucketOf(tableSize: number): TableBucket {
+  if (tableSize <= 2) return 'headsUp'
+  if (tableSize <= 6) return 'shorthanded'
+  return 'full'
 }
 
 interface LedgerRow {
@@ -148,9 +189,15 @@ function summarize(deltas: number[]): Omit<LedgerRow, 'label'> {
   return { n, mean, ci95: (1.96 * Math.sqrt(variance)) / Math.sqrt(n), total: mean * n }
 }
 
-/** Blue/red only where the interval clears zero. Everything else is honestly grey. */
+/**
+ * Blue/red only where the interval clears zero. Everything else is honestly grey.
+ *
+ * Keyed on `n`, not on `ci95 === 0`: a sample of two identical results also has a
+ * zero-width interval, and painting *that* grey would say "indistinguishable from folding"
+ * about the one kind of row where we are, in fact, certain.
+ */
 function colorOf(row: LedgerRow): string {
-  if (row.ci95 === 0) return INCONCLUSIVE
+  if (row.n < 2) return INCONCLUSIVE
   if (row.mean - row.ci95 > 0) return BEAT_FOLD
   if (row.mean + row.ci95 < 0) return LOST_TO_FOLD
   return INCONCLUSIVE
@@ -159,6 +206,7 @@ function colorOf(row: LedgerRow): string {
 function passesFilters(s: PreflopSituation, f: LedgerFilters): boolean {
   if (f.openerBucket !== 'any' && s.openerBucket !== f.openerBucket) return false
   if (f.stackBucket !== 'any' && stackBucketOf(s.heroStackBB) !== f.stackBucket) return false
+  if (f.tableBucket !== 'any' && tableBucketOf(s.tableSize) !== f.tableBucket) return false
   return true
 }
 
@@ -167,20 +215,31 @@ export function buildLedgerRows(
   filters: LedgerFilters,
   t: Translate
 ): { rows: LedgerRow[]; hidden: number } {
-  const eligible = situations.filter(s => passesFilters(s, filters))
+  // One pass, bucketing as we go. A filter-per-family-per-position sweep is ~90 passes
+  // over a six-figure array, and it runs synchronously inside a useMemo on every dropdown
+  // change — which is to say, it blocks paint.
+  const deltas = new Map<string, number[]>()
+  for (const s of situations) {
+    if (!passesFilters(s, filters)) continue
+    const familyIndex = FAMILIES.findIndex(f => f.match(s))
+    if (familyIndex < 0) continue // a fold: Δ is 0 by construction, so it is not a row
+    const key = `${familyIndex}|${s.heroOffset}`
+    const bucket = deltas.get(key)
+    if (bucket) bucket.push(s.deltaBB)
+    else deltas.set(key, [s.deltaBB])
+  }
 
   const rows: LedgerRow[] = []
   let hidden = 0
 
-  for (const family of FAMILIES) {
-    const matched = eligible.filter(family.match)
-    if (matched.length === 0) continue
-
+  // Emitted in declaration order rather than Map order, so the chart is stable across
+  // datasets and the depth ordering the caption promises actually holds.
+  FAMILIES.forEach((family, familyIndex) => {
     for (const [offset, posKey] of POSITIONS) {
-      const deltas = matched.filter(s => s.heroOffset === offset).map(s => s.deltaBB)
-      if (deltas.length === 0) continue
+      const bucket = deltas.get(`${familyIndex}|${offset}`)
+      if (!bucket) continue
 
-      const stats = summarize(deltas)
+      const stats = summarize(bucket)
       if (stats.n < filters.minSample) {
         hidden++
         continue
@@ -194,7 +253,7 @@ export function buildLedgerRows(
         ...stats,
       })
     }
-  }
+  })
 
   return { rows, hidden }
 }

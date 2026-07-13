@@ -317,12 +317,6 @@
   font-size: 0.875rem;
 }
 
-.chart-empty {
-  padding: 2rem;
-  text-align: center;
-  color: #898781;
-}
-
 @media (max-width: 768px) {
   .situation-filters {
     flex-direction: column;

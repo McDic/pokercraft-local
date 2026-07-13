@@ -23,11 +23,16 @@ import Plot from './plot'
 import type { HandHistory } from '../types'
 import type { PreflopSituation, OpenerBucket } from '../analysis/preflopSituation'
 import { classifyHandHistories } from '../analysis/preflopSituation'
-import type { LedgerFilters, StackBucket } from '../visualization/handHistory/situationLedger'
+import type {
+  LedgerFilters,
+  StackBucket,
+  TableBucket,
+} from '../visualization/handHistory/situationLedger'
 import {
   DEFAULT_FILTERS,
   OPENER_BUCKET_KEYS,
   STACK_BUCKET_KEYS,
+  TABLE_BUCKET_KEYS,
   getSituationLedgerData,
 } from '../visualization/handHistory/situationLedger'
 import type { ExportChart } from '../export/htmlExport'
@@ -83,7 +88,7 @@ export const SituationCharts = forwardRef<SituationChartsRef, SituationChartsPro
     }))
 
     if (handHistories.length === 0) {
-      return <div className="chart-empty">{t('charts.noSituationData')}</div>
+      return <div className="no-data">{t('charts.noSituationData')}</div>
     }
 
     return (
@@ -130,6 +135,26 @@ export const SituationCharts = forwardRef<SituationChartsRef, SituationChartsPro
           </label>
 
           <label>
+            {t('chart.situation.filter.table')}
+            <select
+              value={filters.tableBucket}
+              onChange={e =>
+                setFilters(f => ({
+                  ...f,
+                  tableBucket: e.target.value as TableBucket | 'any',
+                }))
+              }
+            >
+              <option value="any">{t('chart.situation.filter.any')}</option>
+              {TABLE_BUCKET_KEYS.map(([bucket, key]) => (
+                <option key={bucket} value={bucket}>
+                  {t(key)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
             {t('chart.situation.filter.minSample')}
             <select
               value={filters.minSample}
@@ -157,7 +182,7 @@ export const SituationCharts = forwardRef<SituationChartsRef, SituationChartsPro
             />
           </section>
         ) : (
-          !isComputing && <div className="chart-empty">{t('chart.situation.empty')}</div>
+          !isComputing && <div className="no-data">{t('chart.situation.empty')}</div>
         )}
       </div>
     )

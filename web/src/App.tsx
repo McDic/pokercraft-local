@@ -84,12 +84,11 @@ function App() {
     // histories, so they export under the hand-history heading — but they have their own
     // ref, and picking it by "not tournament" would quietly export the wrong tab's charts.
     const isTournament = activeTab === 'tournament'
-    const activeRef =
-      activeTab === 'tournament'
-        ? tournamentChartsRef.current
-        : activeTab === 'handHistory'
-          ? handHistoryChartsRef.current
-          : situationChartsRef.current
+    const activeRef = isTournament
+      ? tournamentChartsRef.current
+      : activeTab === 'handHistory'
+        ? handHistoryChartsRef.current
+        : situationChartsRef.current
     const charts = activeRef?.getChartData() ?? []
     if (charts.length === 0) return
 
