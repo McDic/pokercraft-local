@@ -14,7 +14,7 @@
 import { describe, it, expect } from 'vitest'
 import type { PreflopContext, HeroPreflopAction, PreflopSituation } from '../../analysis/preflopSituation'
 import { DEFAULT_FILTERS } from './situationFilters'
-import { FAMILIES, buildLedgerRows, getSituationLedgerData } from './situationLedger'
+import { EXCLUSIONS, FAMILIES, buildLedgerRows, getSituationLedgerData } from './situationLedger'
 
 /** A stub translator: the ledger only ever uses keys for labels, so echoing them is enough. */
 const t = ((key: string, values?: Record<string, unknown>) =>
@@ -65,32 +65,52 @@ const REACHABLE: Array<[PreflopContext, HeroPreflopAction]> = [
 ]
 
 describe('family coverage', () => {
-  it.each(REACHABLE)('%s / %s is matched by exactly one family (or is a fold)', (context, action) => {
-    for (const allIn of [false, true]) {
-      const s = situation({ context, action, allIn })
-      const matched = FAMILIES.filter(f => f.match(s))
+  it.each(REACHABLE)(
+    '%s / %s is a fold, or matched by exactly one family, or explicitly excluded',
+    (context, action) => {
+      for (const allIn of [false, true]) {
+        const s = situation({ context, action, allIn })
+        const families = FAMILIES.filter(f => f.match(s))
+        const exclusions = EXCLUSIONS.filter(e => e.match(s))
+        const label = `${context}/${action}${allIn ? ' (all-in)' : ''}`
 
-      if (action === 'fold') {
-        // Folds are the baseline: Δ is 0 by construction, so a fold row would be a row of
-        // zeros. They are excluded on purpose, not by omission.
-        expect(matched, `fold should match no family`).toHaveLength(0)
-      } else {
+        if (action === 'fold') {
+          // Folds are the baseline: Δ is 0 by construction, so a fold row would be a row of
+          // zeros. They are left out on purpose, not by omission.
+          expect(families, `${label}: fold should match no family`).toHaveLength(0)
+          expect(exclusions, `${label}: fold needs no exclusion`).toHaveLength(0)
+          continue
+        }
+
+        // Exactly one home, and never two. A decision that is both charted and excluded
+        // would be counted twice; one that is neither would vanish without a trace, which
+        // is the whole reason this test exists.
         expect(
-          matched.length,
-          `${context}/${action}${allIn ? ' (all-in)' : ''} matched ${matched.length} families`
+          families.length + exclusions.length,
+          `${label} matched ${families.length} families and ${exclusions.length} exclusions`
         ).toBe(1)
       }
     }
-  })
+  )
 
   it('has no family that nothing can reach', () => {
-    const reachable = REACHABLE.flatMap(([context, action]) =>
-      [false, true].map(allIn => situation({ context, action, allIn }))
-    )
-    const orphans = FAMILIES.filter(f => !reachable.some(s => f.match(s)))
+    const orphans = FAMILIES.filter(f => !everySituation().some(s => f.match(s)))
     expect(orphans.map(f => f.key)).toEqual([])
   })
+
+  it('has no exclusion that nothing can reach', () => {
+    // An exclusion for a decision that cannot happen is a claim in the caption about
+    // nothing — and worse, it would hide the fact that the real decision is uncovered.
+    const orphans = EXCLUSIONS.filter(e => !everySituation().some(s => e.match(s)))
+    expect(orphans.map(e => e.key)).toEqual([])
+  })
 })
+
+function everySituation(): PreflopSituation[] {
+  return REACHABLE.flatMap(([context, action]) =>
+    [false, true].map(allIn => situation({ context, action, allIn }))
+  )
+}
 
 describe('buildLedgerRows', () => {
   const many = (n: number, over: Partial<PreflopSituation>) =>
@@ -114,6 +134,43 @@ describe('buildLedgerRows', () => {
     )
     expect(rows).toEqual([])
     expect(hidden).toBe(0)
+  })
+
+  it('counts what it excludes, and does not chart it', () => {
+    // A free check in a limped big blind cannot be folded, so "beat folding" is a bar that
+    // clears itself and there is no decision to score. Withholding the row is defensible;
+    // not saying so would quietly make the chart less than the whole picture.
+    const { rows, hidden, excluded } = buildLedgerRows(
+      [
+        ...many(40, { context: 'limped', action: 'check', heroOffset: 2 }),
+        ...many(7, { context: 'fourBetPlus', action: 'raise', heroOffset: 0 }),
+        ...many(40, { context: 'unopened', action: 'raise', heroOffset: 0 }),
+      ],
+      { ...DEFAULT_FILTERS, minSample: 30 },
+      t
+    )
+
+    expect(rows).toHaveLength(1) // only the RFI
+    expect(rows[0].label).toContain('chart.situation.family.rfi')
+    // Excluded is not "hidden": one was withheld on principle, the other for sample size.
+    expect(hidden).toBe(0)
+    expect(excluded).toEqual([
+      { key: 'chart.situation.excluded.limpedCheck', n: 40 },
+      { key: 'chart.situation.excluded.fiveBet', n: 7 },
+    ])
+  })
+
+  it('says in the caption what it left out', () => {
+    const { caption } = getSituationLedgerData(
+      [
+        ...many(40, { context: 'limped', action: 'check', heroOffset: 2 }),
+        ...many(40, { context: 'unopened', action: 'raise', heroOffset: 0 }),
+      ],
+      DEFAULT_FILTERS,
+      t
+    )
+    expect(caption.join('\n')).toContain('chart.situation.excluded.limpedCheck')
+    expect(caption.join('\n')).toContain('"n":40')
   })
 
   it('summarises a bucket, and puts the sample size in the label', () => {

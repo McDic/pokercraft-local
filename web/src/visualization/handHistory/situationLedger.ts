@@ -53,7 +53,6 @@ export const FAMILIES: Family[] = [
   { key: 'chart.situation.family.openLimp', match: s => s.context === 'unopened' && s.action === 'call' },
   { key: 'chart.situation.family.overLimp', match: s => s.context === 'limped' && s.action === 'call' },
   { key: 'chart.situation.family.isoRaise', match: s => s.context === 'limped' && s.action === 'raise' },
-  { key: 'chart.situation.family.limpedCheck', match: s => s.context === 'limped' && s.action === 'check' },
   { key: 'chart.situation.family.flat', match: s => s.context === 'raised' && s.action === 'call' },
   { key: 'chart.situation.family.threeBet', match: s => s.context === 'raised' && s.action === 'raise' },
   { key: 'chart.situation.family.callMultiway', match: s => s.context === 'raisedCalled' && s.action === 'call' },
@@ -61,7 +60,40 @@ export const FAMILIES: Family[] = [
   { key: 'chart.situation.family.callVs3Bet', match: s => s.context === 'threeBet' && s.action === 'call' },
   { key: 'chart.situation.family.fourBet', match: s => s.context === 'threeBet' && s.action === 'raise' },
   { key: 'chart.situation.family.callVs4Bet', match: s => s.context === 'fourBetPlus' && s.action === 'call' },
-  { key: 'chart.situation.family.fiveBet', match: s => s.context === 'fourBetPlus' && s.action === 'raise' },
+]
+
+/**
+ * Decisions the ledger deliberately does not draw — and says so, with a count.
+ *
+ * A family list that simply omitted these would *orphan* them: computed, correct, and then
+ * dropped without a trace. That is the exact bug the coverage test was written to catch, so
+ * an exclusion has to be declared, not implied. The coverage test asserts every reachable
+ * decision is a fold, or matched by exactly one family, or matched by exactly one of these —
+ * never nothing.
+ */
+export interface Exclusion {
+  /** Why, shown in the caption with its count. */
+  key: TranslationKey
+  match: (s: PreflopSituation) => boolean
+}
+
+export const EXCLUSIONS: Exclusion[] = [
+  {
+    // Checking a limped pot in the big blind is *free*, so folding is a line nobody would
+    // ever take. Δ is defined as the gain over folding, which makes "beat folding" a bar
+    // that clears itself — the row was +1.35bb and could not have been anything else. There
+    // is no decision here to score, so scoring it was a category error, not a thin sample.
+    key: 'chart.situation.excluded.limpedCheck',
+    match: s => s.context === 'limped' && s.action === 'check',
+  },
+  {
+    // 5-bets and beyond. 62 of them in a 72,840-hand sample, which clears no sample
+    // threshold at any single position — so the row never drew anyway, it only padded the
+    // hidden count and the action dropdown. The range is also QQ+/AK with essentially no
+    // bluffs at these stakes, so there is little to learn even with the hands to learn it.
+    key: 'chart.situation.excluded.fiveBet',
+    match: s => s.context === 'fourBetPlus' && s.action === 'raise',
+  },
 ]
 
 export const POSITIONS: Array<[number, TranslationKey]> = [
@@ -79,13 +111,22 @@ export function buildLedgerRows(
   situations: PreflopSituation[],
   filters: SituationFilters,
   t: Translate
-): { rows: DeltaRow[]; hidden: number } {
+): { rows: DeltaRow[]; hidden: number; excluded: Array<{ key: TranslationKey; n: number }> } {
   // One pass, bucketing as we go. A filter-per-family-per-position sweep is ~90 passes
   // over a six-figure array, and it runs synchronously inside a useMemo on every dropdown
   // change — which is to say, it blocks paint.
   const deltas = new Map<string, number[]>()
+  const excludedCounts = new Map<TranslationKey, number>()
+
   for (const s of situations) {
     if (!passesFilters(s, filters)) continue
+
+    const exclusion = EXCLUSIONS.find(e => e.match(s))
+    if (exclusion) {
+      excludedCounts.set(exclusion.key, (excludedCounts.get(exclusion.key) ?? 0) + 1)
+      continue
+    }
+
     const familyIndex = FAMILIES.findIndex(f => f.match(s))
     if (familyIndex < 0) continue // a fold: Δ is 0 by construction, so it is not a row
     const key = `${familyIndex}|${s.heroOffset}`
@@ -93,6 +134,12 @@ export function buildLedgerRows(
     if (bucket) bucket.push(s.deltaBB)
     else deltas.set(key, [s.deltaBB])
   }
+
+  // Declaration order, so the caption reads the same way every time.
+  const excluded = EXCLUSIONS.flatMap(e => {
+    const n = excludedCounts.get(e.key) ?? 0
+    return n > 0 ? [{ key: e.key, n }] : []
+  })
 
   const rows: DeltaRow[] = []
   let hidden = 0
@@ -120,7 +167,7 @@ export function buildLedgerRows(
     }
   })
 
-  return { rows, hidden }
+  return { rows, hidden, excluded }
 }
 
 export function getSituationLedgerData(
@@ -130,7 +177,7 @@ export function getSituationLedgerData(
   /** From `Classification`. Surfaced in the caption, never swallowed. */
   droppedHands = 0
 ): DeltaFigure {
-  const { rows, hidden } = buildLedgerRows(situations, filters, t)
+  const { rows, hidden, excluded } = buildLedgerRows(situations, filters, t)
 
   const captionKeys: TranslationKey[] = [
     // First, because it is the question a reader asks before any other: what *is* a row?
@@ -156,6 +203,18 @@ export function getSituationLedgerData(
   if (hidden > 0) {
     caption.push(t('chart.situation.ledger.caption.hidden', { hidden }))
   }
+
+  // Each exclusion says what it dropped and why. Withholding a row is defensible; not
+  // mentioning that you withheld it is how a chart quietly stops being the whole picture.
+  //
+  // Composed, rather than each reason key carrying its own `{{n}}`: the reason keys are
+  // named as literals in the EXCLUSIONS table, not at a `t()` call, so `callSites.test.ts`
+  // cannot see what values they are handed and rightly refuses to vouch for a placeholder
+  // it cannot check. Keeping the count in the wrapper puts it back where the test can see it.
+  for (const { key, n } of excluded) {
+    caption.push(t('chart.situation.ledger.caption.excluded', { n, reason: t(key) }))
+  }
+
   if (droppedHands > 0) {
     caption.push(t('chart.situation.ledger.caption.dropped', { droppedHands }))
   }
