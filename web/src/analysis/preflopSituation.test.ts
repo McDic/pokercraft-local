@@ -12,7 +12,7 @@
 import { describe, it, expect } from 'vitest'
 import type { BetAction, HandHistory } from '../types'
 import { makeHandHistory } from '../test/fixtures'
-import { HERO, classifyHand, toOpenerBucket } from './preflopSituation'
+import { HERO, classifyHand, classifyHandHistories, toOpenerBucket } from './preflopSituation'
 
 const SB = 10
 const BB = 20
@@ -328,6 +328,66 @@ describe('classifyHand', () => {
     const [s] = classifyHand(h)
     expect(s.context).toBe('limped')
     expect(s.action).toBe('check')
+  })
+})
+
+describe('a preflop `bet`, which this walk cannot read', () => {
+  // GG moves preflop money as blind/call/raise and never writes `bets` there, so this is
+  // unreachable today. It is pinned anyway, because the failure is silent by construction:
+  // `bet` carries an increment where `raise` carries a *to* total, so guessing would desync
+  // Hero's commitment and put a nonzero Δ on every later node — folds included, which is
+  // the identity the whole metric rests on.
+  const withPreflopBet = () =>
+    hand({
+      seats: seats(1),
+      actionsPreflop: [
+        ...posts(1),
+        fold(p(1).mp), fold(p(1).mp1), fold(p(1).co),
+        bet(HERO, 50), // not a thing GG writes
+      ],
+      wons: new Map([[HERO, 42]]),
+    })
+
+  it('drops the hand rather than scoring it wrong', () => {
+    expect(classifyHand(withPreflopBet())).toEqual([])
+  })
+
+  it('counts the drop, so a truncated corpus cannot pass for a complete one', async () => {
+    const good = hand({
+      seats: seats(1),
+      actionsPreflop: [
+        ...posts(1),
+        fold(p(1).mp), fold(p(1).mp1), fold(p(1).co),
+        raise(HERO, 50),
+      ],
+      wons: new Map([[HERO, 42]]),
+    })
+
+    const { situations, droppedHands } = await classifyHandHistories([
+      good,
+      withPreflopBet(),
+      good,
+    ])
+
+    expect(situations).toHaveLength(2)
+    expect(droppedHands).toBe(1)
+  })
+
+  it('does not count a hand that merely gave Hero no decision', async () => {
+    // A walk yields no situations either, but nothing was refused — only a refusal counts,
+    // or the caption would cry wolf on every ordinary session.
+    const walk = hand({
+      seats: seats(3),
+      actionsPreflop: [
+        ...posts(3),
+        fold(p(3).mp), fold(p(3).mp1), fold(p(3).co), fold(p(3).btn), fold(p(3).sb),
+      ],
+      wons: new Map([[HERO, 42]]),
+    })
+
+    const { situations, droppedHands } = await classifyHandHistories([walk])
+    expect(situations).toEqual([])
+    expect(droppedHands).toBe(0)
   })
 })
 

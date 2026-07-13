@@ -63,7 +63,14 @@ const LOST_TO_FOLD = '#e34948'
 /** The neutral midpoint of the diverging pair: a decision we cannot tell apart from folding. */
 const INCONCLUSIVE = '#898781'
 
-/** Below this, a row is noise dressed as a finding, and is withheld rather than drawn faintly. */
+/**
+ * The sample sizes worth offering, and the default.
+ *
+ * Below a few tens of decisions a row is noise dressed as a finding, so it is withheld
+ * rather than drawn faintly — a pale cell still reads as data. Lives here, beside the
+ * filter it belongs to, rather than being retyped in the component.
+ */
+export const MIN_SAMPLE_CHOICES = [10, 30, 100, 300] as const
 export const DEFAULT_MIN_SAMPLE = 30
 
 export type StackBucket = 'short' | 'mid' | 'deepish' | 'deep'
@@ -268,7 +275,9 @@ export function buildLedgerRows(
 export function getSituationLedgerData(
   situations: PreflopSituation[],
   filters: LedgerFilters,
-  t: Translate
+  t: Translate,
+  /** From `Classification`. Surfaced in the caption, never swallowed. */
+  droppedHands = 0
 ): SituationLedgerData {
   const { rows, hidden } = buildLedgerRows(situations, filters, t)
 
@@ -333,8 +342,6 @@ export function getSituationLedgerData(
     } as Data)
   }
 
-  // Stacked upward from the top of the plot area in *pixels*: the chart's height varies
-  // with the row count, so paper-relative offsets would drift line-spacing as it grows.
   const captionKeys: TranslationKey[] = [
     // First, because it is the question a reader asks before any other: what *is* a row?
     // The position in a row label is always Hero's, even in the rows that are a response
@@ -347,8 +354,20 @@ export function getSituationLedgerData(
     'chart.situation.ledger.caption.caveat',
   ]
   const caption = captionKeys.map(key => t(key))
+
+  // Say out loud what the default view is doing. A position is a different seat at a
+  // different table size — heads-up puts the button *on* the small blind — so with no
+  // table filter the SB and BB rows blend an HU steal into a full-ring open. That is a
+  // legitimate "show me everything" default, but only if the reader knows it is happening.
+  if (filters.tableBucket === 'any') {
+    caption.push(t('chart.situation.ledger.caption.tablePooled'))
+  }
+
   if (hidden > 0) {
     caption.push(t('chart.situation.ledger.caption.hidden', { hidden }))
+  }
+  if (droppedHands > 0) {
+    caption.push(t('chart.situation.ledger.caption.dropped', { droppedHands }))
   }
 
   // The top margin clears the title; the bottom clears the tick labels, the axis title, and

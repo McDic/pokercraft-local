@@ -148,14 +148,15 @@ function contextOf(raises: number, callers: number): PreflopContext {
  * choice of Hero's produced.
  */
 export function classifyHand(h: HandHistory): PreflopSituation[] {
-  // A preflop `bet` is not a thing GG writes — preflop money moves as blind, call or
-  // raise — but the parser's action regex would accept one on any street, and this walk
-  // has no coherent reading for it: `bet` carries an increment where `raise` carries a
-  // *to* total, so there is no way to know what it did to the betting level. Rather than
-  // guess and desync Hero's commitment from getHandHistoryTotalChipsPut — which would put
-  // a nonzero Δ on every later node of the hand, folds included, and quietly break the one
-  // identity this module rests on — drop the hand. An empty chart is a visible failure; a
-  // subtly wrong one is not.
+  // A preflop `bet` is not a thing GG writes — preflop money moves as blind, call or raise
+  // — but the parser's action regex would accept one on any street, and this walk has no
+  // coherent reading for it: `bet` carries an increment where `raise` carries a *to* total,
+  // so there is no way to know what it did to the betting level. Guessing would desync
+  // Hero's commitment from getHandHistoryTotalChipsPut and put a nonzero Δ on every later
+  // node of the hand, folds included, quietly breaking the one identity this module rests
+  // on. So the hand is dropped instead — but *counted*, and the count is shown: a dropped
+  // hand is invisible by construction, and a ledger that silently rests on a truncated
+  // corpus is the exact failure this bail-out exists to avoid.
   if (h.actionsPreflop.some(a => a.action === 'bet')) return []
 
   let heroOffset: number
@@ -249,6 +250,18 @@ function offsetOrNull(h: HandHistory, playerId: string): number | null {
   }
 }
 
+export interface Classification {
+  situations: PreflopSituation[]
+  /**
+   * Hands the walk refused to read, and therefore threw away.
+   *
+   * Reported rather than swallowed. It should be 0 against any GG export — but if it ever
+   * is not, the chart is built on a corpus with a hole in it, and a hole is precisely the
+   * thing a chart cannot show you. So the number travels out to the caption.
+   */
+  droppedHands: number
+}
+
 /**
  * Classify a whole session.
  *
@@ -257,13 +270,23 @@ function offsetOrNull(h: HandHistory, playerId: string): number | null {
  */
 export async function classifyHandHistories(
   handHistories: HandHistory[]
-): Promise<PreflopSituation[]> {
-  const all: PreflopSituation[] = []
+): Promise<Classification> {
+  const situations: PreflopSituation[] = []
+  let droppedHands = 0
+
   for (let i = 0; i < handHistories.length; i++) {
-    all.push(...classifyHand(handHistories[i]))
+    const h = handHistories[i]
+    const found = classifyHand(h)
+    situations.push(...found)
+
+    // A hand with no decisions is normal — a walk, an all-in blind, Hero not seated. A hand
+    // the walk *refused* is not, so only the refusal is counted.
+    if (h.actionsPreflop.some(a => a.action === 'bet')) droppedHands++
+
     if ((i + 1) % 1000 === 0) {
       await yieldToBrowser()
     }
   }
-  return all
+
+  return { situations, droppedHands }
 }

@@ -112,15 +112,23 @@ function buildChartDivs(charts: ExportChart[], prefix: string): string {
     .join('\n      ')
 }
 
-/** Override axis colors for light background readability */
+/**
+ * Axis colours for the exported file's light background.
+ *
+ * Defaults, not overrides: the chart's own values win. A figure that deliberately styles an
+ * axis has a reason, and the reason is usually meaning — the situation ledger draws its
+ * zero line heavy and dark because zero *is* the chart ("right of the line, the decision
+ * beat folding"). Spreading these on top would have flattened it to a hairline no darker
+ * than a gridline, in the export only.
+ */
 function patchAxesForLightTheme(layout: Partial<Layout>): Record<string, unknown> {
   const src = layout as Record<string, unknown>
   const patched: Record<string, unknown> = { ...src }
-  const axisOverrides = { gridcolor: '#ddd', zerolinecolor: '#bbb', linecolor: '#ccc' }
+  const axisDefaults = { gridcolor: '#ddd', zerolinecolor: '#bbb', linecolor: '#ccc' }
 
   for (const key of Object.keys(src)) {
     if (/^[xy]axis\d*$/.test(key) && typeof src[key] === 'object' && src[key] !== null) {
-      patched[key] = { ...(src[key] as object), ...axisOverrides }
+      patched[key] = { ...axisDefaults, ...(src[key] as object) }
     }
   }
   return patched

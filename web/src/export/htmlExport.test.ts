@@ -46,6 +46,52 @@ describe('generateExportHTML', () => {
     expect(html).toContain('id="situation-0"')
   })
 
+  it('keeps two non-empty sections apart', () => {
+    // The old positional signature made an id collision structurally impossible; a list of
+    // sections makes the prefix a caller's promise. If two sections ever shared one, both
+    // would render into `#hand-0` and Plotly would draw the second over the first — one
+    // section silently showing the other's chart. This pins that they stay distinct.
+    const html = generateExportHTML(
+      [
+        section(),
+        section({ titleKey: 'export.section.handHistory', prefix: 'hand' }),
+      ],
+      identityT,
+      'en'
+    )
+
+    expect(html).toContain('export.section.tournament')
+    expect(html).toContain('export.section.handHistory')
+    expect(html).toContain('id="tournament-0"')
+    expect(html).toContain('id="hand-0"')
+    // Both sections must actually be drawn, not just headed.
+    expect(html.match(/Plotly\.newPlot\(/g) ?? []).toHaveLength(2)
+  })
+
+  it('does not let the light-theme patch overwrite an axis the chart styled itself', () => {
+    // The situation ledger draws its zero line dark and heavy because zero *is* the chart.
+    // These are defaults for the export's white background, not overrides — a figure that
+    // set a colour on purpose keeps it.
+    const html = generateExportHTML(
+      [
+        section({
+          charts: [
+            chart({
+              layout: { xaxis: { zerolinecolor: '#898781', zerolinewidth: 2 } },
+            }),
+          ],
+        }),
+      ],
+      identityT,
+      'en'
+    )
+
+    expect(html).toContain('#898781')
+    expect(html).not.toContain('"zerolinecolor":"#bbb"')
+    // The colours the chart did *not* set still get their light-background default.
+    expect(html).toContain('"gridcolor":"#ddd"')
+  })
+
   it('omits a section with no charts', () => {
     const html = generateExportHTML(
       [section(), section({ titleKey: 'export.section.handHistory', prefix: 'hand', charts: [] })],

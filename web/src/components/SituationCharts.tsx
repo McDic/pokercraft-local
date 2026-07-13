@@ -21,7 +21,7 @@ import { useState, useEffect, useMemo, forwardRef, useImperativeHandle } from 'r
 import { useTranslation } from 'react-i18next'
 import Plot from './plot'
 import type { HandHistory } from '../types'
-import type { PreflopSituation, OpenerBucket } from '../analysis/preflopSituation'
+import type { Classification, OpenerBucket } from '../analysis/preflopSituation'
 import { classifyHandHistories } from '../analysis/preflopSituation'
 import type {
   LedgerFilters,
@@ -30,6 +30,7 @@ import type {
 } from '../visualization/handHistory/situationLedger'
 import {
   DEFAULT_FILTERS,
+  MIN_SAMPLE_CHOICES,
   OPENER_BUCKET_KEYS,
   STACK_BUCKET_KEYS,
   TABLE_BUCKET_KEYS,
@@ -46,9 +47,6 @@ export interface SituationChartsRef {
   isComputing: () => boolean
 }
 
-/** The sample sizes worth offering. Below 10, a bucket is an anecdote. */
-const MIN_SAMPLE_CHOICES = [10, 30, 100, 300]
-
 export const SituationCharts = forwardRef<SituationChartsRef, SituationChartsProps>(
   function SituationCharts({ handHistories }, ref) {
     const { t } = useTranslation()
@@ -56,14 +54,14 @@ export const SituationCharts = forwardRef<SituationChartsRef, SituationChartsPro
 
     // Carries the input it was built from, so staleness is a fact rather than a flag.
     const [built, setBuilt] = useState<{
-      situations: PreflopSituation[]
+      classification: Classification
       from: HandHistory[]
     } | null>(null)
 
     useEffect(() => {
       let cancelled = false
-      classifyHandHistories(handHistories).then(situations => {
-        if (!cancelled) setBuilt({ situations, from: handHistories })
+      classifyHandHistories(handHistories).then(classification => {
+        if (!cancelled) setBuilt({ classification, from: handHistories })
       })
       return () => {
         cancelled = true
@@ -73,7 +71,15 @@ export const SituationCharts = forwardRef<SituationChartsRef, SituationChartsPro
     const isComputing = built === null || built.from !== handHistories
 
     const ledger = useMemo(
-      () => (built === null ? null : getSituationLedgerData(built.situations, filters, t)),
+      () =>
+        built === null
+          ? null
+          : getSituationLedgerData(
+              built.classification.situations,
+              filters,
+              t,
+              built.classification.droppedHands
+            ),
       [built, filters, t]
     )
 
@@ -175,8 +181,10 @@ export const SituationCharts = forwardRef<SituationChartsRef, SituationChartsPro
 
         {ledger && ledger.traces.length > 0 ? (
           <section className="chart-section">
-            {ledger.caption.map(line => (
-              <p key={line} className="chart-caption">
+            {/* Keyed by position, not by text: the lines are a fixed, ordered list, and two
+                translations that happen to come out identical would collide on a text key. */}
+            {ledger.caption.map((line, i) => (
+              <p key={i} className="chart-caption">
                 {line}
               </p>
             ))}

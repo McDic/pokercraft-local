@@ -187,11 +187,10 @@ describe('buildLedgerRows', () => {
       ...many(30, { context: 'unopened', action: 'raise', heroOffset: 0 }), // RFI, shallow
     ]
     const { rows } = buildLedgerRows(situations, { ...DEFAULT_FILTERS, minSample: 30 }, t)
-    expect(rows.map(r => r.label.split('(')[0])).toEqual([
-      'chart.situation.ledger.rowLabel',
-      'chart.situation.ledger.rowLabel',
-    ])
-    // The labels carry the family key in their interpolated values; RFI must come first.
+
+    // RFI is declared before the 4-bet family, so it leads regardless of input order —
+    // which is what lets the caption promise that groups run smallest pot to largest.
+    expect(rows).toHaveLength(2)
     expect(rows[0].label).toContain('chart.situation.family.rfi')
     expect(rows[1].label).toContain('chart.situation.family.fourBet')
   })
