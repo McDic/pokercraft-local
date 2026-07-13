@@ -80,6 +80,8 @@ export const SituationCharts = forwardRef<SituationChartsRef, SituationChartsPro
     useImperativeHandle(ref, () => ({
       getChartData(): ExportChart[] {
         if (!ledger || ledger.traces.length === 0) return []
+        // `caption` rides along: how to read this chart is not optional context, and an
+        // exported figure that has lost it is the one a reader will misread.
         return [{ name: t('chart.situation.name'), ...ledger }]
       },
       isComputing() {
@@ -173,6 +175,11 @@ export const SituationCharts = forwardRef<SituationChartsRef, SituationChartsPro
 
         {ledger && ledger.traces.length > 0 ? (
           <section className="chart-section">
+            {ledger.caption.map(line => (
+              <p key={line} className="chart-caption">
+                {line}
+              </p>
+            ))}
             <Plot
               data={ledger.traces}
               layout={{ ...ledger.layout, autosize: true }}

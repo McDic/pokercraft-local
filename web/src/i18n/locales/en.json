@@ -206,6 +206,7 @@
   "export.meta.exportedOn": "Exported on {{timestamp}}",
   "export.section.tournament": "Tournament Summary",
   "export.section.handHistory": "Hand History",
+  "export.section.situation": "Preflop Situations",
 
   "tabs.situation": "Preflop Situations",
   "charts.noSituationData": "No hand history data loaded",
@@ -219,8 +220,8 @@
   "chart.situation.ledger.rowLabel": "{{family}} · {{position}} (n={{n}})",
   "chart.situation.ledger.axis.mean": "Average Δbb vs. folding (95% CI)",
   "chart.situation.ledger.axis.total": "Total Δbb (impact)",
-  "chart.situation.ledger.hover.mean": "%{text}<br>Average: %{x:.2f} bb vs. folding<br>95% CI: ±%{customdata[1]:.2f} bb<br>Sample: %{customdata[0]} decisions<extra></extra>",
-  "chart.situation.ledger.hover.total": "%{text}<br>Total: %{x:.0f} bb vs. folding<br>Sample: %{customdata[0]} decisions<extra></extra>",
+  "chart.situation.ledger.hover.mean": "%{hovertext}<br>Average: %{x:.2f} bb vs. folding<br>95% CI: ±%{customdata[1]:.2f} bb<br>Sample: %{customdata[0]} decisions<extra></extra>",
+  "chart.situation.ledger.hover.total": "%{hovertext}<br>Total: %{x:.0f} bb vs. folding<br>Sample: %{customdata[0]} decisions<extra></extra>",
 
   "chart.situation.legend.beatFold": "Beat folding",
   "chart.situation.legend.lostToFold": "Folding was better",

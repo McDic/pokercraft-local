@@ -45,6 +45,12 @@ import type { Translate, TranslationKey } from '../../i18n'
 export interface SituationLedgerData {
   traces: Data[]
   layout: Partial<Layout>
+  /**
+   * How to read the chart, and what it does not mean. Rendered as HTML beside the figure,
+   * never as a Plotly annotation: an annotation is one unbreakable line, so on a narrow
+   * window it simply runs off the edge of the plot. Prose has to wrap.
+   */
+  caption: string[]
 }
 
 /**
@@ -299,8 +305,9 @@ export function getSituationLedgerData(
       },
       marker: { color, size: 9, line: { color: '#fcfcfb', width: 1 } },
       // y is an index, so the row name has to travel with the point for the tooltip.
-      // `hovertext`, not `text` — `text` on a bar trace is *drawn on the bar*, which
-      // stamps every row label across the panel beside it.
+      // `hovertext`, not `text` — `text` on a bar trace is *drawn on the bar*, which stamps
+      // every row label across the panel beside it. The template must then read it back as
+      // `%{hovertext}`: `%{text}` is a *different* field, and resolves to a bare "-".
       hovertext: idx.map(i => rows[i].label),
       customdata: idx.map(i => [rows[i].n, rows[i].ci95]),
       hovertemplate: t('chart.situation.ledger.hover.mean'),
@@ -333,28 +340,15 @@ export function getSituationLedgerData(
     'chart.situation.ledger.caption.scale',
     'chart.situation.ledger.caption.caveat',
   ]
-  const captionTexts = captionKeys.map(key => t(key))
+  const caption = captionKeys.map(key => t(key))
   if (hidden > 0) {
-    captionTexts.push(t('chart.situation.ledger.caption.hidden', { hidden }))
+    caption.push(t('chart.situation.ledger.caption.hidden', { hidden }))
   }
 
-  const captions: Layout['annotations'] = captionTexts.map((text, i) => ({
-    text,
-    showarrow: false,
-    xref: 'paper' as const,
-    yref: 'paper' as const,
-    x: 0,
-    y: 1,
-    xanchor: 'left' as const,
-    yanchor: 'bottom' as const,
-    // Last line sits closest to the plot, so later lines get the smaller offset.
-    yshift: 14 + (captionTexts.length - 1 - i) * 16,
-    font: { size: 11, color: '#898781' },
-  }))
-
-  // The top margin has to clear the title *and* the caption stack beneath it; the bottom
-  // has to clear the tick labels, the axis title, and then the legend below both.
-  const marginTop = 180
+  // The top margin clears the title; the bottom clears the tick labels, the axis title, and
+  // then the legend below both. The caption is not in here — it is prose, it has to wrap,
+  // and a Plotly annotation cannot. It is rendered as HTML beside the figure instead.
+  const marginTop = 70
   const marginBottom = 150
   const height = Math.max(460, rows.length * 28 + marginTop + marginBottom + 10)
 
@@ -368,8 +362,7 @@ export function getSituationLedgerData(
     height,
     margin: { l: 300, r: 40, t: marginTop, b: marginBottom },
     showlegend: true,
-    // Below the panels, not above: the caption block already owns the header, and a
-    // top-right legend lands right on the end of the longest caption line.
+    // Below the panels: at the top it would collide with the title on a narrow window.
     legend: {
       orientation: 'h',
       x: 0,
@@ -404,8 +397,7 @@ export function getSituationLedgerData(
       showgrid: false,
       tickfont: { size: 11 },
     },
-    annotations: captions,
   }
 
-  return { traces, layout }
+  return { traces, layout, caption }
 }

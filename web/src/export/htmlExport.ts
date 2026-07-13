@@ -4,13 +4,30 @@
 
 import type { Data, Layout } from 'plotly.js-dist-min'
 import { getVersionInfo } from '../utils/version'
-import type { Translate } from '../i18n'
+import type { Translate, TranslationKey } from '../i18n'
 
 export interface ExportChart {
   /** Already translated; rendered as the chart's heading in the exported file. */
   name: string
   traces: Data[]
   layout: Partial<Layout>
+  /**
+   * Already translated. Prose that has to travel with the chart — how to read it, what it
+   * does not mean — one paragraph per entry.
+   *
+   * It lives here rather than in a Plotly annotation because prose has to *wrap*, and a
+   * Plotly annotation is a single unbreakable line: narrow the window and it runs off the
+   * edge of the figure. A caption is HTML, so the browser wraps it for free.
+   */
+  caption?: string[]
+}
+
+/** One heading's worth of charts in the exported page. */
+export interface ExportSection {
+  titleKey: TranslationKey
+  /** Prefix for the generated div ids; must be unique across sections on the page. */
+  prefix: string
+  charts: ExportChart[]
 }
 
 const PLOTLY_CDN = 'https://cdn.plot.ly/plotly-3.3.1.min.js'
@@ -43,6 +60,13 @@ const THEME_CSS = `
     font-weight: 500;
     color: #888;
     margin: 1.5rem 0 0.5rem 0;
+  }
+  .chart-caption {
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: #777;
+    max-width: 100ch;
+    margin: 0 0 0.4rem 0;
   }
   .chart-container {
     background: #fff;
@@ -80,6 +104,9 @@ function buildChartDivs(charts: ExportChart[], prefix: string): string {
     .map(
       (chart, i) =>
         `<h3 class="chart-title">${escapeHtml(chart.name)}</h3>\n      ` +
+        (chart.caption ?? [])
+          .map(line => `<p class="chart-caption">${escapeHtml(line)}</p>\n      `)
+          .join('') +
         `<div class="chart-container"><div id="${prefix}-${i}" style="width:100%;"></div></div>`
     )
     .join('\n      ')
@@ -128,8 +155,7 @@ function buildPlotCalls(charts: ExportChart[], prefix: string): string {
  * serialized wholesale below. Only the page's own chrome is translated here.
  */
 export function generateExportHTML(
-  tournamentCharts: ExportChart[],
-  handHistoryCharts: ExportChart[],
+  sections: ExportSection[],
   t: Translate,
   language: string
 ): string {
@@ -139,8 +165,10 @@ export function generateExportHTML(
     ? `<a href="${escapeHtml(version.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(version.text)}</a>`
     : escapeHtml(version.text)
 
-  const hasTournament = tournamentCharts.length > 0
-  const hasHandHistory = handHistoryCharts.length > 0
+  // A list rather than one parameter per section: the export follows the tabs, and a
+  // positional (tournament, handHistory) pair had already started lying about which tab it
+  // came from as soon as a third tab existed.
+  const present = sections.filter(s => s.charts.length > 0)
 
   return `<!DOCTYPE html>
 <html lang="${escapeHtml(language)}">
@@ -156,22 +184,15 @@ export function generateExportHTML(
     <h1>${escapeHtml(t('export.heading'))}</h1>
     <div class="meta">${escapeHtml(t('export.meta.exportedOn', { timestamp }))} &middot; ${versionHtml}</div>
   </div>
-  ${
-    hasTournament
-      ? `<h2 class="section-title">${escapeHtml(t('export.section.tournament'))}</h2>
-      ${buildChartDivs(tournamentCharts, 'tournament')}`
-      : ''
-  }
-  ${
-    hasHandHistory
-      ? `<h2 class="section-title">${escapeHtml(t('export.section.handHistory'))}</h2>
-      ${buildChartDivs(handHistoryCharts, 'hand')}`
-      : ''
-  }
+  ${present
+    .map(
+      s => `<h2 class="section-title">${escapeHtml(t(s.titleKey))}</h2>
+      ${buildChartDivs(s.charts, s.prefix)}`
+    )
+    .join('\n  ')}
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      ${hasTournament ? buildPlotCalls(tournamentCharts, 'tournament') : ''}
-      ${hasHandHistory ? buildPlotCalls(handHistoryCharts, 'hand') : ''}
+      ${present.map(s => buildPlotCalls(s.charts, s.prefix)).join('\n      ')}
     });
   <\/script>
 </body>
