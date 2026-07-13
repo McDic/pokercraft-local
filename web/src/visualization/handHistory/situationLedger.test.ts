@@ -13,12 +13,8 @@
 
 import { describe, it, expect } from 'vitest'
 import type { PreflopContext, HeroPreflopAction, PreflopSituation } from '../../analysis/preflopSituation'
-import {
-  DEFAULT_FILTERS,
-  LEDGER_FAMILIES,
-  buildLedgerRows,
-  getSituationLedgerData,
-} from './situationLedger'
+import { DEFAULT_FILTERS } from './situationFilters'
+import { FAMILIES, buildLedgerRows, getSituationLedgerData } from './situationLedger'
 
 /** A stub translator: the ledger only ever uses keys for labels, so echoing them is enough. */
 const t = ((key: string, values?: Record<string, unknown>) =>
@@ -72,7 +68,7 @@ describe('family coverage', () => {
   it.each(REACHABLE)('%s / %s is matched by exactly one family (or is a fold)', (context, action) => {
     for (const allIn of [false, true]) {
       const s = situation({ context, action, allIn })
-      const matched = LEDGER_FAMILIES.filter(f => f.match(s))
+      const matched = FAMILIES.filter(f => f.match(s))
 
       if (action === 'fold') {
         // Folds are the baseline: Δ is 0 by construction, so a fold row would be a row of
@@ -91,7 +87,7 @@ describe('family coverage', () => {
     const reachable = REACHABLE.flatMap(([context, action]) =>
       [false, true].map(allIn => situation({ context, action, allIn }))
     )
-    const orphans = LEDGER_FAMILIES.filter(f => !reachable.some(s => f.match(s)))
+    const orphans = FAMILIES.filter(f => !reachable.some(s => f.match(s)))
     expect(orphans.map(f => f.key)).toEqual([])
   })
 })
