@@ -29,6 +29,8 @@ import { passesFilters } from './situationFilters'
 
 interface Family {
   key: TranslationKey
+  /** One line saying what the name means. Shown under the row name on hover. */
+  descKey: TranslationKey
   match: (s: PreflopSituation) => boolean
 }
 
@@ -49,20 +51,53 @@ interface Family {
  * the reader to compare along. Declared rather than derived: `callSites.test.ts` requires
  * every translation key to appear as a literal in the source, so these cannot be assembled
  * from template strings.
+ *
+ * ## Every family is the state of the action *when it reaches Hero*
+ *
+ * Not the shape the pot ends up in — what is in front of Hero at the moment of the decision,
+ * because that is what sets the price and the equity Hero needs. Two pairs of these read as
+ * near-synonyms and are not; both were asked about by the first person to use the chart, so
+ * they are spelled out here and in the row's own hover text.
+ *
+ * **`flat` vs `callMultiway`** — has anyone already *called* the raise?
+ *
+ *     flat           CO raises, BTN folds, SB folds, Hero (BB) calls
+ *                    -> Hero is the first in behind the raise
+ *     callMultiway   CO raises, BTN calls,           Hero (BB) calls
+ *                    -> BTN got there first; Hero is third into the pot
+ *
+ * It is *not* heads-up versus multiway: a `flat` can still go multiway behind Hero. What is
+ * true is that when Hero acted, nobody had called yet — so the odds and the realisation are
+ * a different problem.
+ *
+ * **`isoRaise` vs `squeeze`** — has anyone already *raised*?
+ *
+ *     isoRaise   UTG limps, MP limps,  Hero (CO) raises
+ *                -> nobody had raised; Hero is the first aggressor, isolating a limper
+ *     squeeze    UTG raises, MP calls, Hero (CO) raises
+ *                -> Hero is 3-betting, with MP squeezed between Hero and the opener
+ *
+ * Both raise into several opponents, which is why they feel alike. One opens the betting
+ * into a passive field; the other re-raises someone who has already shown strength.
+ *
+ * One subtlety in the counting: a limper who has not yet responded to a raise is not a
+ * *caller*. `UTG limps, CO raises, Hero acts` is `flat` — the limper has not called the
+ * raise, so nobody is in behind it. (`callers` resets to zero on every raise; see
+ * `contextOf` in preflopSituation.ts.)
  */
 export const FAMILIES: Family[] = [
-  { key: 'chart.situation.family.rfi', match: s => s.context === 'unopened' && s.action === 'raise' && !s.allIn },
-  { key: 'chart.situation.family.openJam', match: s => s.context === 'unopened' && s.action === 'raise' && s.allIn },
-  { key: 'chart.situation.family.openLimp', match: s => s.context === 'unopened' && s.action === 'call' },
-  { key: 'chart.situation.family.overLimp', match: s => s.context === 'limped' && s.action === 'call' },
-  { key: 'chart.situation.family.isoRaise', match: s => s.context === 'limped' && s.action === 'raise' },
-  { key: 'chart.situation.family.flat', match: s => s.context === 'raised' && s.action === 'call' },
-  { key: 'chart.situation.family.threeBet', match: s => s.context === 'raised' && s.action === 'raise' },
-  { key: 'chart.situation.family.callMultiway', match: s => s.context === 'raisedCalled' && s.action === 'call' },
-  { key: 'chart.situation.family.squeeze', match: s => s.context === 'raisedCalled' && s.action === 'raise' },
-  { key: 'chart.situation.family.callVs3Bet', match: s => s.context === 'threeBet' && s.action === 'call' },
-  { key: 'chart.situation.family.fourBet', match: s => s.context === 'threeBet' && s.action === 'raise' },
-  { key: 'chart.situation.family.callVs4Bet', match: s => s.context === 'fourBetPlus' && s.action === 'call' },
+  { key: 'chart.situation.family.rfi', descKey: 'chart.situation.family.rfi.desc', match: s => s.context === 'unopened' && s.action === 'raise' && !s.allIn },
+  { key: 'chart.situation.family.openJam', descKey: 'chart.situation.family.openJam.desc', match: s => s.context === 'unopened' && s.action === 'raise' && s.allIn },
+  { key: 'chart.situation.family.openLimp', descKey: 'chart.situation.family.openLimp.desc', match: s => s.context === 'unopened' && s.action === 'call' },
+  { key: 'chart.situation.family.overLimp', descKey: 'chart.situation.family.overLimp.desc', match: s => s.context === 'limped' && s.action === 'call' },
+  { key: 'chart.situation.family.isoRaise', descKey: 'chart.situation.family.isoRaise.desc', match: s => s.context === 'limped' && s.action === 'raise' },
+  { key: 'chart.situation.family.flat', descKey: 'chart.situation.family.flat.desc', match: s => s.context === 'raised' && s.action === 'call' },
+  { key: 'chart.situation.family.threeBet', descKey: 'chart.situation.family.threeBet.desc', match: s => s.context === 'raised' && s.action === 'raise' },
+  { key: 'chart.situation.family.callMultiway', descKey: 'chart.situation.family.callMultiway.desc', match: s => s.context === 'raisedCalled' && s.action === 'call' },
+  { key: 'chart.situation.family.squeeze', descKey: 'chart.situation.family.squeeze.desc', match: s => s.context === 'raisedCalled' && s.action === 'raise' },
+  { key: 'chart.situation.family.callVs3Bet', descKey: 'chart.situation.family.callVs3Bet.desc', match: s => s.context === 'threeBet' && s.action === 'call' },
+  { key: 'chart.situation.family.fourBet', descKey: 'chart.situation.family.fourBet.desc', match: s => s.context === 'threeBet' && s.action === 'raise' },
+  { key: 'chart.situation.family.callVs4Bet', descKey: 'chart.situation.family.callVs4Bet.desc', match: s => s.context === 'fourBetPlus' && s.action === 'call' },
 ]
 
 export interface Exclusion {
@@ -192,6 +227,7 @@ export function buildLedgerRows(
           position: t(posKey),
           n: stats.n,
         }),
+        description: t(family.descKey),
         ...stats,
       })
     }

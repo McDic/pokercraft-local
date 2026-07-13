@@ -53,11 +53,26 @@ const INCONCLUSIVE = '#898781'
 
 export interface DeltaRow {
   label: string
+  /**
+   * What this row *means*, shown under its name on hover. Optional.
+   *
+   * "Flat / defend vs. open" and "Call vs. open + caller(s)" are not self-explanatory, and
+   * neither are "Iso-raise" and "Squeeze" — the first reader of this chart had to ask which
+   * was which. The answer belongs on the row, because that is where the question occurs:
+   * a glossary in the repo is not open when you are staring at a tooltip. It also rides
+   * along into the exported HTML for free, since Plotly hover is part of the figure.
+   */
+  description?: string
   n: number
   mean: number
   /** Half-width of the 95% interval. Zero when n < 2, where no interval is defined. */
   ci95: number
   total: number
+}
+
+/** The row's name, with its meaning beneath it when it has one. */
+function hoverLabel(row: DeltaRow): string {
+  return row.description ? `<b>${row.label}</b><br><i>${row.description}</i>` : row.label
 }
 
 export function summarize(deltas: number[]): Omit<DeltaRow, 'label'> {
@@ -135,7 +150,7 @@ export function buildDeltaFigure(
       // `hovertext`, not `text` — `text` on a bar trace is *drawn on the bar*, which stamps
       // every row label across the panel beside it. The template must then read it back as
       // `%{hovertext}`: `%{text}` is a *different* field, and resolves to a bare "-".
-      hovertext: idx.map(i => rows[i].label),
+      hovertext: idx.map(i => hoverLabel(rows[i])),
       customdata: idx.map(i => [rows[i].n, rows[i].ci95]),
       hovertemplate: t('chart.situation.hover.mean'),
       xaxis: 'x',
@@ -152,7 +167,7 @@ export function buildDeltaFigure(
       y: idx,
       width: 0.62,
       marker: { color },
-      hovertext: idx.map(i => rows[i].label),
+      hovertext: idx.map(i => hoverLabel(rows[i])),
       customdata: idx.map(i => [rows[i].n]),
       hovertemplate: t('chart.situation.hover.total'),
       xaxis: 'x2',
