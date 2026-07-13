@@ -61,9 +61,9 @@
   "progress.chart.complete": "Complete",
 
   "charts.noTournamentData": "No tournament data loaded",
+  "charts.noHandHistoryData": "No hand history data loaded",
   "charts.buildFailed": "Some charts could not be generated. See the browser console for details.",
   "charts.equityFailed": "All-in equity could not be calculated. See the browser console for details.",
-  "charts.noHandHistoryData": "No hand history data loaded",
 
   "chart.historical.name": "Historical Performance",
   "chart.historical.title": "Historical Performance",

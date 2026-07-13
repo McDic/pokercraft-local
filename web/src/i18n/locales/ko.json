@@ -61,9 +61,9 @@
   "progress.chart.complete": "완료",
 
   "charts.noTournamentData": "불러온 토너먼트 데이터가 없습니다",
+  "charts.noHandHistoryData": "불러온 핸드 히스토리 데이터가 없습니다",
   "charts.buildFailed": "일부 차트를 생성하지 못했습니다. 자세한 내용은 브라우저 콘솔을 확인해주세요.",
   "charts.equityFailed": "올인 에퀴티를 계산하지 못했습니다. 자세한 내용은 브라우저 콘솔을 확인해주세요.",
-  "charts.noHandHistoryData": "불러온 핸드 히스토리 데이터가 없습니다",
 
   "chart.historical.name": "과거 성적",
   "chart.historical.title": "과거 성적",

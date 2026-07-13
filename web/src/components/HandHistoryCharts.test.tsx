@@ -55,8 +55,11 @@ const equity = vi.hoisted(() => {
     inFlight: () => release !== null,
   }
 })
-vi.mock('../visualization/handHistory/allInEquityAsync', () => equity)
-vi.mock('../visualization/handHistory/equityStore', () => equity)
+vi.mock('../visualization/handHistory/equityStore', () => ({ loadEquity: equity.loadEquity }))
+vi.mock('../visualization/handHistory/allInEquityAsync', () => ({
+  calculateLuckScore: equity.calculateLuckScore,
+  createAllInEquityChart: equity.createAllInEquityChart,
+}))
 
 const gates = vi.hoisted(() => {
   let waiting: Array<() => void> = []
@@ -75,9 +78,8 @@ let container: HTMLDivElement
 let root: Root
 let ref: RefObject<HandHistoryChartsRef | null>
 
-// The equity store is module-level and survives between tests, so every test needs hand
-// ids of its own — otherwise the second test finds the first test's equity already there.
 let idSeq = 0
+/** Fresh ids per test, so nothing can accidentally depend on another test's hands. */
 function makeHands(count: number): HandHistory[] {
   const batch = ++idSeq
   return Array.from({ length: count }, (_, i) => ({ id: `t${batch}-h${i}` }) as HandHistory)
@@ -197,6 +199,33 @@ describe('HandHistoryCharts', () => {
     expect(viz.getChipHistoriesData).toHaveBeenCalledTimes(1)
     expect(viz.getHandUsageHeatmapsData).toHaveBeenCalledTimes(1)
     expect(chartNames()).toEqual([NAME.chips, NAME.usage, NAME.equity])
+  })
+
+  // A failure has to be shown — writing it into the progress state, as the component used
+  // to, meant the very act of reporting it unmounted the block that displayed it. And it
+  // has to be *dropped* once the layer that raised it recovers: the figure layers rerun
+  // on every language switch, so a banner that outlived its cause would be permanent.
+  it('shows a failure, and clears it when that layer succeeds again', async () => {
+    viz.getChipHistoriesData.mockRejectedValueOnce(new Error('boom'))
+
+    await render(makeHands(3))
+    await stepUntilEquityInFlight()
+    await landEquity()
+    await drain()
+
+    const banner = () => container.querySelector('.chart-error')?.textContent ?? null
+    expect(banner()).toBe(i18n.t('charts.buildFailed'))
+    // The failure is confined to its own layer: the equity chart still made it.
+    expect(chartNames()).toContain(NAME.equity)
+
+    // A language switch reruns the figure layers. This time they succeed.
+    await act(async () => {
+      await i18n.changeLanguage('ko')
+    })
+    await drain()
+
+    expect(banner(), 'the banner outlived the failure that caused it').toBeNull()
+    expect(chartNames()).toHaveLength(3)
   })
 
   it('settles with every figure present, and reports idle', async () => {
