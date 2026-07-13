@@ -44,8 +44,8 @@ interface Family {
  * it never becomes a row, and it is not counted among the hidden ones either. A player
  * bleeding a big blind on every over-limp would open this chart, find no over-limp row, and
  * conclude limping is not one of their leaks. (This is exactly what shipped in the first
- * draft.) An exclusion is the *declared*, counted, captioned way to leave a decision out;
- * deleting a family is the silent one.
+ * draft.) An exclusion is the *declared* way to leave a decision out, and the coverage test
+ * knows about it; deleting a family is the silent one, and nothing would.
  *
  * Ordered by how much is already in the pot when Hero acts — the axis the caption tells
  * the reader to compare along. Declared rather than derived: `callSites.test.ts` requires
@@ -101,7 +101,13 @@ export const FAMILIES: Family[] = [
 ]
 
 export interface Exclusion {
-  /** Why, shown in the caption with its count. */
+  /**
+   * Why this is not scored.
+   *
+   * Never shown by the ledger — see below. Shown by the hand-class chart, and only when the
+   * reader has *selected* an excluded scope, because at that point they have asked a question
+   * and a blank chart owes them an answer.
+   */
   key: TranslationKey
   match: (s: PreflopSituation) => boolean
 }
@@ -110,11 +116,27 @@ export interface Exclusion {
 const BB = 2
 
 /**
- * Decisions the charts deliberately do not draw — and say so, with a count.
+ * Decisions the charts deliberately do not draw.
  *
- * A family list that simply omitted these would *orphan* them: computed, correct, and then
- * dropped without a trace. That is the exact bug the coverage test was written to catch, so
- * an exclusion has to be declared, not implied.
+ * A family list that simply *omitted* these would orphan them — computed, correct, and then
+ * dropped without a trace, which is the exact bug the coverage test was written to catch. So
+ * an exclusion is declared, not implied, and the test proves every reachable decision still
+ * has exactly one home.
+ *
+ * ## The ledger does not announce them; the hand-class chart does
+ *
+ * The ledger used to, and it read badly: "Not shown (536): free checks in a limped big
+ * blind…" stacked up in the caption on every render. The other counts there are *contingent*
+ * — `hidden` depends on your sample and you can act on it by lowering the threshold;
+ * `droppedHands` should be zero and means something is wrong if it is not. An exclusion is
+ * neither. It is a permanent property of what the chart *is*, true of every dataset, and
+ * nothing the reader can do about it. Captioning it each time is like captioning "this chart
+ * does not show postflop play". That is scope, not truncation, and scope belongs here.
+ *
+ * The hand-class chart is the opposite case, and still reports it. There the reader can
+ * *select* an excluded scope — "Iso-raise" + "Big blind" — and having asked a question, they
+ * are owed an answer rather than a blank panel. An absence you did not ask about is scope; an
+ * absence you did ask about is a question, and it has to be answered.
  *
  * **Checked before the families, and that ordering is load-bearing** — it is what lets an
  * exclusion override a family it overlaps, and so carve a single *seat* out of a family that
@@ -125,9 +147,6 @@ const BB = 2
  * screen over one `situations` array, scoring the same Δ against the same baseline; a
  * decision cannot be a category error above and a legitimate row below.
  *
- * The coverage test asserts the surviving invariant: every reachable decision is a fold, or
- * excluded, or matched by exactly one family. Never nothing.
- *
  * ## Two of these are the same mistake
  *
  * Δ scores every decision against folding. That is only meaningful where folding is a line
@@ -137,8 +156,9 @@ const BB = 2
  */
 export const EXCLUSIONS: Exclusion[] = [
   {
-    // "Beat folding" is a bar that clears itself here: the row read +1.35bb and could not
-    // have read anything else.
+    // Checking a limped big blind is free, so folding is a line nobody would take. "Beat
+    // folding" is a bar that clears itself: the row read +1.35bb and could not have read
+    // anything else.
     key: 'chart.situation.excluded.limpedCheck',
     match: s => s.context === 'limped' && s.action === 'check',
   },
@@ -176,21 +196,17 @@ export function buildLedgerRows(
   situations: PreflopSituation[],
   filters: SituationFilters,
   t: Translate
-): { rows: DeltaRow[]; hidden: number; excluded: Array<{ key: TranslationKey; n: number }> } {
+): { rows: DeltaRow[]; hidden: number } {
   // One pass, bucketing as we go. A filter-per-family-per-position sweep is ~90 passes
   // over a six-figure array, and it runs synchronously inside a useMemo on every dropdown
   // change — which is to say, it blocks paint.
   const deltas = new Map<string, number[]>()
-  const excludedCounts = new Map<TranslationKey, number>()
 
   for (const s of situations) {
     if (!passesFilters(s, filters)) continue
 
-    const exclusion = EXCLUSIONS.find(e => e.match(s))
-    if (exclusion) {
-      excludedCounts.set(exclusion.key, (excludedCounts.get(exclusion.key) ?? 0) + 1)
-      continue
-    }
+    // Before the families, and that ordering is what carves a seat out of a family.
+    if (EXCLUSIONS.some(e => e.match(s))) continue
 
     const familyIndex = FAMILIES.findIndex(f => f.match(s))
     if (familyIndex < 0) continue // a fold: Δ is 0 by construction, so it is not a row
@@ -199,12 +215,6 @@ export function buildLedgerRows(
     if (bucket) bucket.push(s.deltaBB)
     else deltas.set(key, [s.deltaBB])
   }
-
-  // Declaration order, so the caption reads the same way every time.
-  const excluded = EXCLUSIONS.flatMap(e => {
-    const n = excludedCounts.get(e.key) ?? 0
-    return n > 0 ? [{ key: e.key, n }] : []
-  })
 
   const rows: DeltaRow[] = []
   let hidden = 0
@@ -233,7 +243,7 @@ export function buildLedgerRows(
     }
   })
 
-  return { rows, hidden, excluded }
+  return { rows, hidden }
 }
 
 export function getSituationLedgerData(
@@ -243,7 +253,7 @@ export function getSituationLedgerData(
   /** From `Classification`. Surfaced in the caption, never swallowed. */
   droppedHands = 0
 ): DeltaFigure {
-  const { rows, hidden, excluded } = buildLedgerRows(situations, filters, t)
+  const { rows, hidden } = buildLedgerRows(situations, filters, t)
 
   const captionKeys: TranslationKey[] = [
     // First, because it is the question a reader asks before any other: what *is* a row?
@@ -266,19 +276,13 @@ export function getSituationLedgerData(
     caption.push(t('chart.situation.ledger.caption.tablePooled'))
   }
 
+  // No line for EXCLUSIONS. The counts here are the *contingent* ones — `hidden` depends on
+  // your sample and you can act on it, `droppedHands` should be zero and means something is
+  // wrong when it is not. An exclusion is neither: it is a permanent property of what this
+  // chart is, true of every dataset, and nothing the reader can do anything about. See
+  // EXCLUSIONS for the reasoning.
   if (hidden > 0) {
     caption.push(t('chart.situation.ledger.caption.hidden', { hidden }))
-  }
-
-  // Each exclusion says what it dropped and why. Withholding a row is defensible; not
-  // mentioning that you withheld it is how a chart quietly stops being the whole picture.
-  //
-  // Composed, rather than each reason key carrying its own `{{n}}`: the reason keys are
-  // named as literals in the EXCLUSIONS table, not at a `t()` call, so `callSites.test.ts`
-  // cannot see what values they are handed and rightly refuses to vouch for a placeholder
-  // it cannot check. Keeping the count in the wrapper puts it back where the test can see it.
-  for (const { key, n } of excluded) {
-    caption.push(t('chart.situation.caption.excluded', { n, reason: t(key) }))
   }
 
   if (droppedHands > 0) {

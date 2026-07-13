@@ -169,14 +169,15 @@ describe('buildLedgerRows', () => {
     expect(hidden).toBe(0)
   })
 
-  it('counts what it excludes, and does not chart it', () => {
+  it('does not chart an excluded decision, and does not call it hidden either', () => {
     // A free check in a limped big blind cannot be folded, so "beat folding" is a bar that
-    // clears itself and there is no decision to score. Withholding the row is defensible;
-    // not saying so would quietly make the chart less than the whole picture.
-    const { rows, hidden, excluded } = buildLedgerRows(
+    // clears itself and there is no decision to score. It leaves no row — and crucially it
+    // does not inflate `hidden`, which means something else entirely: a row the reader could
+    // get back by lowering the sample threshold. An exclusion never comes back.
+    const { rows, hidden } = buildLedgerRows(
       [
         ...many(40, { context: 'limped', action: 'check', heroOffset: 2 }),
-        ...many(7, { context: 'fourBetPlus', action: 'raise', heroOffset: 0 }),
+        ...many(40, { context: 'fourBetPlus', action: 'raise', heroOffset: 0 }),
         ...many(40, { context: 'unopened', action: 'raise', heroOffset: 0 }),
       ],
       { ...DEFAULT_FILTERS, minSample: 30 },
@@ -185,22 +186,38 @@ describe('buildLedgerRows', () => {
 
     expect(rows).toHaveLength(1) // only the RFI
     expect(rows[0].label).toContain('chart.situation.family.rfi')
-    // Excluded is not "hidden": one was withheld on principle, the other for sample size.
+    // 40 excluded decisions would clear a threshold of 30, so this is a real assertion: a
+    // family lookup that ran before the exclusions would produce two more rows here.
     expect(hidden).toBe(0)
-    expect(excluded).toEqual([
-      { key: 'chart.situation.excluded.limpedCheck', n: 40 },
-      { key: 'chart.situation.excluded.fiveBet', n: 7 },
-    ])
+  })
+
+  it('says nothing in the caption about what it excludes', () => {
+    // The ledger's other caption counts are contingent — `hidden` moves with your filters,
+    // `droppedHands` should be zero. An exclusion is neither: it is a permanent property of
+    // what this chart is, true of every dataset, and nothing the reader can act on. Stacking
+    // "Not shown (536): free checks in a limped big blind…" into the caption on every render
+    // was noise. (The hand-class chart still reports it — there the reader can *select* an
+    // excluded scope, and a blank panel then owes them an answer.)
+    const { caption } = getSituationLedgerData(
+      [
+        ...many(40, { context: 'limped', action: 'check', heroOffset: 2 }),
+        ...many(40, { context: 'unopened', action: 'raise', heroOffset: 0 }),
+      ],
+      DEFAULT_FILTERS,
+      t
+    )
+    expect(caption.join('\n')).not.toContain('excluded')
+    expect(caption.join('\n')).not.toContain('Not shown')
   })
 
   it('lets an exclusion override the family it overlaps, and keeps the rest of that family', () => {
     // The one behaviour in this file that a plausible refactor silently undoes. `buildLedgerRows`
     // tests exclusions *before* families; hoist the family lookup above it — a natural
     // micro-optimisation, since the family path is the common one — and "Iso-raise · BB"
-    // quietly returns as a row while its caption line quietly disappears. Every other test in
-    // the suite passes either way, because they interrogate the FAMILIES and EXCLUSIONS tables
-    // directly and never go through the builder. This one goes through the builder.
-    const { rows, hidden, excluded } = buildLedgerRows(
+    // quietly returns as a row. Every other test in the suite passes either way, because they
+    // interrogate the FAMILIES and EXCLUSIONS tables directly and never go through the
+    // builder. This one goes through the builder, and it is what kills that mutant.
+    const { rows, hidden } = buildLedgerRows(
       [
         ...many(40, { context: 'limped', action: 'raise', heroOffset: 2, deltaBB: 10 }), // BB: excluded
         ...many(40, { context: 'limped', action: 'raise', heroOffset: -1, deltaBB: 0 }), // CO: charted
@@ -215,22 +232,23 @@ describe('buildLedgerRows', () => {
     expect(rows[0].label).toContain('position.co')
     expect(rows[0].n).toBe(40)
     expect(rows[0].mean).toBeCloseTo(0) // not 5 — the +10 BB hands are not averaged in
-
-    expect(excluded).toEqual([{ key: 'chart.situation.excluded.isoRaiseBB', n: 40 }])
     expect(hidden).toBe(0) // withheld on principle, not for sample size
   })
 
-  it('says in the caption what it left out', () => {
+  it('still says the things the reader *can* act on', () => {
+    // Dropping the exclusion lines must not take the contingent counts with them: `hidden`
+    // moves with the sample threshold and `droppedHands` means the corpus has a hole.
     const { caption } = getSituationLedgerData(
       [
-        ...many(40, { context: 'limped', action: 'check', heroOffset: 2 }),
-        ...many(40, { context: 'unopened', action: 'raise', heroOffset: 0 }),
+        ...many(5, { context: 'unopened', action: 'raise', heroOffset: 0 }),
+        ...many(40, { context: 'raised', action: 'call', heroOffset: 2 }),
       ],
       DEFAULT_FILTERS,
-      t
+      t,
+      3
     )
-    expect(caption.join('\n')).toContain('chart.situation.excluded.limpedCheck')
-    expect(caption.join('\n')).toContain('"n":40')
+    expect(caption.join('\n')).toContain('chart.situation.ledger.caption.hidden')
+    expect(caption.join('\n')).toContain('chart.situation.ledger.caption.dropped')
   })
 
   it('summarises a bucket, and puts the sample size in the label', () => {
