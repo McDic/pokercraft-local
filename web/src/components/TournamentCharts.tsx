@@ -30,6 +30,7 @@ interface ChartsState {
   rrByRank: ChartData | null
   isComputing: boolean
   progress: { messageKey: TranslationKey | null; percentage: number }
+  error: TranslationKey | null
 }
 
 export interface TournamentChartsRef {
@@ -48,6 +49,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
     rrByRank: null,
     isComputing: false,
     progress: { messageKey: null, percentage: 0 },
+    error: null,
   })
 
   const computeIdRef = useRef(0)
@@ -89,6 +91,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
       setState(prev => ({
         ...prev,
         isComputing: true,
+        error: null,
         progress: { messageKey: 'progress.chart.loadingModules', percentage: 5 },
       }))
 
@@ -181,15 +184,13 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
           isComputing: false,
           progress: { messageKey: 'progress.chart.complete', percentage: 100 },
         }))
-      } catch (error) {
-        console.error('Chart generation failed:', error)
+      } catch (err) {
+        console.error('Chart generation failed:', err)
         if (isStale()) return
 
-        setState(prev => ({
-          ...prev,
-          isComputing: false,
-          progress: { messageKey: 'progress.chart.error', percentage: 0 },
-        }))
+        // Not into `progress`: that block only renders while work is outstanding, so
+        // writing the failure there was exactly what hid it.
+        setState(prev => ({ ...prev, isComputing: false, error: 'charts.buildFailed' }))
       }
     }
 
@@ -216,6 +217,12 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
 
   return (
     <div className="charts-container">
+      {state.error && (
+        <div className="chart-error" role="alert">
+          <p>{t(state.error)}</p>
+        </div>
+      )}
+
       {state.isComputing && (
         <div className="chart-loading">
           <div className="progress-bar">

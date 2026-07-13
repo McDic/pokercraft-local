@@ -33,6 +33,19 @@ function placeholders(value: string): Set<string> {
 }
 
 /**
+ * Blank out comments, preserving offsets so every index below still lines up.
+ *
+ * Without this a key merely *mentioned* in a comment counts as used — which would let the
+ * unused-key check stay green over a key nothing renders, and these comments discuss keys
+ * by name constantly.
+ */
+function withoutComments(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
+    .replace(/(^|[^:])\/\/[^\n]*/g, (m, lead) => lead + ' '.repeat(m.length - lead.length))
+}
+
+/**
  * Top-level property names of the object literal starting at `open`.
  *
  * Tracks brace depth so nested objects stay out of the way, tracks paren/bracket depth
@@ -105,7 +118,7 @@ function callSites(): CallSite[] {
   const found: CallSite[] = []
 
   for (const file of sourceFiles(SRC)) {
-    const source = readFileSync(file, 'utf8')
+    const source = withoutComments(readFileSync(file, 'utf8'))
 
     for (const match of source.matchAll(/['"]([\w.]+)['"]/g)) {
       const key = match[1]
@@ -153,6 +166,15 @@ describe('translation key usages', () => {
     expect(byKey('progress.chart.equity')).toEqual(new Set(['current', 'total']))
     // A key with no values at all.
     expect(byKey('charts.noHandHistoryData')).toEqual(new Set())
+  })
+
+  // A key nobody uses is worse than clutter: translators spend real effort on it, and it
+  // is invisible — the type system only checks the other direction, that a key used
+  // exists. Every key here is named as a literal somewhere (including the ones that
+  // travel as `messageKey` data), so anything unreferenced is genuinely dead.
+  it('has no key that the source never names', () => {
+    const used = new Set(sites.map(s => s.key))
+    expect(Object.keys(en).filter(key => !used.has(key))).toEqual([])
   })
 
   it('passes exactly the values each key interpolates', () => {

@@ -49,6 +49,9 @@ interface Progress {
   percentage: number
 }
 
+/** The three things this component computes, each of which can fail on its own. */
+type Layer = 'data' | 'handFigures' | 'equityFigure'
+
 /** The language-independent output of the equity pass. */
 interface EquityData {
   allInData: AllInHandData[]
@@ -72,9 +75,6 @@ export interface HandHistoryChartsRef {
   isComputing: () => boolean
 }
 
-// Global cache for equity results (persists across re-renders)
-const equityCache = new Map<string, AllInHandData>()
-
 export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryChartsProps>(
   function HandHistoryCharts({ handHistories }, ref) {
   const { t, i18n } = useTranslation()
@@ -90,6 +90,29 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
   > | null>(null)
   const [equityFigure, setEquityFigure] = useState<Built<ChartData, EquityData> | null>(null)
   const [drawProgress, setDrawProgress] = useState<Progress>({ messageKey: null, percentage: 0 })
+
+  // Kept apart from `progress`, because the progress block only renders while work is
+  // outstanding — so writing a failure into it was exactly what hid the failure. The
+  // only trace a user got of a broken chart was a console line they never opened.
+  //
+  // Per layer, not one shared slot: each layer retries independently (a language switch
+  // reruns the figures but not the equity pass), so a shared slot would either leave a
+  // failure on screen after the layer that raised it had recovered, or let a recovering
+  // layer wipe another layer's still-live failure.
+  const [failures, setFailures] = useState<Partial<Record<Layer, TranslationKey>>>({})
+
+  const fail = (layer: Layer, message: TranslationKey) =>
+    setFailures(prev => ({ ...prev, [layer]: message }))
+
+  const clearFailure = (layer: Layer) =>
+    setFailures(prev => {
+      if (!(layer in prev)) return prev // keep identity, so this cannot loop a render
+      const next = { ...prev }
+      delete next[layer]
+      return next
+    })
+
+  const failureMessages = [...new Set(Object.values(failures))]
 
   const calcIdRef = useRef(0)
   const handsIdRef = useRef(0)
@@ -112,7 +135,14 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
     equity !== null &&
     (equityFigure === null || equityFigure.from !== equity || equityFigure.language !== language)
 
-  const isComputing = isCalculating || handFiguresStale || equityFigureStale
+  // A layer that has failed is not "outstanding" — it is finished, badly. Counting it as
+  // still working would leave the progress bar spinning under the error banner for the
+  // rest of the session, and hold the export gate shut on charts that are never coming.
+  // The banner says what is missing; the user can still export what did build.
+  const isComputing =
+    isCalculating ||
+    (handFiguresStale && !failures.handFigures) ||
+    (equityFigureStale && !failures.equityFigure)
 
   // The equity pass is the slow one, so its message is the one worth showing while it
   // runs. The bar itself is derived rather than taken from whichever layer wrote last:
@@ -161,50 +191,29 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
 
     const calculate = async () => {
       setIsCalculating(true)
+      clearFailure('data')
       setDataProgress({ messageKey: 'progress.chart.equityCache', percentage: 25 })
       await yieldToBrowser()
 
       try {
-        const { collectAllInDataAsync, calculateLuckScore } = await import(
-          '../visualization/handHistory/allInEquityAsync'
-        )
+        const [{ loadEquity }, { calculateLuckScore }] = await Promise.all([
+          import('../visualization/handHistory/equityStore'),
+          import('../visualization/handHistory/allInEquityAsync'),
+        ])
         if (isStale()) return
 
-        const uncachedHands = handHistories.filter(h => !equityCache.has(h.id))
-        const cachedCount = handHistories.length - uncachedHands.length
-
-        if (uncachedHands.length > 0) {
-          setDataProgress({
-            messageKey: 'progress.chart.equityCached',
-            messageParams: { cached: cachedCount, pending: uncachedHands.length },
-            percentage: 30,
-          })
-
-          const { data: newAllInData } = await collectAllInDataAsync(
-            uncachedHands,
-            (current, total) => {
-              if (isStale()) return
-              setDataProgress({
-                messageKey: 'progress.chart.equity',
-                messageParams: { current, total },
-                percentage: 30 + Math.floor((current / total) * 55),
-              })
-            }
-          )
-
-          // Bank before the staleness check. Equity is keyed by hand id and does not
-          // depend on which pass produced it, so results are always worth keeping —
-          // returning first would throw away every hand this pass already paid WASM
-          // for, and a pass does get superseded, by a second upload landing mid-pass.
-          for (const data of newAllInData) {
-            equityCache.set(data.handId, data)
-          }
+        // `loadEquity` owns both the cache and the record of what is currently being
+        // computed, so this pass never re-does a hand that an earlier, still-running
+        // pass is already working on — it waits for it instead.
+        const allInData = await loadEquity(handHistories, (current, total) => {
           if (isStale()) return
-        }
-
-        const allInData = handHistories
-          .map(h => equityCache.get(h.id))
-          .filter((d): d is AllInHandData => d !== undefined)
+          setDataProgress({
+            messageKey: 'progress.chart.equity',
+            messageParams: { current, total },
+            percentage: 30 + Math.floor((current / total) * 55),
+          })
+        })
+        if (isStale()) return
 
         // Luck is scored over every loaded hand, not just the latest batch.
         const luckScore = await calculateLuckScore(allInData)
@@ -216,12 +225,12 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
         setDrawProgress({ messageKey: 'progress.chart.allInEquity', percentage: 90 })
         setEquity({ allInData, luckScore })
         setIsCalculating(false)
-      } catch (error) {
-        console.error('Equity calculation failed:', error)
+      } catch (err) {
+        console.error('Equity calculation failed:', err)
         if (isStale()) return
         lastComputedRef.current = new Set() // Allow a retry on the next upload
         setIsCalculating(false)
-        setDataProgress({ messageKey: 'progress.chart.error', percentage: 0 })
+        fail('data', 'charts.equityFailed')
       }
     }
 
@@ -246,6 +255,7 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
     const isStale = () => handsIdRef.current !== thisId
 
     const draw = async () => {
+      clearFailure('handFigures')
       setDrawProgress({ messageKey: 'progress.chart.loadingModules', percentage: 5 })
       await yieldToBrowser()
 
@@ -270,10 +280,10 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
           from: handHistories,
           language,
         })
-      } catch (error) {
-        console.error('Chart generation failed:', error)
+      } catch (err) {
+        console.error('Chart generation failed:', err)
         if (isStale()) return
-        setDrawProgress({ messageKey: 'progress.chart.error', percentage: 0 })
+        fail('handFigures', 'charts.buildFailed')
       }
     }
 
@@ -295,6 +305,7 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
     const isStale = () => equityIdRef.current !== thisId
 
     const draw = async () => {
+      clearFailure('equityFigure')
       try {
         const { createAllInEquityChart } = await import(
           '../visualization/handHistory/allInEquityAsync'
@@ -305,10 +316,10 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
         if (isStale()) return
 
         setEquityFigure({ figure, from: equity, language })
-      } catch (error) {
-        console.error('All-in equity chart failed:', error)
+      } catch (err) {
+        console.error('All-in equity chart failed:', err)
         if (isStale()) return
-        setDrawProgress({ messageKey: 'progress.chart.error', percentage: 0 })
+        fail('equityFigure', 'charts.buildFailed')
       }
     }
 
@@ -344,6 +355,14 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
 
   return (
     <div className="charts-container">
+      {failureMessages.length > 0 && (
+        <div className="chart-error" role="alert">
+          {failureMessages.map(message => (
+            <p key={message}>{t(message)}</p>
+          ))}
+        </div>
+      )}
+
       {isComputing && (
         <div className="chart-loading">
           <div className="progress-bar">

@@ -122,6 +122,15 @@ function filterEligibleHands(handHistories: HandHistory[]): EligibleHand[] {
 }
 
 /**
+ * How long a worker may go without saying anything before it is presumed dead.
+ *
+ * Generous: it has to load a 686 KB preflop cache and instantiate WASM before its first
+ * message, and a hand on a slow machine is nowhere near this. What it bounds is silence,
+ * not work — the timer restarts on every message.
+ */
+const WORKER_SILENCE_LIMIT_MS = 60_000
+
+/**
  * Calculate equity using multiple parallel Web Workers
  */
 export async function collectAllInDataAsync(
@@ -175,13 +184,38 @@ export async function collectAllInDataAsync(
         { type: 'module' }
       )
 
+      // A worker that dies without a word — the browser OOM-killing one of eight, each
+      // holding a 686 KB cache and a WASM instance, is the realistic way — fires neither
+      // `message` nor `onerror`. Without this, its promise simply never settles: no
+      // result, no rejection, no error to catch, and the progress bar spins for the rest
+      // of the session. So treat a long enough silence as death.
+      let watchdog: ReturnType<typeof setTimeout>
+      const die = (reason: string) => {
+        clearTimeout(watchdog)
+        worker.terminate()
+        reject(new Error(reason))
+      }
+      const settle = () => clearTimeout(watchdog)
+      // Reset on every sign of life, so the limit is on *silence*, not on total runtime —
+      // a genuinely long batch keeps reporting progress and is never mistaken for dead.
+      const heardFrom = () => {
+        clearTimeout(watchdog)
+        watchdog = setTimeout(
+          () => die(`Equity worker ${workerIndex} stopped responding`),
+          WORKER_SILENCE_LIMIT_MS
+        )
+      }
+      heardFrom()
+
       worker.onmessage = (event: MessageEvent<EquityWorkerOutput>) => {
         const msg = event.data
+        heardFrom()
 
         if (msg.type === 'progress') {
           progressPerWorker[workerIndex] = msg.current
           updateProgress()
         } else if (msg.type === 'result') {
+          settle()
           worker.terminate()
           // Aggregate stats
           if (msg.stats) {
@@ -194,12 +228,14 @@ export async function collectAllInDataAsync(
             allInStreet: d.allInStreet as HandStage,
           })))
         } else if (msg.type === 'error') {
+          settle()
           worker.terminate()
           reject(new Error(msg.message))
         }
       }
 
       worker.onerror = (error) => {
+        settle()
         worker.terminate()
         reject(error)
       }
