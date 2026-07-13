@@ -47,10 +47,27 @@ jobs:
 
       # Prebuilt binary. `cargo install wasm-pack` compiles it from source and costs
       # minutes on every run, which is too much for a workflow that gates every PR.
+      #
+      # The version is PINNED, and must stay pinned. `version: 'latest'` asks the action to
+      # resolve the newest release from the GitHub API *unauthenticated* — and on a failure
+      # or a rate limit it does not error, it silently falls back to a hard-coded default:
+      #
+      #     return Promise.resolve(JSON.parse(body).tag_name || 'v0.9.1')
+      #
+      # v0.9.1 is from 2020 and ships a `wasm-opt` that predates the reference-types
+      # proposal, so it cannot even parse the module current Rust emits:
+      #
+      #     [parse exception: Only 1 table definition allowed in MVP]
+      #
+      # The failure is intermittent by construction — it depends on whether an API call is
+      # rate-limited, which is likeliest when two runs fire at once, as `push` and
+      # `pull_request` do for every PR. That is exactly how it presented: one commit, both
+      # events, one green (v0.15.0) and one red (v0.9.1). A rerun would have "fixed" it and
+      # taught us nothing.
       - name: Install wasm-pack
         uses: jetli/wasm-pack-action@v0.4.0
         with:
-          version: 'latest'
+          version: 'v0.15.0'
 
       # web/src/wasm/ is generated and gitignored, so tsc cannot resolve the module
       # without this.
