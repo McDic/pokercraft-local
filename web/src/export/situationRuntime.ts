@@ -156,8 +156,18 @@ class FigureBlock {
       window.Plotly.purge(this.plot)
       return
     }
-    void window.Plotly.react(this.plot, figure.traces, toLightLayout(figure.layout), {
+
+    // A chart that fails must say so. Swallowing this would leave a blank white box and no
+    // explanation — and the export would be the one surface in the app that hides a broken
+    // chart, which is the exact regression PR #32 ("show the user when a chart fails") fixed
+    // everywhere else. The message is deliberately not translated: it is a stack trace for a
+    // person who is about to file a bug, not prose for a reader.
+    window.Plotly.react(this.plot, figure.traces, toLightLayout(figure.layout), {
       responsive: true,
+    }).catch((error: unknown) => {
+      this.container.style.display = 'none'
+      this.empty.style.display = ''
+      this.empty.textContent = `Failed to draw this chart: ${String(error)}`
     })
   }
 }

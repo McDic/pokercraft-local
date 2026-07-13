@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { generateExportHTML, type ExportChart, type ExportSection } from './htmlExport'
+import type { SituationExport } from './situationPayload'
+import { DEFAULT_FILTERS } from '../visualization/handHistory/situationFilters'
+import { DEFAULT_SCOPE } from '../visualization/handHistory/handClassProfit'
 import { identityT } from '../test/i18n'
 
 function chart(overrides: Partial<ExportChart> = {}): ExportChart {
@@ -115,6 +118,95 @@ describe('generateExportHTML', () => {
 
     expect(html).toContain('<p class="chart-caption">Zero is folding.</p>')
     expect(html).toContain('<p class="chart-caption">Chip EV, not $EV.</p>')
+  })
+
+  describe('a live situation section', () => {
+    // This section is not a picture: it inlines a bundled runtime and a payload of decisions,
+    // and its dropdowns keep working after download. That makes it the one part of the export
+    // that ships *executable code plus user-derived data* in the same document, so it gets the
+    // scrutiny the static path already has.
+
+    function live(overrides: Partial<SituationExport> = {}): ExportSection {
+      return {
+        titleKey: 'export.section.situation',
+        prefix: 'situation',
+        charts: [],
+        situation: {
+          rows: [[2, 2, 0, 2, 2, 2.5, 30, 6, 1.25, 'Ah', 'Kd']],
+          filters: DEFAULT_FILTERS,
+          scope: DEFAULT_SCOPE,
+          strings: { 'chart.situation.empty': 'nothing here' },
+          droppedHands: 0,
+          ...overrides,
+        },
+      }
+    }
+
+    it('inlines the runtime and mounts it over the payload', () => {
+      const html = generateExportHTML([live()], identityT, 'en')
+
+      expect(html).toContain('<div id="situation-app"></div>')
+      expect(html).toContain('PokercraftSituation.mount(')
+      // The bundle really is in there, not just the call that needs it.
+      expect(html).toContain('var PokercraftSituation')
+      // A live section draws itself; a static `Plotly.newPlot` would be a second, stale copy.
+      expect(html).not.toContain('Plotly.newPlot(')
+    })
+
+    it('leaves the runtime out of an export that has no use for it', () => {
+      // It is ~13KB of dead weight in a tournament export, which has no filters to drive.
+      const html = generateExportHTML([section()], identityT, 'en')
+
+      expect(html).not.toContain('PokercraftSituation')
+    })
+
+    it('still draws the static sections beside it', () => {
+      const html = generateExportHTML(
+        [section(), live()],
+        identityT,
+        'en'
+      )
+
+      expect(html).toContain('Plotly.newPlot(')
+      expect(html).toContain('PokercraftSituation.mount(')
+      expect(html).toContain('id="tournament-0"')
+      expect(html).toContain('<div id="situation-app"></div>')
+    })
+
+    it('cannot be broken out of by a hostile card string in the payload', () => {
+      // Hole cards are parsed out of an uploaded hand-history file, so they are user input
+      // that lands inside an inline <script>. `JSON.stringify` escapes neither `<` nor `/`.
+      const html = generateExportHTML(
+        [live({ rows: [[2, 2, 0, 2, 2, null, 30, 6, 1, '</script><img src=x onerror=alert(1)>', 'Kd']] })],
+        identityT,
+        'en'
+      )
+
+      expect(html).not.toContain('</script><img')
+      expect(html).not.toContain('<img src=x')
+      expect(html).toContain('\\u003c/script>')
+    })
+
+    it('cannot be broken out of by a hostile translation string', () => {
+      // The whole dictionary rides along in the payload, so it is inside the script element too.
+      const html = generateExportHTML(
+        [live({ strings: { 'chart.situation.empty': '</script><img src=x onerror=alert(1)>' } })],
+        identityT,
+        'en'
+      )
+
+      expect(html).not.toContain('<img src=x')
+    })
+
+    it('emits exactly the script elements it authors', () => {
+      // Three: the Plotly CDN tag, the inlined runtime, and the bootstrap. A break-out — from
+      // the payload *or* from a `</script` sequence inside the bundle itself — would make a
+      // fourth closing tag, and orphan the rest of the page as text.
+      const html = generateExportHTML([live()], identityT, 'en')
+
+      expect(html.match(/<script/g) ?? []).toHaveLength(3)
+      expect(html.match(/<\/script>/g) ?? []).toHaveLength(3)
+    })
   })
 
   // Tournament names are copied verbatim out of the uploaded summary file, and land

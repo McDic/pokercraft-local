@@ -84,52 +84,59 @@ export interface SituationExport {
 }
 
 /**
- * The codes are `Record`s over the union, so the compiler refuses a new context, action or
- * opener bucket that has no wire representation — and the decode tables are *inverted from*
- * these rather than written out again, so the two can never disagree.
+ * The wire codes: a name's position in its list.
+ *
+ * The **list** is the source of truth, and the lookup is derived from it — not the other way
+ * round. Writing the codes out as a `Record<PreflopContext, number>` and inverting it looks
+ * equivalent and is not: a `Record` only checks that every name *has* a code, never that the
+ * codes are `0..n-1` and distinct. A typo giving two contexts the same number, or skipping
+ * one, yields a sparse inverse whose holes decode to `undefined` — and an `undefined` context
+ * matches no family, so those decisions would vanish from the exported charts and from nothing
+ * else. Deriving the codes from the order makes that unrepresentable.
+ *
+ * `satisfies` keeps the compiler's half of the bargain: a new context with no entry here is a
+ * build error, because the list would no longer cover the union.
  */
-const CONTEXT_CODES: Record<PreflopContext, number> = {
-  unopened: 0,
-  limped: 1,
-  raised: 2,
-  raisedCalled: 3,
-  threeBet: 4,
-  fourBetPlus: 5,
-}
+const CONTEXT_NAMES = [
+  'unopened',
+  'limped',
+  'raised',
+  'raisedCalled',
+  'threeBet',
+  'fourBetPlus',
+] as const satisfies readonly PreflopContext[]
 
-const ACTION_CODES: Record<HeroPreflopAction, number> = {
-  fold: 0,
-  check: 1,
-  call: 2,
-  raise: 3,
-}
+const ACTION_NAMES = ['fold', 'check', 'call', 'raise'] as const satisfies readonly HeroPreflopAction[]
 
-const OPENER_CODES: Record<OpenerBucket, number> = {
-  ep: 0,
-  mp: 1,
-  lp: 2,
-  blinds: 3,
-}
+const OPENER_NAMES = ['ep', 'mp', 'lp', 'blinds'] as const satisfies readonly OpenerBucket[]
 
-function invert<K extends string>(codes: Record<K, number>): K[] {
-  const names: K[] = []
-  for (const [name, code] of Object.entries(codes) as Array<[K, number]>) {
-    names[code] = name
-  }
-  return names
-}
-
-const CONTEXT_NAMES = invert(CONTEXT_CODES)
-const ACTION_NAMES = invert(ACTION_CODES)
-const OPENER_NAMES = invert(OPENER_CODES)
+/**
+ * Every member of the union has to be in the list, or `packSituation` would emit -1 for it.
+ *
+ * `satisfies` above proves the list holds only *valid* names; these prove it holds *all* of
+ * them. Both directions are needed — a list missing `fourBetPlus` still satisfies
+ * `readonly PreflopContext[]`, and would quietly encode every call-vs-4-bet as `-1`.
+ */
+type Covers<Union extends string, List extends readonly string[]> = Exclude<
+  Union,
+  List[number]
+> extends never
+  ? true
+  : never
+const _contextsCovered: Covers<PreflopContext, typeof CONTEXT_NAMES> = true
+const _actionsCovered: Covers<HeroPreflopAction, typeof ACTION_NAMES> = true
+const _openersCovered: Covers<OpenerBucket, typeof OPENER_NAMES> = true
+void _contextsCovered
+void _actionsCovered
+void _openersCovered
 
 export function packSituation(s: PreflopSituation): PackedSituation {
   return [
-    CONTEXT_CODES[s.context],
-    ACTION_CODES[s.action],
+    CONTEXT_NAMES.indexOf(s.context),
+    ACTION_NAMES.indexOf(s.action),
     s.allIn ? 1 : 0,
     s.heroOffset,
-    s.openerBucket === null ? -1 : OPENER_CODES[s.openerBucket],
+    s.openerBucket === null ? -1 : OPENER_NAMES.indexOf(s.openerBucket),
     s.raiseToBB,
     s.heroStackBB,
     s.tableSize,

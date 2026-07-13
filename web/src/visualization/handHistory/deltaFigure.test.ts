@@ -37,8 +37,19 @@ const MAX_WIDTH = 80
  * have to agree, and that agreement is the test.
  */
 function renderedWidth(line: string): number {
-  // Hangul syllables and jamo: the full-width glyphs in the languages we ship.
-  return line.length + (line.match(/[ᄀ-ᇿ㄰-㆏가-힣]/g) ?? []).length
+  // Hangul: syllables and leading jamo are two columns; medial and final jamo are zero, because
+  // they compose *into* the preceding block rather than sitting beside it. Everything else is
+  // one.
+  //
+  // Independent of `displayWidth`, but not permitted to *disagree* with it — an independent
+  // ruler that measures a different thing is not a check, it is a second bug. `agrees with the
+  // ruler the wrap tests measure with` pins the two together.
+  let width = 0
+  for (const char of line) {
+    if (/[ᅠ-ᇿힰ-퟿]/.test(char)) continue // combining jamo
+    width += /[ᄀ-ᅟꥠ-꥿㄰-㆏가-힣]/.test(char) ? 2 : 1
+  }
+  return width
 }
 
 /** What Plotly actually renders: `<br>`-separated lines, with the markup stripped. */
@@ -63,6 +74,36 @@ describe('displayWidth', () => {
     expect(displayWidth('Iso-raise vs. limpers')).toBe(21)
     // Δ, ± and · are ambiguous-width, and render narrow in the font Plotly uses.
     expect(displayWidth('Δbb ±2.5 · n=30')).toBe(15)
+  })
+
+  it('counts a decomposed Hangul syllable the same as a composed one', () => {
+    // NFD text — three jamo per syllable — comes out of macOS filenames and some IMEs, so
+    // which form a translation arrives in is a question of where the string came from, not of
+    // the language. A ruler that only handled the leading consonant would under-measure a
+    // decomposed line by a third and quietly overrun the wrap budget.
+    const composed = '오픈'
+    const decomposed = composed.normalize('NFD')
+
+    expect(decomposed.length).toBeGreaterThan(composed.length) // it really did decompose
+    expect(displayWidth(decomposed)).toBe(displayWidth(composed))
+  })
+
+  it('agrees with the ruler the wrap tests measure with', () => {
+    // The two implementations are deliberately separate — see `renderedWidth`. Separate is the
+    // point; *different* would mean the wrap tests are measuring something the wrapper is not.
+    // Sampled across every block either one claims to cover.
+    const samples = [
+      'Iso-raise vs. limpers',
+      '림퍼 상대 아이소 레이즈',
+      '오픈'.normalize('NFD'),
+      'Δbb ±2.5 · n=30',
+      'ㄱㄴㄷ', // compatibility jamo
+      '3벳 (n=1322)',
+      '',
+    ]
+    for (const sample of samples) {
+      expect(displayWidth(sample), JSON.stringify(sample)).toBe(renderedWidth(sample))
+    }
   })
 })
 

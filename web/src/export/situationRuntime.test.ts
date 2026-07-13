@@ -27,20 +27,36 @@ import type { SituationExport } from './situationPayload'
 
 const strings = en as Record<string, string>
 
-/** Every Plotly call the runtime makes, in order. */
+/**
+ * Every Plotly call the runtime makes, in order — and the caption it rendered alongside it.
+ *
+ * The caption is captured because it is where the *counts* live: `hidden`, `inScope`,
+ * `noCards`, `droppedHands`, and the exclusion tallies. Those are precisely the numbers that a
+ * wire format dropping 78% of the decisions could disturb without touching a single bar, so a
+ * conformance test that compared only `traces` would be blind to the one thing most likely to
+ * break. It is read back out of the DOM rather than intercepted, so what is compared is what
+ * the reader actually sees.
+ */
 interface Drawn {
   el: HTMLElement
   traces: unknown[]
   layout: Record<string, unknown>
+  caption: string[]
 }
 
 let drawn: Drawn[] = []
+
+/** The caption paragraphs of the figure block `el` was plotted into. */
+function captionOf(el: HTMLElement): string[] {
+  const block = el.closest('section')
+  return [...(block?.querySelectorAll('p.chart-caption') ?? [])].map(p => p.textContent ?? '')
+}
 
 beforeEach(() => {
   drawn = []
   ;(window as unknown as { Plotly: unknown }).Plotly = {
     react: vi.fn((el: HTMLElement, traces: unknown[], layout: Record<string, unknown>) => {
-      drawn.push({ el, traces, layout })
+      drawn.push({ el, traces, layout, caption: captionOf(el) })
       return Promise.resolve()
     }),
     purge: vi.fn(),
@@ -162,13 +178,21 @@ describe('mount', () => {
 
     mount(root, payload(situations))
 
+    const ledger = getSituationLedgerData(situations, DEFAULT_FILTERS, t, 0)
+    const handClass = getHandClassProfitData(situations, DEFAULT_FILTERS, DEFAULT_SCOPE, t)
+
     expect(drawn).toHaveLength(2)
-    expect(drawn[0].traces).toEqual(
-      getSituationLedgerData(situations, DEFAULT_FILTERS, t, 0).traces
-    )
-    expect(drawn[1].traces).toEqual(
-      getHandClassProfitData(situations, DEFAULT_FILTERS, DEFAULT_SCOPE, t).traces
-    )
+
+    // The bars, the intervals, the colours...
+    expect(drawn[0].traces).toEqual(ledger.traces)
+    expect(drawn[1].traces).toEqual(handClass.traces)
+
+    // ...and the prose, which is where the counts are. `corpus()` deliberately includes folds,
+    // which the payload drops — so if dropping them changed any tally, it would surface right
+    // here, in a caption that no longer matches the app's.
+    expect(drawn[0].caption).toEqual(ledger.caption)
+    expect(drawn[1].caption).toEqual(handClass.caption)
+    expect(drawn[0].caption.length).toBeGreaterThan(0) // or the two lines above compare nothing
   })
 
   it('renders one control per descriptor, and starts on the exported state', () => {

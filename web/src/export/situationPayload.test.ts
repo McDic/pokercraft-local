@@ -8,6 +8,10 @@
 
 import { describe, it, expect } from 'vitest'
 import type { PreflopSituation } from '../analysis/preflopSituation'
+import { identityT } from '../test/i18n'
+import { getSituationLedgerData } from '../visualization/handHistory/situationLedger'
+import { getHandClassProfitData, DEFAULT_SCOPE } from '../visualization/handHistory/handClassProfit'
+import { DEFAULT_FILTERS } from '../visualization/handHistory/situationFilters'
 import { exportableSituations, packSituation, unpackSituation } from './situationPayload'
 
 function situation(overrides: Partial<PreflopSituation> = {}): PreflopSituation {
@@ -68,6 +72,30 @@ describe('packSituation / unpackSituation', () => {
     expect(unpackSituation(packSituation(situation({ openerBucket: null }))).openerBucket).toBeNull()
   })
 
+  it('round-trips an all-in', () => {
+    // `allIn` is read by exactly one family — the open jam — and it is the only boolean on the
+    // wire, so it is the one field a truthiness bug could flip without anything else noticing.
+    // An open raise filed as an open jam would move a whole row of the ledger.
+    expect(unpackSituation(packSituation(situation({ allIn: true }))).allIn).toBe(true)
+    expect(unpackSituation(packSituation(situation({ allIn: false }))).allIn).toBe(false)
+  })
+
+  it('keeps an open jam apart from an open raise, through the charts', () => {
+    // The end of that story: the two differ only in `allIn`, and they are different rows.
+    const jams = Array.from({ length: 40 }, (_, i) =>
+      situation({ context: 'unopened', action: 'raise', allIn: true, deltaBB: i / 4 })
+    )
+    const raises = Array.from({ length: 40 }, (_, i) =>
+      situation({ context: 'unopened', action: 'raise', allIn: false, deltaBB: -i / 4 })
+    )
+    const packed = exportableSituations([...jams, ...raises]).map(unpackSituation)
+
+    const rows = getSituationLedgerData(packed, DEFAULT_FILTERS, identityT, 0).layout.yaxis
+      ?.ticktext as string[]
+    expect(rows.some(r => r.includes('chart.situation.family.openJam'))).toBe(true)
+    expect(rows.some(r => r.includes('chart.situation.family.rfi'))).toBe(true)
+  })
+
   it('keeps a missing hand missing', () => {
     expect(unpackSituation(packSituation(situation({ cards: null }))).cards).toBeNull()
     expect(unpackSituation(packSituation(situation({ raiseToBB: null }))).raiseToBB).toBeNull()
@@ -126,17 +154,36 @@ describe('exportableSituations', () => {
     expect(rows.map(unpackSituation).map(s => s.action)).toEqual(['call', 'raise', 'check'])
   })
 
-  it('is safe to drop them, because no chart can draw one', () => {
-    // The justification, asserted rather than asserted-in-a-comment. Δ is *defined* as profit
-    // relative to folding, so a fold scores exactly zero and neither chart has a row for it:
-    // `buildLedgerRows` finds no family (`familyIndex < 0`) and skips it. Folds are 78% of the
-    // decisions in a real corpus and 0% of the picture — but if that ever stops being true,
-    // this format is silently missing most of the data, so the claim is pinned here.
-    const folds = [
-      situation({ action: 'fold', context: 'unopened' }),
-      situation({ action: 'fold', context: 'raised' }),
-      situation({ action: 'fold', context: 'threeBet' }),
+  it('is safe to drop them, because neither chart can draw one', () => {
+    // Driven through the *real* builders, because the claim is about them.
+    //
+    // An earlier version of this test asserted `exportableSituations(folds) === []`, which is
+    // the definition of the function rather than a fact about the charts — it would have
+    // stayed green while the export quietly lost 78% of its data. What has to be true is that
+    // a fold changes *nothing a chart shows*: not a row, not a `hidden` count, not `inScope`,
+    // not a caption. So both figures are built with the folds and without them, and compared
+    // whole — traces and caption alike.
+    const decisions = [
+      ...Array.from({ length: 40 }, (_, i) => situation({ deltaBB: i - 20 })),
+      ...Array.from({ length: 40 }, (_, i) =>
+        situation({ context: 'unopened', action: 'raise', deltaBB: i / 4 })
+      ),
     ]
-    expect(exportableSituations(folds)).toEqual([])
+    const folds: PreflopSituation[] = [
+      situation({ action: 'fold', context: 'unopened', deltaBB: 0 }),
+      situation({ action: 'fold', context: 'raised', deltaBB: 0 }),
+      situation({ action: 'fold', context: 'threeBet', deltaBB: 0 }),
+      // A fold is Δ=0 *by construction*; one that is not would be a classifier bug, and it
+      // must still not sneak into a chart through this format.
+      situation({ action: 'fold', context: 'raised', deltaBB: 99 }),
+    ]
+
+    const withFolds = [...decisions, ...folds]
+    expect(getSituationLedgerData(withFolds, DEFAULT_FILTERS, identityT, 0)).toEqual(
+      getSituationLedgerData(decisions, DEFAULT_FILTERS, identityT, 0)
+    )
+    expect(getHandClassProfitData(withFolds, DEFAULT_FILTERS, DEFAULT_SCOPE, identityT)).toEqual(
+      getHandClassProfitData(decisions, DEFAULT_FILTERS, DEFAULT_SCOPE, identityT)
+    )
   })
 })

@@ -79,18 +79,36 @@ export interface DeltaRow {
  * hover text it wraps to is twice as wide as the budget claims. That is precisely the bug
  * `wrap` exists to prevent, re-created by the act of translating.
  *
- * The ranges are the East Asian Wide and Fullwidth blocks: Hangul (jamo, compatibility
- * jamo, and the syllables themselves), kana, the CJK ideographs, and fullwidth punctuation.
- * `Δ`, `±` and `·` are ambiguous-width and counted as one, which is what they render as in
- * the sans-serif Plotly draws hover text in.
+ * The wide ranges are the East Asian Wide and Fullwidth blocks: Hangul syllables and the
+ * leading jamo, the compatibility jamo, kana, the CJK ideographs, and fullwidth punctuation.
+ * `Δ`, `±` and `·` are ambiguous-width and counted as one, which is what they render as in the
+ * sans-serif Plotly draws hover text in.
+ *
+ * ## Combining jamo are zero, not two
+ *
+ * A Hangul syllable can arrive *decomposed* — `오` as ᄋ + ᅩ rather than as one code point.
+ * That happens for reasons that have nothing to do with the language (macOS filenames and some
+ * IMEs emit NFD), so it is a property of where a string came from, not of Korean. The medial
+ * and final jamo are **combining**: they render *into* the preceding syllable block rather than
+ * beside it, so `오` occupies two columns whether it is one code point or two. Counting each
+ * jamo as full-width would measure that syllable at four and wrap the line half as wide as it
+ * should be — the same bug as `String.length`, from the other direction.
  */
+function isCombiningJamo(codePoint: number): boolean {
+  return (
+    (codePoint >= 0x1160 && codePoint <= 0x11ff) || // jamo medial and final
+    (codePoint >= 0xd7b0 && codePoint <= 0xd7ff) // jamo extended-B (medial, final)
+  )
+}
+
 function isFullWidth(codePoint: number): boolean {
   return (
-    (codePoint >= 0x1100 && codePoint <= 0x115f) || // Hangul jamo
+    (codePoint >= 0x1100 && codePoint <= 0x115f) || // Hangul jamo initial
     (codePoint >= 0x2e80 && codePoint <= 0x303e) || // CJK radicals, symbols, punctuation
     (codePoint >= 0x3041 && codePoint <= 0x33ff) || // kana, compatibility jamo, CJK compat
     (codePoint >= 0x3400 && codePoint <= 0x4dbf) || // CJK extension A
     (codePoint >= 0x4e00 && codePoint <= 0x9fff) || // CJK unified ideographs
+    (codePoint >= 0xa960 && codePoint <= 0xa97f) || // Hangul jamo extended-A (initial)
     (codePoint >= 0xac00 && codePoint <= 0xd7a3) || // Hangul syllables
     (codePoint >= 0xf900 && codePoint <= 0xfaff) || // CJK compatibility ideographs
     (codePoint >= 0xfe30 && codePoint <= 0xfe6f) || // CJK compatibility forms
@@ -104,7 +122,9 @@ export function displayWidth(text: string): number {
   // Iterating the string yields code points, not UTF-16 units, so an astral character
   // counts once rather than twice for being a surrogate pair.
   for (const char of text) {
-    width += isFullWidth(char.codePointAt(0)!) ? 2 : 1
+    const codePoint = char.codePointAt(0)!
+    if (isCombiningJamo(codePoint)) continue
+    width += isFullWidth(codePoint) ? 2 : 1
   }
   return width
 }
@@ -137,8 +157,11 @@ function wrap(text: string, width = 64): string {
       line = word
       lineWidth = wordWidth
     } else {
+      // Both branches test `line`, not `lineWidth`: "is there already a word on this line", so
+      // "do we need a space". They agree today only because every non-empty word has width ≥ 1,
+      // which is a coincidence of the data and not the question being asked.
+      lineWidth = line ? lineWidth + 1 + wordWidth : wordWidth
       line = line ? `${line} ${word}` : word
-      lineWidth = lineWidth ? lineWidth + 1 + wordWidth : wordWidth
     }
   }
   if (line) lines.push(line)
