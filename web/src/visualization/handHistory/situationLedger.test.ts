@@ -14,7 +14,13 @@
 import { describe, it, expect } from 'vitest'
 import type { PreflopContext, HeroPreflopAction, PreflopSituation } from '../../analysis/preflopSituation'
 import { DEFAULT_FILTERS } from './situationFilters'
-import { EXCLUSIONS, FAMILIES, buildLedgerRows, getSituationLedgerData } from './situationLedger'
+import {
+  EXCLUSIONS,
+  FAMILIES,
+  POSITIONS,
+  buildLedgerRows,
+  getSituationLedgerData,
+} from './situationLedger'
 
 /** A stub translator: the ledger only ever uses keys for labels, so echoing them is enough. */
 const t = ((key: string, values?: Record<string, unknown>) =>
@@ -65,7 +71,7 @@ const REACHABLE: Array<[PreflopContext, HeroPreflopAction]> = [
 ]
 
 /** Every seat the ledger has a row for. An exclusion may carve out just one of them. */
-const OFFSETS = [-5, -4, -3, -2, -1, 0, 1, 2]
+const OFFSETS = POSITIONS.map(([offset]) => offset)
 
 function everySituation(): PreflopSituation[] {
   return REACHABLE.flatMap(([context, action]) =>
@@ -97,6 +103,12 @@ describe('family coverage', () => {
         // Folds are the baseline: Δ is 0 by construction, so a fold row would be a row of
         // zeros. They are left out on purpose, not by omission.
         if (families.length || exclusions.length) wrong.push(`${label}: a fold needs no home`)
+        continue
+      }
+      // Two families matching is a bug whether or not an exclusion also covers it: the
+      // exclusion could later be narrowed, and the double-match would surface only then.
+      if (families.length > 1) {
+        wrong.push(`${label}: matched ${families.length} families, which double-counts it`)
         continue
       }
       if (exclusions.length === 1) continue // deliberately withheld, and counted in the caption
@@ -179,6 +191,33 @@ describe('buildLedgerRows', () => {
       { key: 'chart.situation.excluded.limpedCheck', n: 40 },
       { key: 'chart.situation.excluded.fiveBet', n: 7 },
     ])
+  })
+
+  it('lets an exclusion override the family it overlaps, and keeps the rest of that family', () => {
+    // The one behaviour in this file that a plausible refactor silently undoes. `buildLedgerRows`
+    // tests exclusions *before* families; hoist the family lookup above it — a natural
+    // micro-optimisation, since the family path is the common one — and "Iso-raise · BB"
+    // quietly returns as a row while its caption line quietly disappears. Every other test in
+    // the suite passes either way, because they interrogate the FAMILIES and EXCLUSIONS tables
+    // directly and never go through the builder. This one goes through the builder.
+    const { rows, hidden, excluded } = buildLedgerRows(
+      [
+        ...many(40, { context: 'limped', action: 'raise', heroOffset: 2, deltaBB: 10 }), // BB: excluded
+        ...many(40, { context: 'limped', action: 'raise', heroOffset: -1, deltaBB: 0 }), // CO: charted
+      ],
+      { ...DEFAULT_FILTERS, minSample: 30 },
+      t
+    )
+
+    // The seat is carved out; the family survives everywhere else.
+    expect(rows).toHaveLength(1)
+    expect(rows[0].label).toContain('chart.situation.family.isoRaise')
+    expect(rows[0].label).toContain('position.co')
+    expect(rows[0].n).toBe(40)
+    expect(rows[0].mean).toBeCloseTo(0) // not 5 — the +10 BB hands are not averaged in
+
+    expect(excluded).toEqual([{ key: 'chart.situation.excluded.isoRaiseBB', n: 40 }])
+    expect(hidden).toBe(0) // withheld on principle, not for sample size
   })
 
   it('says in the caption what it left out', () => {

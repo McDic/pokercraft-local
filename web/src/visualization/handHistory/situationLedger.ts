@@ -33,14 +33,17 @@ interface Family {
 }
 
 /**
- * Every non-fold decision `classifyHand` can emit, matched by exactly one family.
+ * Every non-fold decision `classifyHand` can emit is matched by exactly one family —
+ * **unless it is declared in `EXCLUSIONS` below**, which is the only way out.
  *
- * That "exactly one, and none left over" is not a style rule — it is asserted in
+ * That "exactly one, and nothing left over" is not a style rule; it is asserted in
  * situationLedger.test.ts, because the failure it guards against is invisible. A decision
- * no family matches is computed, correct, and then silently dropped: it never becomes a
- * row, and it is not counted among the hidden ones either. A player bleeding a big blind
- * on every over-limp would open this chart, find no over-limp row, and conclude limping is
- * not one of their leaks. (This is exactly what shipped in the first draft.)
+ * that matches no family and no exclusion is computed, correct, and then silently dropped:
+ * it never becomes a row, and it is not counted among the hidden ones either. A player
+ * bleeding a big blind on every over-limp would open this chart, find no over-limp row, and
+ * conclude limping is not one of their leaks. (This is exactly what shipped in the first
+ * draft.) An exclusion is the *declared*, counted, captioned way to leave a decision out;
+ * deleting a family is the silent one.
  *
  * Ordered by how much is already in the pot when Hero acts — the axis the caption tells
  * the reader to compare along. Declared rather than derived: `callSites.test.ts` requires
@@ -62,14 +65,30 @@ export const FAMILIES: Family[] = [
   { key: 'chart.situation.family.callVs4Bet', match: s => s.context === 'fourBetPlus' && s.action === 'call' },
 ]
 
+export interface Exclusion {
+  /** Why, shown in the caption with its count. */
+  key: TranslationKey
+  match: (s: PreflopSituation) => boolean
+}
+
+/** The big blind, where a limped pot can be checked for nothing. */
+const BB = 2
+
 /**
- * Decisions the ledger deliberately does not draw — and says so, with a count.
+ * Decisions the charts deliberately do not draw — and say so, with a count.
  *
  * A family list that simply omitted these would *orphan* them: computed, correct, and then
  * dropped without a trace. That is the exact bug the coverage test was written to catch, so
- * an exclusion has to be declared, not implied. Checked *before* the families, so an
- * exclusion overrides a family it overlaps — which is how a single seat can be carved out
- * of a family that is otherwise sound.
+ * an exclusion has to be declared, not implied.
+ *
+ * **Checked before the families, and that ordering is load-bearing** — it is what lets an
+ * exclusion override a family it overlaps, and so carve a single *seat* out of a family that
+ * is otherwise sound. Flip the two and the big blind's iso-raise silently returns as a row.
+ * Pinned by a test through `buildLedgerRows`, not merely by reading the tables.
+ *
+ * **Binding on both charts.** `handClassProfit.ts` applies the same gate. The two sit on one
+ * screen over one `situations` array, scoring the same Δ against the same baseline; a
+ * decision cannot be a category error above and a legitimate row below.
  *
  * The coverage test asserts the surviving invariant: every reachable decision is a fold, or
  * excluded, or matched by exactly one family. Never nothing.
@@ -81,15 +100,6 @@ export const FAMILIES: Family[] = [
  * of its options therefore beat folding automatically, and the number says nothing about
  * either. It is a category error, not a thin sample, and no amount of data fixes it.
  */
-export interface Exclusion {
-  /** Why, shown in the caption with its count. */
-  key: TranslationKey
-  match: (s: PreflopSituation) => boolean
-}
-
-/** The big blind, where a limped pot can be checked for nothing. */
-const BB = 2
-
 export const EXCLUSIONS: Exclusion[] = [
   {
     // "Beat folding" is a bar that clears itself here: the row read +1.35bb and could not
@@ -232,7 +242,7 @@ export function getSituationLedgerData(
   // cannot see what values they are handed and rightly refuses to vouch for a placeholder
   // it cannot check. Keeping the count in the wrapper puts it back where the test can see it.
   for (const { key, n } of excluded) {
-    caption.push(t('chart.situation.ledger.caption.excluded', { n, reason: t(key) }))
+    caption.push(t('chart.situation.caption.excluded', { n, reason: t(key) }))
   }
 
   if (droppedHands > 0) {

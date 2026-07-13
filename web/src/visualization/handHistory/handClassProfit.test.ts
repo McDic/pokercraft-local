@@ -5,6 +5,8 @@ import { DEFAULT_FILTERS } from './situationFilters'
 import { FAMILIES } from './situationLedger'
 import { DEFAULT_SCOPE, buildHandClassRows, getHandClassProfitData } from './handClassProfit'
 
+const ISO = FAMILIES.findIndex(f => f.key === 'chart.situation.family.isoRaise')
+
 const t = ((key: string, values?: Record<string, unknown>) =>
   values ? `${key}(${JSON.stringify(values)})` : key) as never
 
@@ -105,6 +107,61 @@ describe('buildHandClassRows', () => {
     )
     expect(rows).toEqual([])
     expect(hidden).toBe(1)
+  })
+
+  describe("the ledger's exclusions bind here too", () => {
+    // The two charts sit on one screen over one `situations` array, scoring the same Δ
+    // against the same fold baseline. A decision the ledger calls a category error — the big
+    // blind's iso-raise, chosen against a *free check* and never against folding — cannot be
+    // a category error above and a legitimate row below. This chart used to score them.
+    const isoRaises = [
+      ...Array.from({ length: 40 }, () =>
+        flat({ context: 'limped', action: 'raise', heroOffset: 2, deltaBB: 10 })
+      ), // BB: excluded
+      ...Array.from({ length: 40 }, () =>
+        flat({ context: 'limped', action: 'raise', heroOffset: -1, deltaBB: 0 })
+      ), // CO: fine
+    ]
+
+    it('refuses to break down a seat the ledger will not score', () => {
+      const { rows, excluded, inScope } = buildHandClassRows(
+        isoRaises,
+        { ...DEFAULT_FILTERS, minSample: 30 },
+        { familyIndex: ISO, heroOffset: 2 },
+        t
+      )
+      expect(rows).toEqual([])
+      expect(inScope).toBe(40)
+      expect(excluded).toEqual([{ key: 'chart.situation.excluded.isoRaiseBB', n: 40 }])
+    })
+
+    it('does not quietly average the excluded seat into the pooled view', () => {
+      // The worse of the two failures, because it is the *default*: pooled across positions,
+      // the excluded BB hands would be blended into the legitimate ones and nothing on the
+      // page would say so. Mean would read 5 instead of 0, on n=80 instead of 40.
+      const { rows, excluded } = buildHandClassRows(
+        isoRaises,
+        { ...DEFAULT_FILTERS, minSample: 30 },
+        { familyIndex: ISO, heroOffset: null },
+        t
+      )
+      expect(rows).toHaveLength(1)
+      expect(rows[0].n).toBe(40)
+      expect(rows[0].mean).toBeCloseTo(0)
+      expect(excluded).toEqual([{ key: 'chart.situation.excluded.isoRaiseBB', n: 40 }])
+    })
+
+    it('says why it is empty rather than just being empty', () => {
+      const { traces, caption } = getHandClassProfitData(
+        isoRaises,
+        { ...DEFAULT_FILTERS, minSample: 30 },
+        { familyIndex: ISO, heroOffset: 2 },
+        t
+      )
+      expect(traces).toEqual([])
+      // An unexplained blank chart is the same silent absence the exclusions exist to prevent.
+      expect(caption.join('\n')).toContain('chart.situation.excluded.isoRaiseBB')
+    })
   })
 
   it('counts what is in scope, whatever becomes of it', () => {

@@ -22,7 +22,7 @@ import type { DeltaFigure, DeltaRow } from './deltaFigure'
 import { buildDeltaFigure, summarize } from './deltaFigure'
 import type { SituationFilters } from './situationFilters'
 import { passesFilters } from './situationFilters'
-import { FAMILIES, POSITIONS } from './situationLedger'
+import { EXCLUSIONS, FAMILIES, POSITIONS } from './situationLedger'
 
 /** Which decision to break down, and from where. `heroOffset: null` pools every position. */
 export interface HandClassScope {
@@ -72,7 +72,13 @@ export function buildHandClassRows(
   filters: SituationFilters,
   scope: HandClassScope,
   t: Translate
-): { rows: DeltaRow[]; hidden: number; noCards: number; inScope: number } {
+): {
+  rows: DeltaRow[]
+  hidden: number
+  noCards: number
+  inScope: number
+  excluded: Array<{ key: TranslationKey; n: number }>
+} {
   const family = FAMILIES[scope.familyIndex]
   const deltas = new Map<HandClass, number[]>()
 
@@ -86,12 +92,27 @@ export function buildHandClassRows(
   // should be zero — but a truncated file would otherwise just quietly shrink every class.
   let noCards = 0
 
+  // The ledger's exclusions bind here too. They have to: the two charts sit on one screen,
+  // over one `situations` array, scoring the same Δbb against the same fold baseline. A
+  // decision the ledger calls a category error — the big blind's iso-raise, which is chosen
+  // against a *free check*, never against folding — cannot be a category error above and a
+  // legitimate row below. Worse than the explicit "Iso-raise + Big blind" case is the
+  // default one: pooled across positions, the excluded hands would be silently averaged in
+  // with the legitimate ones and nothing on the page would say so.
+  const excludedCounts = new Map<TranslationKey, number>()
+
   for (const s of situations) {
     if (!family?.match(s)) continue
     if (scope.heroOffset !== null && s.heroOffset !== scope.heroOffset) continue
     if (!passesFilters(s, filters)) continue
 
     inScope++
+
+    const exclusion = EXCLUSIONS.find(e => e.match(s))
+    if (exclusion) {
+      excludedCounts.set(exclusion.key, (excludedCounts.get(exclusion.key) ?? 0) + 1)
+      continue
+    }
 
     const handClass = s.cards ? classOfHand(s.cards) : null
     if (handClass === null) {
@@ -103,6 +124,12 @@ export function buildHandClassRows(
     if (bucket) bucket.push(s.deltaBB)
     else deltas.set(handClass, [s.deltaBB])
   }
+
+  // Declaration order, so the caption reads the same way every time.
+  const excluded = EXCLUSIONS.flatMap(e => {
+    const n = excludedCounts.get(e.key) ?? 0
+    return n > 0 ? [{ key: e.key, n }] : []
+  })
 
   const rows: DeltaRow[] = []
   let hidden = 0
@@ -127,7 +154,7 @@ export function buildHandClassRows(
     })
   }
 
-  return { rows, hidden, noCards, inScope }
+  return { rows, hidden, noCards, inScope, excluded }
 }
 
 export function getHandClassProfitData(
@@ -136,7 +163,12 @@ export function getHandClassProfitData(
   scope: HandClassScope,
   t: Translate
 ): DeltaFigure {
-  const { rows, hidden, noCards, inScope } = buildHandClassRows(situations, filters, scope, t)
+  const { rows, hidden, noCards, inScope, excluded } = buildHandClassRows(
+    situations,
+    filters,
+    scope,
+    t
+  )
 
   const family = FAMILIES[scope.familyIndex]
   const positionKey =
@@ -158,6 +190,14 @@ export function getHandClassProfitData(
   if (hidden > 0) {
     caption.push(t('chart.handClass.caption.hidden', { hidden }))
   }
+
+  // Why the rows are missing, in the same words the ledger uses. Skipping them silently
+  // would trade a wrong chart for an unexplained blank one — the same absence this whole
+  // mechanism exists to prevent.
+  for (const { key, n } of excluded) {
+    caption.push(t('chart.situation.caption.excluded', { n, reason: t(key) }))
+  }
+
   if (noCards > 0) {
     caption.push(t('chart.handClass.caption.noCards', { noCards }))
   }
