@@ -32,7 +32,13 @@ export function getRRByRankData(tournaments: TournamentSummary[], t: Translate):
         peRR: (tour.myRank / tour.totalPlayers) * rr, // Percentile * RR
       }
     })
-    .filter(d => d.rr > 0 && !isNaN(d.rr))
+    // Every axis bound, and every plotted point, is derived from what survives here — so
+    // this filter is where non-finite values have to be stopped. `rankPercentile` is
+    // `myRank / totalPlayers`, which a zero field would make Infinity or NaN, and that
+    // then reaches `minPercentile`, the x-axis range, `customdata`, and the export.
+    .filter(
+      d => d.rr > 0 && !isNaN(d.rr) && d.rankPercentile > 0 && Number.isFinite(d.rankPercentile)
+    )
 
   // Every axis bound below is computed from this data, so with none of it `minPercentile`
   // stays Infinity and the x-axis range becomes [0, Infinity] — which Plotly cannot use,
@@ -178,7 +184,10 @@ export function getRRByRankData(tournaments: TournamentSummary[], t: Translate):
       // ITM cutoff vertical line (12.5%)
       {
         type: 'line',
+        name: 'itm-cut', // so a test can name the shape it means, rather than describe it
         xref: 'x',
+        // Data coordinates — a shape's, unlike an annotation's, are NOT log10. See the
+        // note on the matching label below.
         x0: 1 / 8,
         x1: 1 / 8,
         yref: 'paper',

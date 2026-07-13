@@ -67,6 +67,7 @@
 
   "chart.historical.name": "Historical Performance",
   "chart.historical.title": "Historical Performance",
+  "chart.historical.noData": "No tournaments to plot",
   "chart.historical.legendGroup.profitsRakes": "Profits & Rakes",
   "chart.historical.legendGroup.profitableRatio": "Profitable Ratio",
   "chart.historical.legendGroup.avgBuyIn": "Avg Buy-In",
