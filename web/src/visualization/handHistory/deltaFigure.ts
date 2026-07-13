@@ -71,6 +71,45 @@ export interface DeltaRow {
 }
 
 /**
+ * How wide a string renders, in units of one Latin character.
+ *
+ * A budget counted in `String.length` is a budget in the wrong unit the moment the text is
+ * not English. CJK glyphs are *full-width* — a Hangul syllable occupies about two Latin
+ * characters — so 64 characters of Korean is roughly 128 characters of English, and the
+ * hover text it wraps to is twice as wide as the budget claims. That is precisely the bug
+ * `wrap` exists to prevent, re-created by the act of translating.
+ *
+ * The ranges are the East Asian Wide and Fullwidth blocks: Hangul (jamo, compatibility
+ * jamo, and the syllables themselves), kana, the CJK ideographs, and fullwidth punctuation.
+ * `Δ`, `±` and `·` are ambiguous-width and counted as one, which is what they render as in
+ * the sans-serif Plotly draws hover text in.
+ */
+function isFullWidth(codePoint: number): boolean {
+  return (
+    (codePoint >= 0x1100 && codePoint <= 0x115f) || // Hangul jamo
+    (codePoint >= 0x2e80 && codePoint <= 0x303e) || // CJK radicals, symbols, punctuation
+    (codePoint >= 0x3041 && codePoint <= 0x33ff) || // kana, compatibility jamo, CJK compat
+    (codePoint >= 0x3400 && codePoint <= 0x4dbf) || // CJK extension A
+    (codePoint >= 0x4e00 && codePoint <= 0x9fff) || // CJK unified ideographs
+    (codePoint >= 0xac00 && codePoint <= 0xd7a3) || // Hangul syllables
+    (codePoint >= 0xf900 && codePoint <= 0xfaff) || // CJK compatibility ideographs
+    (codePoint >= 0xfe30 && codePoint <= 0xfe6f) || // CJK compatibility forms
+    (codePoint >= 0xff00 && codePoint <= 0xff60) || // fullwidth forms
+    (codePoint >= 0xffe0 && codePoint <= 0xffe6)
+  )
+}
+
+export function displayWidth(text: string): number {
+  let width = 0
+  // Iterating the string yields code points, not UTF-16 units, so an astral character
+  // counts once rather than twice for being a surrogate pair.
+  for (const char of text) {
+    width += isFullWidth(char.codePointAt(0)!) ? 2 : 1
+  }
+  return width
+}
+
+/**
  * Break a line at word boundaries, because Plotly will not.
  *
  * Hover text is broken **only** on an explicit `<br>` — there is no width-based wrapping and
@@ -81,16 +120,25 @@ export interface DeltaRow {
  * would then have to remember to re-break every sentence they rewrite — and a Korean
  * rendering of the same sentence is a different length anyway. The code knows the budget; the
  * translator should only have to know the language.
+ *
+ * The budget is in rendered width, not characters — see `displayWidth`. Korean splits on
+ * spaces the same way English does (they fall between 어절), so the word-boundary rule itself
+ * carries over unchanged; only the ruler had to be fixed.
  */
 function wrap(text: string, width = 64): string {
   const lines: string[] = []
   let line = ''
+  let lineWidth = 0
+
   for (const word of text.split(' ')) {
-    if (line && line.length + 1 + word.length > width) {
+    const wordWidth = displayWidth(word)
+    if (line && lineWidth + 1 + wordWidth > width) {
       lines.push(line)
       line = word
+      lineWidth = wordWidth
     } else {
       line = line ? `${line} ${word}` : word
+      lineWidth = lineWidth ? lineWidth + 1 + wordWidth : wordWidth
     }
   }
   if (line) lines.push(line)
