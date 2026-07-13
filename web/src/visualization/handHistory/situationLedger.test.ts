@@ -170,14 +170,21 @@ describe('buildLedgerRows', () => {
   })
 
   it('does not chart an excluded decision, and does not call it hidden either', () => {
-    // A free check in a limped big blind cannot be folded, so "beat folding" is a bar that
-    // clears itself and there is no decision to score. It leaves no row — and crucially it
-    // does not inflate `hidden`, which means something else entirely: a row the reader could
-    // get back by lowering the sample threshold. An exclusion never comes back.
+    // Three exclusions, and the third is the one with teeth. `limped/check` and
+    // `fourBetPlus/raise` match no family at all, so they would fall out of the fold path
+    // even with the exclusion gate deleted — asserting on them alone would be vacuous, which
+    // is exactly what this test was until review caught it. `limped/raise` at the BB *does*
+    // match a family (iso-raise), so it can only be missing because an exclusion removed it:
+    // delete the gate and this row comes back, forty strong, well over the threshold.
+    //
+    // `hidden` matters as much as `rows`. It means "a row you could get back by lowering the
+    // threshold". An exclusion never comes back, so counting one as hidden would be a lie
+    // the reader could act on.
     const { rows, hidden } = buildLedgerRows(
       [
         ...many(40, { context: 'limped', action: 'check', heroOffset: 2 }),
         ...many(40, { context: 'fourBetPlus', action: 'raise', heroOffset: 0 }),
+        ...many(40, { context: 'limped', action: 'raise', heroOffset: 2 }), // iso-raise · BB
         ...many(40, { context: 'unopened', action: 'raise', heroOffset: 0 }),
       ],
       { ...DEFAULT_FILTERS, minSample: 30 },
@@ -186,8 +193,6 @@ describe('buildLedgerRows', () => {
 
     expect(rows).toHaveLength(1) // only the RFI
     expect(rows[0].label).toContain('chart.situation.family.rfi')
-    // 40 excluded decisions would clear a threshold of 30, so this is a real assertion: a
-    // family lookup that ran before the exclusions would produce two more rows here.
     expect(hidden).toBe(0)
   })
 

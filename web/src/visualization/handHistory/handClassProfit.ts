@@ -191,9 +191,16 @@ export function getHandClassProfitData(
     caption.push(t('chart.handClass.caption.hidden', { hidden }))
   }
 
-  // Why the rows are missing, in the same words the ledger uses. Skipping them silently
-  // would trade a wrong chart for an unexplained blank one — the same absence this whole
-  // mechanism exists to prevent.
+  // The ledger says nothing about its exclusions — they are permanent scope, not a finding,
+  // and captioning them every render was noise. Here it is the opposite: the reader can
+  // *select* an excluded scope ("Iso-raise" + "Big blind"), and having asked a question they
+  // are owed an answer rather than a blank panel. An absence you did not ask about is scope;
+  // an absence you did ask about is a question.
+  //
+  // Composed, rather than each reason key carrying its own `{{n}}`: the reason keys are named
+  // as literals in the EXCLUSIONS table, not at a `t()` call, so `callSites.test.ts` cannot
+  // see what values they are handed and rightly refuses to vouch for a placeholder it cannot
+  // check. Keeping the count in the wrapper puts it back where the test can see it.
   for (const { key, n } of excluded) {
     caption.push(t('chart.situation.caption.excluded', { n, reason: t(key) }))
   }

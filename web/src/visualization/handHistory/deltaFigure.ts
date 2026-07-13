@@ -70,12 +70,50 @@ export interface DeltaRow {
   total: number
 }
 
-/** The row's name, with its meaning beneath it when it has one. */
-function hoverLabel(row: DeltaRow): string {
-  return row.description ? `<b>${row.label}</b><br><i>${row.description}</i>` : row.label
+/**
+ * Break a line at word boundaries, because Plotly will not.
+ *
+ * Hover text is broken **only** on an explicit `<br>` — there is no width-based wrapping and
+ * no max width. A 167-character description therefore renders as one ~1100px line: as wide as
+ * the whole chart on a desktop, and clipped at the plot edge on anything smaller.
+ *
+ * Done here rather than by seeding `<br>` into the strings themselves, because a translator
+ * would then have to remember to re-break every sentence they rewrite — and a Korean
+ * rendering of the same sentence is a different length anyway. The code knows the budget; the
+ * translator should only have to know the language.
+ */
+function wrap(text: string, width = 64): string {
+  const lines: string[] = []
+  let line = ''
+  for (const word of text.split(' ')) {
+    if (line && line.length + 1 + word.length > width) {
+      lines.push(line)
+      line = word
+    } else {
+      line = line ? `${line} ${word}` : word
+    }
+  }
+  if (line) lines.push(line)
+  return lines.join('<br>')
 }
 
-export function summarize(deltas: number[]): Omit<DeltaRow, 'label'> {
+/** The row's name, with its meaning beneath it when it has one. */
+export function hoverLabel(row: DeltaRow): string {
+  return row.description
+    ? `<b>${row.label}</b><br><i>${wrap(row.description)}</i>`
+    : row.label
+}
+
+/**
+ * The statistics of a bucket — and *only* the statistics.
+ *
+ * Deliberately not `Omit<DeltaRow, 'label'>`: that would now include `description`, and every
+ * caller spreads this over a row literal. The day this returned an explicit
+ * `description: undefined`, the spread would overwrite the caller's and every row would
+ * silently lose its hover text. A `Pick` cannot: it also says the truer thing, which is that
+ * summarising a sample has nothing to do with naming it.
+ */
+export function summarize(deltas: number[]): Pick<DeltaRow, 'n' | 'mean' | 'ci95' | 'total'> {
   const n = deltas.length
   const mean = deltas.reduce((a, b) => a + b, 0) / n
   if (n < 2) return { n, mean, ci95: 0, total: mean * n }
