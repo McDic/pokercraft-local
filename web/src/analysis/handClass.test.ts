@@ -43,6 +43,33 @@ describe('classOfHand', () => {
     expect(orphans).toEqual([])
   })
 
+  it('emits no class that HAND_CLASS_ORDER does not list', () => {
+    // The direction that silently loses hands. `buildHandClassRows` iterates
+    // HAND_CLASS_ORDER, so a class the classifier emits but the order omits is bucketed and
+    // then never read: it vanishes from the chart with no `hidden` count and no `noCards`
+    // count, and every other test stays green. An absence, again — the one defect a chart
+    // cannot show you.
+    const listed = new Set<string>(HAND_CLASS_ORDER)
+    const unlisted = [...new Set(combos.map(classOfHand))].filter(c => c !== null && !listed.has(c))
+    expect(unlisted).toEqual([])
+  })
+
+  it('does not put a king next to a seven-deuce', () => {
+    // The bug this taxonomy was rewritten to fix. A purely gap-based split makes K9s four
+    // ranks apart and therefore "trash", sitting in the same row as 72s — so the row's mass
+    // is K-x and Q-x, and a reader seeing it break even concludes their trash defences are
+    // fine and starts flatting 92s.
+    expect(classOfHand(['Kh', '9h'])).toBe('suitedBroadwayX')
+    expect(classOfHand(['Qh', '7h'])).toBe('suitedBroadwayX')
+    expect(classOfHand(['Th', '4h'])).toBe('suitedBroadwayX')
+    expect(classOfHand(['Kh', '9d'])).toBe('offsuitBroadwayX')
+
+    // Trash now means what it says: no broadway card at all.
+    const trash = combos.filter(c => classOfHand(c) === 'suitedTrash')
+    const hasBroadway = trash.filter(([a, b]) => 'TJQKA'.includes(a[0]) || 'TJQKA'.includes(b[0]))
+    expect(hasBroadway).toEqual([])
+  })
+
   it('classifies the boundary hands the way a poker player would', () => {
     const cases: Array<[[CardString, CardString], HandClass]> = [
       // Pairs, split by height.
@@ -67,19 +94,26 @@ describe('classOfHand', () => {
       [['Ah', '2h'], 'suitedAce'],
       [['Ah', '5d'], 'offsuitAce'],
 
-      // T9s is the first connector below broadway (T is broadway, 9 is not).
+      // Connector is tested *before* broadway-x, so T9s stays a suited connector — which is
+      // what it is — rather than becoming a ten-with-a-nine.
       [['Th', '9h'], 'suitedConnector'],
       [['5h', '4h'], 'suitedConnector'],
       [['9h', '8d'], 'offsuitConnector'],
 
-      // Gapper: 2-3 ranks apart.
+      // Broadway-x: exactly one broadway card, unconnected. The class that keeps K9s away
+      // from 72s.
+      [['Kh', '9h'], 'suitedBroadwayX'],
+      [['Kh', '2h'], 'suitedBroadwayX'], // K2s: broadway needs *both* cards to be broadway
+      [['Qh', '9h'], 'suitedBroadwayX'], // not a gapper — the queen is what matters
+      [['Th', '2h'], 'suitedBroadwayX'],
+      [['Kh', '9d'], 'offsuitBroadwayX'],
+
+      // Gapper and trash now mean what they say: no broadway card at all.
       [['9h', '7h'], 'suitedGapper'],
       [['9h', '6h'], 'suitedGapper'],
       [['9h', '6d'], 'offsuitGapper'],
-
-      // Trash: four or more apart, and no ace to redeem it.
       [['9h', '5h'], 'suitedTrash'],
-      [['Kh', '2h'], 'suitedTrash'], // K2s: broadway needs *both* cards, not just one
+      [['7h', '2h'], 'suitedTrash'],
       [['9h', '4d'], 'offsuitTrash'],
       [['7h', '2d'], 'offsuitTrash'],
     ]

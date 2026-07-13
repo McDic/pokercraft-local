@@ -24,7 +24,6 @@
 import { useState, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react'
 import { useTranslation } from 'react-i18next'
 import Plot from './plot'
-import type { Layout } from 'plotly.js-dist-min'
 import type { HandHistory } from '../types'
 import type { Classification, OpenerBucket } from '../analysis/preflopSituation'
 import { classifyHandHistories } from '../analysis/preflopSituation'
@@ -59,8 +58,14 @@ export interface SituationChartsRef {
   isComputing: () => boolean
 }
 
-/** A figure and its caption, rendered together — the caption is not optional context. */
-function Figure({ figure }: { figure: DeltaFigure }) {
+/**
+ * A figure and its caption, rendered together — the caption is not optional context.
+ *
+ * It renders even when there are no rows, which is the whole point: the caption is where
+ * the counts live, and "you have squeezed from UTG six times, all below the threshold" is
+ * exactly what an empty chart needs to say and cannot say from an empty state alone.
+ */
+function Figure({ figure, emptyMessage }: { figure: DeltaFigure; emptyMessage: string }) {
   return (
     <section className="chart-section">
       {/* Keyed by position, not by text: the lines are a fixed, ordered list, and two
@@ -70,13 +75,17 @@ function Figure({ figure }: { figure: DeltaFigure }) {
           {line}
         </p>
       ))}
-      <Plot
-        data={figure.traces}
-        layout={{ ...figure.layout, autosize: true }}
-        useResizeHandler
-        style={{ width: '100%', height: `${(figure.layout as Partial<Layout>).height ?? 600}px` }}
-        config={{ responsive: true }}
-      />
+      {figure.traces.length > 0 ? (
+        <Plot
+          data={figure.traces}
+          layout={{ ...figure.layout, autosize: true }}
+          useResizeHandler
+          style={{ width: '100%', height: `${figure.layout.height ?? 600}px` }}
+          config={{ responsive: true }}
+        />
+      ) : (
+        <div className="no-data">{emptyMessage}</div>
+      )}
     </section>
   )
 }
@@ -219,11 +228,7 @@ export const SituationCharts = forwardRef<SituationChartsRef, SituationChartsPro
           </label>
         </div>
 
-        {ledger && ledger.traces.length > 0 ? (
-          <Figure figure={ledger} />
-        ) : (
-          !isComputing && <div className="no-data">{t('chart.situation.empty')}</div>
-        )}
+        {ledger && <Figure figure={ledger} emptyMessage={t('chart.situation.empty')} />}
 
         {/* The class chart's own two controls, kept beside it rather than in the bar above:
             they do not narrow the data, they choose which row of the ledger to open up. */}
@@ -262,11 +267,7 @@ export const SituationCharts = forwardRef<SituationChartsRef, SituationChartsPro
           </label>
         </div>
 
-        {handClass && handClass.traces.length > 0 ? (
-          <Figure figure={handClass} />
-        ) : (
-          !isComputing && <div className="no-data">{t('chart.situation.empty')}</div>
-        )}
+        {handClass && <Figure figure={handClass} emptyMessage={t('chart.handClass.empty')} />}
       </div>
     )
   }

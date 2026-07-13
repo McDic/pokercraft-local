@@ -38,23 +38,28 @@ export const DEFAULT_SCOPE: HandClassScope = {
   heroOffset: null,
 }
 
-export const HAND_CLASS_KEYS: Array<[HandClass, TranslationKey]> = [
-  ['pairHigh', 'chart.handClass.pairHigh'],
-  ['pairMid', 'chart.handClass.pairMid'],
-  ['pairLow', 'chart.handClass.pairLow'],
-  ['suitedBroadway', 'chart.handClass.suitedBroadway'],
-  ['suitedAce', 'chart.handClass.suitedAce'],
-  ['suitedConnector', 'chart.handClass.suitedConnector'],
-  ['suitedGapper', 'chart.handClass.suitedGapper'],
-  ['suitedTrash', 'chart.handClass.suitedTrash'],
-  ['offsuitBroadway', 'chart.handClass.offsuitBroadway'],
-  ['offsuitAce', 'chart.handClass.offsuitAce'],
-  ['offsuitConnector', 'chart.handClass.offsuitConnector'],
-  ['offsuitGapper', 'chart.handClass.offsuitGapper'],
-  ['offsuitTrash', 'chart.handClass.offsuitTrash'],
-]
-
-const KEY_OF = new Map(HAND_CLASS_KEYS)
+/**
+ * A `Record`, not an array of pairs, so the *compiler* enforces that every class has a
+ * label. An array would let a fourteenth class ship with no name, and `KEY_OF.get(c)!`
+ * would render it through `t(undefined)` — the kind of hole a type can simply close.
+ */
+export const HAND_CLASS_KEYS: Record<HandClass, TranslationKey> = {
+  pairHigh: 'chart.handClass.pairHigh',
+  pairMid: 'chart.handClass.pairMid',
+  pairLow: 'chart.handClass.pairLow',
+  suitedBroadway: 'chart.handClass.suitedBroadway',
+  suitedAce: 'chart.handClass.suitedAce',
+  suitedBroadwayX: 'chart.handClass.suitedBroadwayX',
+  suitedConnector: 'chart.handClass.suitedConnector',
+  suitedGapper: 'chart.handClass.suitedGapper',
+  suitedTrash: 'chart.handClass.suitedTrash',
+  offsuitBroadway: 'chart.handClass.offsuitBroadway',
+  offsuitAce: 'chart.handClass.offsuitAce',
+  offsuitBroadwayX: 'chart.handClass.offsuitBroadwayX',
+  offsuitConnector: 'chart.handClass.offsuitConnector',
+  offsuitGapper: 'chart.handClass.offsuitGapper',
+  offsuitTrash: 'chart.handClass.offsuitTrash',
+}
 
 /** Every position that can be *selected*, plus the pooled option the scope defaults to. */
 export const SCOPE_POSITION_KEYS: Array<[number | null, TranslationKey]> = [
@@ -67,13 +72,18 @@ export function buildHandClassRows(
   filters: SituationFilters,
   scope: HandClassScope,
   t: Translate
-): { rows: DeltaRow[]; hidden: number; noCards: number } {
+): { rows: DeltaRow[]; hidden: number; noCards: number; inScope: number } {
   const family = FAMILIES[scope.familyIndex]
   const deltas = new Map<HandClass, number[]>()
 
-  // Hands whose hole cards the history never showed. Hero's own cards are always dealt, so
-  // this should be zero — but if a file is ever truncated mid-hand it would silently shrink
-  // every class, so it is counted rather than assumed.
+  // Decisions this scope actually contains, whatever happens to them afterwards. Without it
+  // an empty chart cannot tell you *why* it is empty — "you have squeezed from UTG six
+  // times" and "you have never squeezed from UTG" look identical, and only one of them is
+  // fixed by lowering the sample threshold.
+  let inScope = 0
+
+  // Hands whose hole cards could not be read. Hero's own cards are always dealt, so this
+  // should be zero — but a truncated file would otherwise just quietly shrink every class.
   let noCards = 0
 
   for (const s of situations) {
@@ -81,11 +91,9 @@ export function buildHandClassRows(
     if (scope.heroOffset !== null && s.heroOffset !== scope.heroOffset) continue
     if (!passesFilters(s, filters)) continue
 
-    if (!s.cards) {
-      noCards++
-      continue
-    }
-    const handClass = classOfHand(s.cards)
+    inScope++
+
+    const handClass = s.cards ? classOfHand(s.cards) : null
     if (handClass === null) {
       noCards++
       continue
@@ -112,14 +120,14 @@ export function buildHandClassRows(
     }
     rows.push({
       label: t('chart.handClass.rowLabel', {
-        handClass: t(KEY_OF.get(handClass)!),
+        handClass: t(HAND_CLASS_KEYS[handClass]),
         n: stats.n,
       }),
       ...stats,
     })
   }
 
-  return { rows, hidden, noCards }
+  return { rows, hidden, noCards, inScope }
 }
 
 export function getHandClassProfitData(
@@ -128,7 +136,7 @@ export function getHandClassProfitData(
   scope: HandClassScope,
   t: Translate
 ): DeltaFigure {
-  const { rows, hidden, noCards } = buildHandClassRows(situations, filters, scope, t)
+  const { rows, hidden, noCards, inScope } = buildHandClassRows(situations, filters, scope, t)
 
   const family = FAMILIES[scope.familyIndex]
   const positionKey =
@@ -138,6 +146,9 @@ export function getHandClassProfitData(
     t('chart.handClass.caption.reading'),
     t('chart.handClass.caption.grid'),
     t('chart.handClass.caption.caveat'),
+    // Always, not only when rows survive: it is the one number that tells an empty chart
+    // apart from a chart of a thing you have never done.
+    t('chart.handClass.caption.inScope', { inScope }),
   ]
 
   if (hidden > 0) {

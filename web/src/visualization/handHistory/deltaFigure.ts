@@ -46,10 +46,10 @@ export interface DeltaFigure {
  * CVD separation ΔE 74.6, every step ≥ 3:1 on the surface. Blue↔red rather than the
  * green↔red poker convention, which is precisely the pair deuteranopes cannot separate.
  */
-export const BEAT_FOLD = '#2a78d6'
-export const LOST_TO_FOLD = '#e34948'
+const BEAT_FOLD = '#2a78d6'
+const LOST_TO_FOLD = '#e34948'
 /** The neutral midpoint of the diverging pair: a decision we cannot tell apart from folding. */
-export const INCONCLUSIVE = '#898781'
+const INCONCLUSIVE = '#898781'
 
 export interface DeltaRow {
   label: string
@@ -78,14 +78,14 @@ export function summarize(deltas: number[]): Omit<DeltaRow, 'label'> {
  * zero-width interval, and painting *that* grey would say "indistinguishable from folding"
  * about the one kind of row where we are, in fact, certain.
  */
-export function colorOf(row: DeltaRow): string {
+function colorOf(row: DeltaRow): string {
   if (row.n < 2) return INCONCLUSIVE
   if (row.mean - row.ci95 > 0) return BEAT_FOLD
   if (row.mean + row.ci95 < 0) return LOST_TO_FOLD
   return INCONCLUSIVE
 }
 
-export interface DeltaFigureOptions {
+interface DeltaFigureOptions {
   /** Already translated. */
   title: string
   /** Already translated, one paragraph per entry. */

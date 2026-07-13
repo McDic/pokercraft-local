@@ -17,7 +17,7 @@ import type { TranslationKey } from '../../i18n'
  * rather than drawn faintly — a faint row still reads as data.
  */
 export const MIN_SAMPLE_CHOICES = [10, 30, 100, 300] as const
-export const DEFAULT_MIN_SAMPLE = 30
+const DEFAULT_MIN_SAMPLE = 30
 
 export type StackBucket = 'short' | 'mid' | 'deepish' | 'deep'
 
@@ -65,14 +65,14 @@ export const TABLE_BUCKET_KEYS: Array<[TableBucket, TranslationKey]> = [
   ['full', 'chart.situation.table.full'],
 ]
 
-export function stackBucketOf(stackBB: number): StackBucket {
+function stackBucketOf(stackBB: number): StackBucket {
   if (stackBB < 15) return 'short'
   if (stackBB < 25) return 'mid'
   if (stackBB < 40) return 'deepish'
   return 'deep'
 }
 
-export function tableBucketOf(tableSize: number): TableBucket {
+function tableBucketOf(tableSize: number): TableBucket {
   if (tableSize <= 2) return 'headsUp'
   if (tableSize <= 6) return 'shorthanded'
   return 'full'

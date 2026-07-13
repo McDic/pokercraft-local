@@ -107,6 +107,21 @@ describe('buildHandClassRows', () => {
     expect(hidden).toBe(1)
   })
 
+  it('counts what is in scope, whatever becomes of it', () => {
+    // The number that tells an empty chart apart from a chart of a thing you have never
+    // done. "You squeezed from UTG six times" is fixed by lowering the threshold; "you have
+    // never squeezed from UTG" is not, and without this they look identical.
+    const { rows, hidden, inScope } = buildHandClassRows(
+      many(6),
+      { ...DEFAULT_FILTERS, minSample: 30 },
+      DEFAULT_SCOPE,
+      t
+    )
+    expect(rows).toEqual([])
+    expect(hidden).toBe(1)
+    expect(inScope).toBe(6)
+  })
+
   it('counts decisions whose hole cards the history never showed', () => {
     // Hero's own cards are always dealt, so this should be zero on any real file. It is
     // counted rather than assumed, because a truncated file would otherwise just quietly
@@ -161,7 +176,24 @@ describe('getHandClassProfitData', () => {
 
   it('defaults to breaking down the defence bucket, pooled across positions', () => {
     // The deepest bucket in a real sample, and the one whose average most needs opening up.
+    // Also pins that the findIndex at module load actually found something: at -1 the chart
+    // would be silently empty and the action dropdown would point at the wrong entry.
+    expect(DEFAULT_SCOPE.familyIndex).toBeGreaterThanOrEqual(0)
     expect(FAMILIES[DEFAULT_SCOPE.familyIndex].key).toBe('chart.situation.family.flat')
     expect(DEFAULT_SCOPE.heroOffset).toBeNull()
+  })
+
+  it('still explains itself when it has no rows to draw', () => {
+    // The caption is where the counts live, so it has to survive the empty state — that is
+    // exactly when the reader needs to be told they have six of these, not zero.
+    const { traces, caption } = getHandClassProfitData(
+      many(6),
+      { ...DEFAULT_FILTERS, minSample: 30 },
+      DEFAULT_SCOPE,
+      t
+    )
+    expect(traces).toEqual([])
+    expect(caption.join('\n')).toContain('"inScope":6')
+    expect(caption.join('\n')).toContain('"hidden":1')
   })
 })

@@ -24,10 +24,24 @@
  *
  * ## The classes
  *
- * Thirteen, chosen to be the coarsest split that still separates hands you would play
+ * Fifteen, chosen to be the coarsest split that still separates hands you would play
  * differently: pairs by height, then suited and offsuit each split into broadway, ace-x,
- * connector, gapper, and trash. Ordering is taxonomic (pairs, suited, offsuit) rather than
- * by strength, so the chart is stable whatever the data says.
+ * broadway-x, connector, gapper, and trash.
+ *
+ * **`broadway-x` is why there are fifteen and not thirteen.** A purely gap-based split puts
+ * K9s four ranks apart and therefore in "trash" — next to 72s. That fails the module's own
+ * criterion, and it fails it in the direction that misleads: the "trash" row would be 36
+ * hands whose *mass* is K-x and Q-x, so a reader seeing it break even would conclude their
+ * trash defences are fine and start flatting 92s. The ace already had a class of its own;
+ * the king fell off a cliff. So a hand with exactly one broadway card and no connection is
+ * its own thing, and gapper/trash now mean what they say: no broadway card at all. Suited
+ * trash is now 95s-72s — ten hands, and every one of them is genuinely trash.
+ *
+ * Connectors are tested *before* broadway-x so that T9s stays a suited connector, which is
+ * what it is, rather than becoming a ten-with-a-low-card.
+ *
+ * Ordering is taxonomic (pairs, suited, offsuit) rather than by strength, so the chart is
+ * stable whatever the data says.
  */
 
 import type { CardString } from '../types'
@@ -38,11 +52,13 @@ export type HandClass =
   | 'pairLow'
   | 'suitedBroadway'
   | 'suitedAce'
+  | 'suitedBroadwayX'
   | 'suitedConnector'
   | 'suitedGapper'
   | 'suitedTrash'
   | 'offsuitBroadway'
   | 'offsuitAce'
+  | 'offsuitBroadwayX'
   | 'offsuitConnector'
   | 'offsuitGapper'
   | 'offsuitTrash'
@@ -61,9 +77,15 @@ function rankOf(card: CardString): number {
 /**
  * The class a hand belongs to, or null if the cards cannot be read.
  *
- * Order of tests matters: broadway is checked before connector and before ace-x, so KQs is
- * a suited broadway rather than a suited connector, and AKs is a broadway rather than an
- * ace-x. Every hand lands in exactly one class — asserted over all 1326 combinations.
+ * The order of the tests *is* the taxonomy, and every one of them is load-bearing:
+ *
+ *   both broadway  before everything — AKs and KQs are broadway, not ace-x or connectors
+ *   ace-x          before connector  — A5s is a suited ace, not a gapper
+ *   connector      before broadway-x — T9s is a suited connector, not a ten-with-a-nine
+ *   broadway-x     before gapper     — K9s is a king-x, not trash; Q9s is not a gapper
+ *
+ * Every hand lands in exactly one class, and every class is reachable — both asserted over
+ * all 1326 combinations.
  */
 export function classOfHand(cards: [CardString, CardString]): HandClass | null {
   const [a, b] = cards
@@ -81,20 +103,24 @@ export function classOfHand(cards: [CardString, CardString]): HandClass | null {
   }
 
   const suited = a[1] === b[1]
-  const broadway = low >= TEN // both cards ten or better
+  const bothBroadway = low >= TEN
+  /** Exactly one broadway card, the other below it — K9s, Q7s, T4s. */
+  const oneBroadway = high >= TEN
   const gap = high - low
 
   if (suited) {
-    if (broadway) return 'suitedBroadway'
+    if (bothBroadway) return 'suitedBroadway'
     if (high === ACE) return 'suitedAce'
     if (gap === 1) return 'suitedConnector'
+    if (oneBroadway) return 'suitedBroadwayX'
     if (gap <= 3) return 'suitedGapper'
     return 'suitedTrash'
   }
 
-  if (broadway) return 'offsuitBroadway'
+  if (bothBroadway) return 'offsuitBroadway'
   if (high === ACE) return 'offsuitAce'
   if (gap === 1) return 'offsuitConnector'
+  if (oneBroadway) return 'offsuitBroadwayX'
   if (gap <= 3) return 'offsuitGapper'
   return 'offsuitTrash'
 }
@@ -106,11 +132,13 @@ export const HAND_CLASS_ORDER: HandClass[] = [
   'pairLow',
   'suitedBroadway',
   'suitedAce',
+  'suitedBroadwayX',
   'suitedConnector',
   'suitedGapper',
   'suitedTrash',
   'offsuitBroadway',
   'offsuitAce',
+  'offsuitBroadwayX',
   'offsuitConnector',
   'offsuitGapper',
   'offsuitTrash',

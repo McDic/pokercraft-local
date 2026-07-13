@@ -27,7 +27,7 @@ import { buildDeltaFigure, summarize } from './deltaFigure'
 import type { SituationFilters } from './situationFilters'
 import { passesFilters } from './situationFilters'
 
-export interface Family {
+interface Family {
   key: TranslationKey
   match: (s: PreflopSituation) => boolean
 }
