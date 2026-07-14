@@ -23,6 +23,7 @@ import { useAnalysisWorker } from './hooks/useAnalysisWorker'
 
 // Export
 import { generateExportHTML, downloadHTML, type ExportChart } from './export/htmlExport'
+import type { SituationExport } from './export/situationPayload'
 import type { TranslationKey } from './i18n'
 
 /** Local timestamp `YYYY-MM-DD_HH-MM-SS` for export filenames (colon-free for all OSes). */
@@ -65,12 +66,23 @@ const EXPORT_BY_TAB: Record<
   },
 }
 
+/**
+ * What one tab exports.
+ *
+ * Two shapes, not one: the tournament and hand-history tabs export *figures*, while the
+ * situation tab exports the decisions behind them plus a runtime, so its filter dropdowns keep
+ * working in the downloaded file. See `export/situationPayload.ts`.
+ */
+interface ExportRequest {
+  tab: ChartTab
+  charts: ExportChart[]
+  situation?: SituationExport
+}
+
 function App() {
   const { t, i18n } = useTranslation()
   const [activeTab, setActiveTab] = useState<ChartTab>('tournament')
-  const [pendingExport, setPendingExport] = useState<
-    { charts: ExportChart[]; tab: ChartTab } | null
-  >(null)
+  const [pendingExport, setPendingExport] = useState<ExportRequest | null>(null)
   const tournamentChartsRef = useRef<TournamentChartsRef>(null)
   const handHistoryChartsRef = useRef<HandHistoryChartsRef>(null)
   const situationChartsRef = useRef<SituationChartsRef>(null)
@@ -100,24 +112,40 @@ function App() {
   // built in it, so anything else would mean rebuilding every figure.
   const language = i18n.resolvedLanguage ?? 'en'
   const runExport = useCallback(
-    (charts: ExportChart[], tab: ChartTab) => {
+    ({ tab, charts, situation }: ExportRequest) => {
       const { titleKey, prefix, filename } = EXPORT_BY_TAB[tab]
-      const html = generateExportHTML([{ titleKey, prefix, charts }], t, language)
+      const html = generateExportHTML([{ titleKey, prefix, charts, situation }], t, language)
       downloadHTML(html, `pokercraft-${filename}-${exportTimestamp()}.html`)
     },
     [t, language]
   )
 
   const handleExport = useCallback(() => {
-    // Export only the currently-active tab's charts.
+    // Export only the currently-active tab.
     const isTournament = activeTab === 'tournament'
     const activeRef = isTournament
       ? tournamentChartsRef.current
       : activeTab === 'handHistory'
         ? handHistoryChartsRef.current
         : situationChartsRef.current
-    const charts = activeRef?.getChartData() ?? []
-    if (charts.length === 0) return
+
+    // The situation tab exports its data and a runtime rather than figures, so that its
+    // filters keep working offline. Everything else exports the figures it is showing.
+    const request: ExportRequest =
+      activeTab === 'situation'
+        ? {
+            tab: activeTab,
+            charts: [],
+            situation: situationChartsRef.current?.getExportPayload() ?? undefined,
+          }
+        : {
+            tab: activeTab,
+            charts:
+              (isTournament ? tournamentChartsRef.current : handHistoryChartsRef.current)
+                ?.getChartData() ?? [],
+          }
+
+    if (request.charts.length === 0 && request.situation === undefined) return
 
     // Eager export: warn if charts may still be incomplete. This covers the chart
     // component's own generation loop (isComputing) plus the bankroll simulation,
@@ -126,11 +154,11 @@ function App() {
     // isLoading is only relevant to the tournament tab — gating it there avoids a
     // false "still calculating" warning when exporting hand history during analysis.
     if ((isTournament && isLoading) || activeRef?.isComputing()) {
-      setPendingExport({ charts, tab: activeTab })
+      setPendingExport(request)
       return
     }
 
-    runExport(charts, activeTab)
+    runExport(request)
   }, [activeTab, isLoading, runExport])
 
   // Auto-switch tab when data changes
@@ -209,7 +237,7 @@ function App() {
         confirmLabel={t('modal.export.confirm')}
         cancelLabel={t('modal.cancel')}
         onConfirm={() => {
-          if (pendingExport) runExport(pendingExport.charts, pendingExport.tab)
+          if (pendingExport) runExport(pendingExport)
           setPendingExport(null)
         }}
         onCancel={() => setPendingExport(null)}
