@@ -95,6 +95,7 @@ Seat 7: Hero (button) folded before Flop
     expect(hand.bb).toBe(1200)
     expect(hand.buttonSeat).toBe(7)
     expect(hand.maxSeats).toBe(7)
+    expect(hand.tableId).toBe('25')
 
     // Datetime
     expect(hand.datetime.getFullYear()).toBe(2025)

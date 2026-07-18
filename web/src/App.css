@@ -575,3 +575,73 @@
   from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
 }
+
+/* Deep Dive: the final-table runs table. Wide, so it scrolls inside its own
+   container rather than forcing the page to scroll horizontally. */
+.deep-dive-table-wrap {
+  overflow-x: auto;
+}
+
+.deep-dive-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.deep-dive-table th,
+.deep-dive-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.deep-dive-table th {
+  color: #ddd;
+  font-weight: 600;
+  border-bottom: 1px solid #444;
+}
+
+.deep-dive-table td {
+  color: #ccc;
+}
+
+.deep-dive-table th.num,
+.deep-dive-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.deep-dive-table tbody tr:hover {
+  background: #202020;
+}
+
+.deep-dive-table .reentry-tag {
+  color: #898781;
+  font-size: 0.8rem;
+}
+
+.deep-dive-table th .sort-header {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.deep-dive-table th .sort-header:hover {
+  color: #fff;
+}
+
+/* Reserve the arrow's width so column widths don't jump as the active column changes. */
+.deep-dive-table .sort-arrow {
+  font-size: 0.7rem;
+  color: #7a7a7a;
+  min-width: 0.7rem;
+  display: inline-block;
+}

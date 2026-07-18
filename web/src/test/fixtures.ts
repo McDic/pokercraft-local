@@ -40,6 +40,7 @@ export function makeHandHistory(
     sbSeat: 2,
     bbSeat: 3,
     maxSeats: 9,
+    tableId: '1',
     seats: new Map(),
     knownCards: new Map(),
     wons: new Map(),

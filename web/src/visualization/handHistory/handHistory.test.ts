@@ -18,6 +18,7 @@ function createMockHandHistory(overrides: Partial<HandHistory> = {}): HandHistor
     sbSeat: 2,
     bbSeat: 3,
     maxSeats: 6,
+    tableId: '1',
     seats: new Map([
       [1, ['Player1', 1000]],
       [2, ['Player2', 1000]],

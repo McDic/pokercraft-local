@@ -81,6 +81,7 @@ function createEmptyHandHistory(
     sbSeat: null,
     bbSeat: -1,
     maxSeats: 999,
+    tableId: '',
     seats: new Map(),
     knownCards: new Map(),
     wons: new Map(),
@@ -205,7 +206,8 @@ export function parseHandHistory(content: string): HandHistory[] {
     // LINE2: Table info
     else if ((match = LINE2_TABLE_NUM.exec(line))) {
       if (!currentHand || currentStage !== 'preflop') continue
-      const [, , maxSeatsStr, buttonSeatStr] = match
+      const [, tableId, maxSeatsStr, buttonSeatStr] = match
+      currentHand.tableId = tableId
       currentHand.maxSeats = parseInt(maxSeatsStr, 10)
       currentHand.buttonSeat = parseInt(buttonSeatStr, 10)
     }
