@@ -69,6 +69,10 @@
   "charts.equityFailed": "All-in equity could not be calculated. See the browser console for details.",
 
   "chart.historical.name": "Historical Performance",
+  "chart.historical.caption.axis": "Every panel shares one x-axis: your tournaments in the order you played them.",
+  "chart.historical.caption.money": "Top (money): Net Profit is your actual cumulative result; Ideal Profit adds the rake back, so the gap between them is what rake has cost you; Max Drawdown is your deepest drop below a prior peak. Net Rake is hidden — toggle it in the legend.",
+  "chart.historical.caption.ratio": "Middle: the share of tournaments that turned a profit (prize above buy-in — stricter than just cashing). \"Since #0\" is lifetime; \"Recent N\" a rolling window of your last N.",
+  "chart.historical.caption.stakes": "Bottom: average buy-in on a log scale, banded micro / low / mid / high — whether you've been moving up or down in stakes.",
   "chart.historical.title": "Historical Performance",
   "chart.historical.noData": "No tournaments to plot",
   "chart.historical.legendGroup.profitsRakes": "Profits & Rakes",
@@ -92,6 +96,8 @@
   "chart.historical.annotation.midHigh": "<b>Mid/High</b>",
 
   "chart.rre.name": "RRE Distribution",
+  "chart.rre.caption.what": "RRE (Relative Return of Entry) is prize ÷ buy-in — your return multiple per entry. Dashed lines mark break-even (1×), a good run (4×), and a deep run (32×); the shared y-axis is log2(RRE).",
+  "chart.rre.caption.panels": "The first three panels bin your tournaments by buy-in, field size, and time of day; darker cells hold more of your total return. The far-right panel is your overall RRE distribution.",
   "chart.rre.title": "RRE (Relative Return of Entry) Distribution",
   "chart.rre.legend.byBuyIn": "RRE by Buy-In",
   "chart.rre.legend.byEntries": "RRE by Entries",
@@ -111,6 +117,9 @@
   "chart.rre.annotation.deepRun": "Deep run (32x)",
 
   "chart.prizePies.name": "Prize Distribution",
+  "chart.prizePies.caption.what": "Where your prize money came from — gross winnings, not profit (buy-ins aren't subtracted).",
+  "chart.prizePies.caption.rings": "Left: each tournament's share of total winnings; anything under 1% is pooled into \"Others\". Right: the same winnings by weekday, then by tournament within a day (click a wedge to zoom in).",
+  "chart.prizePies.caption.mismatch": "The two aren't a like-for-like split: the weekday ring covers every prize, but only tournaments above 0.5% of your winnings appear as their own outer wedges.",
   "chart.prizePies.title": "Prize Distribution",
   "chart.prizePies.subtitle": "Individual tournaments and by weekday",
   "chart.prizePies.legend.individual": "Individual Prizes",
@@ -127,6 +136,9 @@
   "chart.prizePies.weekday.sun": "Sun",
 
   "chart.rrByRank.name": "RR by Rank",
+  "chart.rrByRank.caption.what": "Each dot is one cashed tournament: how deep you finished (rank percentile, x) against your return (RR = prize ÷ buy-in, y). Both axes are log.",
+  "chart.rrByRank.caption.read": "Deep, high-return runs sit in the upper-right (the percentile axis is reversed, so deeper finishes are to the right). The horizontal line is break-even (1×), the vertical the rough in-the-money cut (~12.5%); the trendline is fit to your deepest 12.5% of finishes. PERR (percentile × RR) is hidden — toggle it to weight each return by how deep you ran.",
+  "chart.rrByRank.caption.cashesOnly": "Only cashes appear — a bust has no return to plot.",
   "chart.rrByRank.title": "RR by Rank Percentile",
   "chart.rrByRank.noData": "No cashes yet — nothing to plot",
   "chart.rrByRank.legend.rrByPercentile": "RR by Percentile",
@@ -141,6 +153,9 @@
   "chart.rrByRank.annotation.itmCut": "Rough ITM Cut (~12.5%)",
 
   "chart.bankroll.name": "Bankroll Analysis",
+  "chart.bankroll.caption.what": "A Monte Carlo simulation: your real results are resampled over many simulated lifetimes to estimate risk of ruin at different starting bankrolls.",
+  "chart.bankroll.caption.read": "Each bar is a starting bankroll in buy-ins — green survived, red went broke (they stack to 100%). Read off the smallest bankroll whose survival rate you're comfortable with.",
+  "chart.bankroll.caption.caveat": "It assumes your future looks like your past at the same stakes — a rule of thumb, not a guarantee.",
   "chart.bankroll.title": "Bankroll Analysis",
   "chart.bankroll.noData": "No data available (simulation may have failed)",
   "chart.bankroll.tick.buyIns": "{{capital}} buy-ins",
@@ -151,6 +166,8 @@
   "chart.bankroll.axis.initialCapital": "Initial Capital",
 
   "chart.chipHistories.name": "Chip Histories",
+  "chart.chipHistories.caption.main": "Main panel: one line per tournament — your stack over hands as a multiple of your starting stack (log scale), so every line starts at 1×. The dashed Danger Line is a rough short-stack threshold.",
+  "chart.chipHistories.caption.panels": "Bottom-left: survival rate — the share of tournaments you were still alive at hand N, with your average bust hand marked. Bottom-right: for each drawdown level, the share of tournaments where you fell that far below your peak stack and never came back.",
   "chart.chipHistories.title": "Chip Histories",
   "chart.chipHistories.legend.dangerLine": "Danger Line",
   "chart.chipHistories.legend.survivalRate": "Survival Rate",
@@ -170,6 +187,9 @@
   "chart.chipHistories.trace.unknownTournament": "Unknown Tournament (Trial #{{trial}})",
 
   "chart.handUsage.name": "Hand Usage Heatmaps",
+  "chart.handUsage.caption.grids": "Nine 13×13 grids — one per position, plus \"All\". Each cell is a starting hand (pairs on the diagonal, suited above, offsuit below), shaded by VPIP: how often you voluntarily entered the pot rather than folding preflop.",
+  "chart.handUsage.caption.positions": "Positions are seats relative to the button; anything earlier than the 8-max UTG — 9-max UTG included — is folded into the UTG panel.",
+  "chart.handUsage.caption.header": "Each header shows your overall VPIP there and your Range usage: the share of hand combinations (weighted 6 per pair, 4 suited, 12 offsuit) you enter more than 10% of the time.",
   "chart.handUsage.title": "Hand Usage by Position (VPIP Heatmaps)",
   "chart.handUsage.hover.vpip": "%{text}<br>VPIP: %{z:.1%}<extra></extra>",
   "chart.handUsage.subplotTitle": "{{position}} (VPIP {{vpip}}%, Range {{range}}%)",
@@ -184,6 +204,9 @@
   "position.all": "All",
 
   "chart.allInEquity.name": "All-In Equity",
+  "chart.allInEquity.caption.scope": "Only all-in showdowns where every player's cards are known (all-ins on preflop, flop, or turn). Top: how many of your all-ins fell in each equity bucket, split won / chopped / lost.",
+  "chart.allInEquity.caption.diagonal": "Bottom: your actual win/chop/loss rate per bucket — over a large sample it should hug the dashed diagonal (X% equity ≈ winning X% of the time). Bars above the line are spots you ran better than your cards deserved, below is worse.",
+  "chart.allInEquity.caption.luck": "The Luck Score is a z-score: how many standard deviations your actual all-in results landed from what your equities predicted (your win count is modelled exactly, then placed on a Gaussian). Positive means you've run above your equity, negative below; \"Top X%\" is where that falls on the bell curve.",
   "chart.allInEquity.title": "All-in Equity Analysis",
   "chart.allInEquity.noData": "No all-in hands found with known opponent cards",
   "chart.allInEquity.legend.won": "Hero Won",

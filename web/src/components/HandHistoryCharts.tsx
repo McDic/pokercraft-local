@@ -27,6 +27,7 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import { useTranslation } from 'react-i18next'
 import Plot from './plot'
+import { ChartCaption } from './ChartCaption'
 import type { Data, Layout } from 'plotly.js-dist-min'
 import type { HandHistory } from '../types'
 import type { AllInHandData, LuckScore } from '../visualization/handHistory/allInEquityAsync'
@@ -37,6 +38,8 @@ import { yieldToBrowser } from '../utils'
 interface ChartData {
   traces: Data[]
   layout: Partial<Layout>
+  /** Explanatory paragraphs shown above the figure (and carried into the export). */
+  caption: string[]
 }
 
 interface HandHistoryChartsProps {
@@ -380,6 +383,7 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
 
       {chipHistories && chipHistories.traces.length > 0 && (
         <section className="chart-section">
+          <ChartCaption lines={chipHistories.caption} />
           <Plot
             data={chipHistories.traces}
             layout={{ ...chipHistories.layout, autosize: true }}
@@ -392,6 +396,7 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
 
       {handUsage && handUsage.traces.length > 0 && (
         <section className="chart-section">
+          <ChartCaption lines={handUsage.caption} />
           <Plot
             data={handUsage.traces}
             layout={{ ...handUsage.layout, autosize: true }}
@@ -404,6 +409,7 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
 
       {allInEquity && allInEquity.traces.length > 0 && (
         <section className="chart-section">
+          <ChartCaption lines={allInEquity.caption} />
           <Plot
             data={allInEquity.traces}
             layout={{ ...allInEquity.layout, autosize: true }}

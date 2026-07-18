@@ -20,7 +20,7 @@ const NAME = {
 vi.mock('./plot', () => ({ default: () => null }))
 
 const viz = vi.hoisted(() => {
-  const chart = () => ({ traces: [{}], layout: {} })
+  const chart = () => ({ traces: [{}], layout: {}, caption: [] })
   return {
     getChipHistoriesData: vi.fn(async () => chart()),
     getHandUsageHeatmapsData: vi.fn(async () => chart()),
@@ -39,7 +39,7 @@ const equity = vi.hoisted(() => {
       })
     ),
     calculateLuckScore: vi.fn(async () => 1.5),
-    createAllInEquityChart: vi.fn(() => ({ traces: [{}], layout: {} })),
+    createAllInEquityChart: vi.fn(() => ({ traces: [{}], layout: {}, caption: [] })),
     /** Resolve the pass currently in flight. Throws if none is — which is the point:
      *  a test that finishes a pass that never started would otherwise silently resolve
      *  the *previous* test's promise, since this mock outlives the test. */

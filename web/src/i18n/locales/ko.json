@@ -69,6 +69,10 @@
   "charts.equityFailed": "올인 에퀴티를 계산하지 못했습니다. 자세한 내용은 브라우저 콘솔을 확인해주세요.",
 
   "chart.historical.name": "과거 성적",
+  "chart.historical.caption.axis": "모든 패널이 같은 x축을 공유합니다 — 플레이한 순서대로 나열된 토너먼트들입니다.",
+  "chart.historical.caption.money": "위쪽 (금액): 순수익은 실제 누적 성적이고, 이상적 수익은 레이크를 되돌려 더한 값이라 둘 사이의 간격이 레이크로 잃은 금액입니다. 고점 대비 최대 하락폭은 이전 고점에서 가장 깊이 떨어진 지점입니다. 지불한 레이크는 기본으로 숨겨져 있으니 범례에서 켜세요.",
+  "chart.historical.caption.ratio": "가운데: 멘징 이상 벌은 (바이인보다 상금이 큰 — 단순 인더머니보다 엄격한) 토너먼트의 비율입니다. '전체 기준'은 통산, '최근 N개 기준'은 최근 N개의 이동 구간입니다.",
+  "chart.historical.caption.stakes": "아래: 로그 스케일의 평균 바이인 금액으로, 마이크로 / 로우 / 미들 / 하이 구간으로 나뉩니다 — 스테이크가 오르고 있는지 내리고 있는지 보여줍니다.",
   "chart.historical.title": "과거 성적",
   "chart.historical.noData": "표시할 토너먼트가 없습니다",
   "chart.historical.legendGroup.profitsRakes": "수익 & 레이크",
@@ -92,6 +96,8 @@
   "chart.historical.annotation.midHigh": "<b>미들 / 하이롤러</b>",
 
   "chart.rre.name": "RRE 분포",
+  "chart.rre.caption.what": "RRE (바인 금액 대비 상대적 리턴)는 상금 ÷ 바이인, 즉 엔트리당 리턴 배율입니다. 점선은 손익분기점(1배), 좋은 성적(4배), 딥런(32배)을 나타내며, 공통 y축은 Log2(RRE)입니다.",
+  "chart.rre.caption.panels": "왼쪽 세 패널은 토너먼트를 바인금액, 엔트리 수, 시간대별로 묶은 것으로, 어두운 칸일수록 전체 리턴이 많이 쌓인 구간입니다. 맨 오른쪽 패널은 전체 RRE 분포입니다.",
   "chart.rre.title": "RRE (바인 금액 대비 상대적 리턴) 분포",
   "chart.rre.legend.byBuyIn": "바인금액별 RRE",
   "chart.rre.legend.byEntries": "엔트리수별 RRE",
@@ -111,6 +117,9 @@
   "chart.rre.annotation.deepRun": "딥런 (32배)",
 
   "chart.prizePies.name": "상금 분포",
+  "chart.prizePies.caption.what": "상금이 어디서 나왔는지 보여줍니다 — 수익이 아니라 총 상금입니다 (바이인은 빼지 않습니다).",
+  "chart.prizePies.caption.rings": "왼쪽: 각 토너먼트가 전체 상금에서 차지하는 비율이며, 1% 미만은 '기타'로 묶입니다. 오른쪽: 같은 상금을 요일별로, 다시 그 안에서 토너먼트별로 나눈 것입니다 (조각을 클릭하면 확대됩니다).",
+  "chart.prizePies.caption.mismatch": "두 그림은 같은 기준의 분할이 아닙니다: 요일 고리는 모든 상금을 포함하지만, 바깥 고리에는 전체 상금의 0.5%를 넘는 토너먼트만 개별 조각으로 나타납니다.",
   "chart.prizePies.title": "상금 분포",
   "chart.prizePies.subtitle": "개별 토너먼트별 및 요일별",
   "chart.prizePies.legend.individual": "개별 상금",
@@ -127,6 +136,9 @@
   "chart.prizePies.weekday.sun": "일요일",
 
   "chart.rrByRank.name": "순위 백분위별 RR",
+  "chart.rrByRank.caption.what": "각 점은 상금권에 든 토너먼트 하나입니다: 얼마나 깊이 들어갔는지(랭킹 백분위, x)와 리턴(RR = 상금 ÷ 바이인, y)을 나타냅니다. 두 축 모두 로그입니다.",
+  "chart.rrByRank.caption.read": "깊이 들어가고 리턴이 큰 성적일수록 오른쪽 위에 모입니다 (백분위 축이 뒤집혀 있어, 깊이 들어갈수록 오른쪽입니다). 가로선은 손익분기점(1배), 세로선은 대략적인 ITM 컷(~12.5%)이며, 추세선은 상위 12.5% 성적에 맞춘 것입니다. PERR(백분위 × RR)는 숨겨져 있으니, 범례에서 켜면 각 리턴을 얼마나 깊이 들어갔는지로 가중합니다.",
+  "chart.rrByRank.caption.cashesOnly": "상금권에 든 경우만 표시됩니다 — 탈락은 리턴이 없어 찍히지 않습니다.",
   "chart.rrByRank.title": "랭킹 백분위수별 RR",
   "chart.rrByRank.noData": "아직 상금을 획득한 토너먼트가 없습니다",
   "chart.rrByRank.legend.rrByPercentile": "백분위별 RR",
@@ -141,6 +153,9 @@
   "chart.rrByRank.annotation.itmCut": "대략적인 ITM 컷 (~12.5%)",
 
   "chart.bankroll.name": "뱅크롤 분석",
+  "chart.bankroll.caption.what": "몬테카를로 시뮬레이션입니다: 실제 성적을 여러 번의 가상 플레이로 재추출해 초기 뱅크롤별 파산 위험을 추정합니다.",
+  "chart.bankroll.caption.read": "각 막대는 바이인 단위의 초기 뱅크롤입니다 — 초록은 생존, 빨강은 파산이며 합치면 100%입니다. 생존 확률이 만족스러운 가장 작은 뱅크롤을 고르면 됩니다.",
+  "chart.bankroll.caption.caveat": "미래가 같은 스테이크에서 과거와 비슷하다고 가정합니다 — 보장이 아니라 어림잡는 기준입니다.",
   "chart.bankroll.title": "뱅크롤 분석",
   "chart.bankroll.noData": "데이터가 없습니다 (시뮬레이션이 실패했을 수 있습니다)",
   "chart.bankroll.tick.buyIns": "{{capital}} 바이인",
@@ -151,6 +166,8 @@
   "chart.bankroll.axis.initialCapital": "초기 자본",
 
   "chart.chipHistories.name": "칩 히스토리",
+  "chart.chipHistories.caption.main": "메인 패널: 토너먼트마다 한 줄로, 스타팅 칩 대비 배율(로그 스케일)로 나타낸 핸드별 칩 변화입니다. 그래서 모든 줄이 1배에서 시작합니다. 점선 위험선은 대략적인 숏스택 기준선입니다.",
+  "chart.chipHistories.caption.panels": "왼쪽 아래: 생존 확률 — N번째 핸드까지 살아남은 토너먼트의 비율이며, 평균 탈락 핸드 수가 표시됩니다. 오른쪽 아래: 각 하락 임계점마다, 고점 대비 그만큼 떨어진 뒤 회복하지 못한 토너먼트의 비율입니다.",
   "chart.chipHistories.title": "토너먼트 칩 변화 히스토리",
   "chart.chipHistories.legend.dangerLine": "위험선",
   "chart.chipHistories.legend.survivalRate": "생존 확률",
@@ -170,6 +187,9 @@
   "chart.chipHistories.trace.unknownTournament": "알 수 없는 토너먼트 ({{trial}}번째 시도)",
 
   "chart.handUsage.name": "포지션별 핸드 통계",
+  "chart.handUsage.caption.grids": "13×13 격자 아홉 개 — 포지션마다 하나, 그리고 '전체'입니다. 각 칸은 스타팅 핸드로(대각선은 포켓페어, 위쪽은 수딧, 아래쪽은 옵숫), VPIP로 색을 입힙니다: 프리플랍에서 폴드하지 않고 자발적으로 팟에 들어간 비율입니다.",
+  "chart.handUsage.caption.positions": "포지션은 버튼 기준 자리이며, 8맥스 UTG보다 앞선 자리는 — 9맥스 UTG 포함 — UTG 패널에 합산됩니다.",
+  "chart.handUsage.caption.header": "각 제목은 해당 포지션의 전체 VPIP와 레인지 사용률을 보여줍니다: 핸드 조합(포켓페어 6, 수딧 4, 옵숫 12로 가중) 중 10%를 넘게 플레이한 비율입니다.",
   "chart.handUsage.title": "포지션별 핸드 사용 통계 (VPIP 히트맵)",
   "chart.handUsage.hover.vpip": "%{text}<br>VPIP: %{z:.1%}<extra></extra>",
   "chart.handUsage.subplotTitle": "{{position}} (VPIP {{vpip}}%, 레인지 {{range}}%)",
@@ -184,6 +204,9 @@
   "position.all": "전체",
 
   "chart.allInEquity.name": "올인 에퀴티",
+  "chart.allInEquity.caption.scope": "모든 플레이어의 카드가 공개된 올인 쇼다운만 대상입니다 (프리플랍·플랍·턴 올인). 위쪽: 올인들이 에퀴티 구간별로 몇 번씩 있었는지 승/무/패로 나눕니다.",
+  "chart.allInEquity.caption.diagonal": "아래쪽: 구간별 실제 승/무/패 비율입니다 — 표본이 크면 점선 대각선에 가까워야 합니다 (에퀴티 X% ≈ X% 확률로 승리). 선 위의 막대는 카드값보다 잘 풀린 구간, 아래는 못 풀린 구간입니다.",
+  "chart.allInEquity.caption.luck": "행운 지수는 z-점수입니다: 실제 올인 결과가 에퀴티가 예측한 값에서 몇 표준편차나 벗어났는지를 나타냅니다 (승리 횟수를 정확히 모델링한 뒤 정규분포에 대응시킵니다). 양수면 에퀴티보다 잘 풀린 것, 음수면 못 풀린 것이며, '상위 X%'는 그 값이 종형 곡선에서 어디에 있는지입니다.",
   "chart.allInEquity.title": "올인 에퀴티 분석",
   "chart.allInEquity.noData": "상대 카드가 공개된 올인 핸드가 없습니다",
   "chart.allInEquity.legend.won": "히어로 승리",

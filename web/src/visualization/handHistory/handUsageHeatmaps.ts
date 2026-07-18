@@ -15,6 +15,8 @@ import { yieldToBrowser } from '../../utils'
 export interface HandUsageHeatmapsData {
   traces: Data[]
   layout: Partial<Layout>
+  /** How to read the chart; one paragraph per line. Shown above the figure and in the export. */
+  caption: string[]
 }
 
 // Card number order (2 lowest, A highest)
@@ -153,6 +155,12 @@ export async function getHandUsageHeatmapsData(
   handHistories: HandHistory[],
   t: Translate
 ): Promise<HandUsageHeatmapsData> {
+  const caption = [
+    t('chart.handUsage.caption.grids'),
+    t('chart.handUsage.caption.positions'),
+    t('chart.handUsage.caption.header'),
+  ]
+
   // Create matrices for each position
   const matrices: Map<number | null, HandMatrix> = new Map([
     [-5, createEmptyMatrix()], // UTG
@@ -294,5 +302,5 @@ export async function getHandUsageHeatmapsData(
     }
   }
 
-  return { traces, layout }
+  return { traces, layout, caption }
 }

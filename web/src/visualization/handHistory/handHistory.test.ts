@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import type { HandHistory } from '../../types'
 import { getChipHistoriesData } from './chipHistories'
 import { getHandUsageHeatmapsData } from './handUsageHeatmaps'
+import { createAllInEquityChart } from './allInEquityAsync'
 import { identityT } from '../../test/i18n'
 
 // Helper to create a minimal hand history for testing
@@ -120,4 +121,40 @@ describe('handUsageHeatmaps', () => {
 })
 
 // Note: allInEquity tests require WASM initialization which isn't available in unit tests.
-// The functionality is tested through integration tests.
+// The functionality is tested through integration tests. (createAllInEquityChart itself is pure —
+// it draws pre-computed data — so it can be exercised directly below.)
+
+// Every hand-history chart carries its own explanatory caption, shown above the figure and in the
+// export, present both with data and on the no-data path.
+describe('every hand-history chart ships a caption', () => {
+  const hh = createMockHandHistory({ id: 'X1', tournamentId: 1 })
+
+  it('chip histories: caption present with data and empty', async () => {
+    expect((await getChipHistoriesData([hh], identityT)).caption.length).toBeGreaterThan(0)
+    expect((await getChipHistoriesData([], identityT)).caption.length).toBeGreaterThan(0)
+  })
+
+  it('hand usage: caption present with data and empty', async () => {
+    expect((await getHandUsageHeatmapsData([hh], identityT)).caption.length).toBeGreaterThan(0)
+    expect((await getHandUsageHeatmapsData([], identityT)).caption.length).toBeGreaterThan(0)
+  })
+
+  it('all-in equity: caption present with data and empty', () => {
+    const withData = createAllInEquityChart(
+      [
+        {
+          handId: 'h',
+          tournamentId: 1,
+          allInStreet: 'preflop',
+          equity: 0.5,
+          actualResult: 1,
+          communityAtAllIn: [],
+        },
+      ],
+      0,
+      identityT
+    )
+    expect(withData.caption.length).toBeGreaterThan(0)
+    expect(createAllInEquityChart([], 'no-data', identityT).caption.length).toBeGreaterThan(0)
+  })
+})
