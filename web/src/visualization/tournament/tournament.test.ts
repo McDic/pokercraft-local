@@ -48,6 +48,19 @@ describe('getRRByRankData', () => {
     expect(layout.title).toEqual({ text: 'chart.rrByRank.title' })
   })
 
+  // The per-tournament dots are a WebGL trace (`scattergl`) so a full history of a few thousand
+  // markers stays smooth on hover/zoom; the fitted line stays SVG `scatter` so it paints on top.
+  it('renders the per-tournament markers with WebGL and keeps the trend line as SVG', () => {
+    const { traces } = getRRByRankData([cashed(1), cashed(2), busted(3)], identityT)
+
+    const markerTraces = traces.filter(tr => (tr as { mode?: string }).mode === 'markers')
+    const lineTraces = traces.filter(tr => (tr as { mode?: string }).mode === 'lines')
+    expect(markerTraces.length).toBeGreaterThan(0)
+    expect(lineTraces.length).toBeGreaterThan(0)
+    for (const tr of markerTraces) expect((tr as { type?: string }).type).toBe('scattergl')
+    for (const tr of lineTraces) expect((tr as { type?: string }).type).toBe('scatter')
+  })
+
   // Regression: with nothing to plot, `minPercentile` stayed at its Infinity sentinel and
   // the x-axis range came out as [0, Infinity] — a blank plot with a nonsense axis rather
   // than the "no data" state every other builder shows, and [0, null] in the export.
