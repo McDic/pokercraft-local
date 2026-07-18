@@ -218,6 +218,7 @@
   "deepDive.finalTable.title": "Final Table Runs",
   "deepDive.finalTable.subtitle": "Every final table matched to its tournament result — {{n}} found.",
   "deepDive.finalTable.note": "Built by joining tournament results with hand histories. PokerCraft keeps ~12 months of tournament results but only ~3 months of hand histories, so final tables from tournaments without a downloaded hand history are not shown here.",
+  "deepDive.finalTable.skipped": "{{n}} joined tournaments aren't listed here (satellites, fields under 10, or busted before the final table).",
   "deepDive.finalTable.reentryTag": "(re-entry)",
   "deepDive.finalTable.col.date": "Date",
   "deepDive.finalTable.col.tournament": "Tournament",

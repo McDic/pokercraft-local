@@ -103,11 +103,14 @@ describe('DeepDiveCharts', () => {
 
     // Default is date-descending → the newer tournament (Beta) is first.
     expect(firstRow()).toContain('Beta')
-    // Finish descending → 8 (Alpha) before 3 (Beta).
-    clickHeader('Finish')
+    // Tournament column defaults to A→Z → Alpha first.
+    clickHeader('Tournament')
     expect(firstRow()).toContain('Alpha')
-    // Clicking the active column flips it to ascending → 3 (Beta) first.
+    // Finish defaults to best-first (ascending) → finish 3 (Beta) ahead of finish 8 (Alpha).
     clickHeader('Finish')
     expect(firstRow()).toContain('Beta')
+    // Clicking the active column flips it → worst finish (Alpha, 8th) first.
+    clickHeader('Finish')
+    expect(firstRow()).toContain('Alpha')
   })
 })

@@ -42,10 +42,19 @@ const MIN_ENTRANTS = 10
  * real playable tournament and "Daily $100,000 #ThanksGG Flipout" is a real cash event — neither
  * is a satellite, and neither has "to"/"satellite" in its name. The one exception is a Flip & Go
  * "[Flip Stage]", the all-in qualifier phase that feeds the Go Stage — that counts as a satellite.
+ *
+ * Best-effort and name-based: it only sees the tournament name, so an oddly-named qualifier could
+ * slip through (or a cash event be dropped). A mismatch is not silent — the tournament lands in
+ * `skipped` with a reason, and the UI shows the skipped count.
  */
 export function isSatelliteName(name: string): boolean {
   const n = name.toLowerCase()
-  return /\bto\b/.test(n) || /\bsatellite\b/.test(n) || /flip stage/.test(n)
+  return (
+    /\bto\b/.test(n) ||
+    /\bsatellite\b/.test(n) ||
+    /\bqualifier\b/.test(n) ||
+    /flip stage/.test(n)
+  )
 }
 
 export interface FinalTableRow {
@@ -115,8 +124,13 @@ function analyzeOne(
   // the final table proper is the run just before it — fold the two into one session and take the
   // entry hand (and capacity) from the proper run.
   const lastRun = runs[runs.length - 1]
+  const prevRun = runs[runs.length - 2]
+  // Guard the fold on the previous run being larger than heads-up, so back-to-back 2-max runs
+  // or a truncated download don't silently discard the real final table.
   const ftProper =
-    lastRun.hands[0].maxSeats === 2 && runs.length >= 2 ? runs[runs.length - 2] : lastRun
+    lastRun.hands[0].maxSeats === 2 && prevRun && prevRun.hands[0].maxSeats > 2
+      ? prevRun
+      : lastRun
 
   const entryHand = ftProper.hands[0]
   const finalTableSize = entryHand.maxSeats
@@ -140,6 +154,7 @@ function analyzeOne(
   if (heroChips === null) return { reason: 'Hero not seated at the final-table entry hand' }
 
   const total = stacks.reduce((sum, s) => sum + s, 0)
+  // Standard competition ranking: players tied with Hero all share Hero's (best) rank.
   const entryRank = 1 + stacks.filter(s => s > (heroChips as number)).length
 
   return {

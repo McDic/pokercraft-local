@@ -150,6 +150,61 @@ describe('analyzeFinalTables', () => {
     expect(isSatelliteName('Flip & Go $0.05 [Go Stage]')).toBe(false)
     expect(isSatelliteName('Flip & Go $0.50 [Flip Stage H]')).toBe(true)
     expect(isSatelliteName('Daily $100,000 #ThanksGG Flipout')).toBe(false)
+    expect(isSatelliteName('WSOP $5 Qualifier: Sunday Special')).toBe(true)
+  })
+
+  it('sorts hands chronologically even when supplied out of order', () => {
+    const summary = makeTournament(700, { myRank: 8, totalPlayers: 1000 })
+    const nine: Array<[string, number]> = [
+      ['Hero', 100], ['a', 200], ['b', 300], ['c', 400],
+      ['d', 500], ['e', 600], ['f', 700], ['g', 800], ['h', 900],
+    ]
+    const ordered = [
+      hand({ tournamentId: 700, day: 1, tableId: 'A', maxSeats: 8, stacks: nine.slice(0, 8) }),
+      hand({ tournamentId: 700, day: 2, tableId: 'B', maxSeats: 9, stacks: nine }), // entry
+      hand({ tournamentId: 700, day: 3, tableId: 'B', maxSeats: 9, stacks: nine.slice(0, 8) }),
+    ]
+    const { rows } = analyzeFinalTables([summary], [ordered[2], ordered[0], ordered[1]])
+    expect(rows).toHaveLength(1)
+    expect(rows[0].finalTableSize).toBe(9)
+    expect(rows[0].entrySeated).toBe(9)
+    expect(rows[0].entryRank).toBe(9)
+  })
+
+  it('skips a tournament whose final-table capacity is unknown (maxSeats sentinel)', () => {
+    const summary = makeTournament(800, { myRank: 3, totalPlayers: 500 })
+    const hands = [
+      hand({ tournamentId: 800, day: 1, tableId: '', maxSeats: 999, stacks: [['Hero', 100], ['a', 90]] }),
+    ]
+    const { rows, skipped } = analyzeFinalTables([summary], hands)
+    expect(rows).toHaveLength(0)
+    expect(skipped[0].reason).toMatch(/capacity unknown/)
+  })
+
+  it('ranks stacks tied with Hero at Hero\'s (best) position', () => {
+    const summary = makeTournament(900, { myRank: 3, totalPlayers: 300 })
+    const stacks: Array<[string, number]> = [
+      ['Hero', 100], ['a', 100], ['b', 100], ['c', 200], ['d', 300], ['e', 400],
+    ]
+    const hands = [hand({ tournamentId: 900, day: 1, tableId: 'B', maxSeats: 6, stacks })]
+    const { rows } = analyzeFinalTables([summary], hands)
+    // Three stacks strictly greater than 100 → rank 4; the two players tied with Hero share it.
+    expect(rows[0].entryRank).toBe(4)
+  })
+
+  it('ignores hands with a null tournamentId', () => {
+    const summary = makeTournament(1000, { myRank: 1, totalPlayers: 100 })
+    const real = hand({ tournamentId: 1000, day: 1, tableId: 'B', maxSeats: 9, stacks: [['Hero', 100], ['a', 90]] })
+    const orphan = makeHandHistory('TMX', {
+      tournamentId: null,
+      datetime: new Date(2026, 5, 1),
+      tableId: 'Z',
+      maxSeats: 8,
+      seats: new Map([[1, ['Hero', 50]]]),
+    })
+    const { rows } = analyzeFinalTables([summary], [real, orphan])
+    expect(rows).toHaveLength(1)
+    expect(rows[0].tournamentId).toBe(1000)
   })
 
   it('flags re-entry tournaments', () => {

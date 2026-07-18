@@ -28,6 +28,17 @@ interface SortState {
   dir: 'asc' | 'desc'
 }
 
+// First click on a column sorts it by its most useful direction: names A→Z, chip share and field
+// size high→low, but finishing place and entry rank low→high (best first).
+const DEFAULT_DIR: Record<SortKey, 'asc' | 'desc'> = {
+  date: 'desc',
+  tournament: 'asc',
+  entrants: 'desc',
+  entryRank: 'asc',
+  entryChipRatio: 'desc',
+  finish: 'asc',
+}
+
 function formatDate(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
@@ -51,7 +62,8 @@ function compare(a: FinalTableRow, b: FinalTableRow, key: SortKey): number {
 }
 
 export function DeepDiveCharts({ tournaments, handHistories }: DeepDiveChartsProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const fmt = (n: number) => n.toLocaleString(i18n.language)
   // Default: most recent first, matching how the analysis returns them.
   const [sort, setSort] = useState<SortState>({ key: 'date', dir: 'desc' })
 
@@ -65,13 +77,12 @@ export function DeepDiveCharts({ tournaments, handHistories }: DeepDiveChartsPro
     return [...result.rows].sort((a, b) => compare(a, b, sort.key) * dir)
   }, [result.rows, sort])
 
-  // First click sorts a column by its most useful direction (names A→Z, numbers high→low);
-  // clicking the active column flips it.
+  // Clicking the active column flips its direction; a new column starts at its default (above).
   const onSort = (key: SortKey) =>
     setSort(prev =>
       prev.key === key
         ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
-        : { key, dir: key === 'tournament' ? 'asc' : 'desc' }
+        : { key, dir: DEFAULT_DIR[key] }
     )
 
   const header = (key: SortKey, labelKey: TranslationKey, numeric = false) => {
@@ -87,7 +98,16 @@ export function DeepDiveCharts({ tournaments, handHistories }: DeepDiveChartsPro
   }
 
   if (result.rows.length === 0) {
-    return <div className="no-data">{t('charts.noDeepDiveData')}</div>
+    return (
+      <div className="no-data">
+        {t('charts.noDeepDiveData')}
+        {result.skipped.length > 0 && (
+          <p className="chart-caption">
+            {t('deepDive.finalTable.skipped', { n: result.skipped.length })}
+          </p>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -98,6 +118,11 @@ export function DeepDiveCharts({ tournaments, handHistories }: DeepDiveChartsPro
           {t('deepDive.finalTable.subtitle', { n: result.rows.length })}
         </p>
         <p className="chart-caption">{t('deepDive.finalTable.note')}</p>
+        {result.skipped.length > 0 && (
+          <p className="chart-caption">
+            {t('deepDive.finalTable.skipped', { n: result.skipped.length })}
+          </p>
+        )}
         <div className="deep-dive-table-wrap">
           <table className="deep-dive-table">
             <thead>
@@ -120,13 +145,13 @@ export function DeepDiveCharts({ tournaments, handHistories }: DeepDiveChartsPro
                       <span className="reentry-tag"> {t('deepDive.finalTable.reentryTag')}</span>
                     )}
                   </td>
-                  <td className="num">{r.entrants.toLocaleString()}</td>
+                  <td className="num">{fmt(r.entrants)}</td>
                   <td className="num">
                     {r.entryRank} / {r.entrySeated}
                   </td>
                   <td className="num">{(r.entryChipRatio * 100).toFixed(1)}%</td>
                   <td className="num">
-                    {r.finish} / {r.entrants.toLocaleString()}
+                    {r.finish} / {fmt(r.entrants)}
                   </td>
                 </tr>
               ))}

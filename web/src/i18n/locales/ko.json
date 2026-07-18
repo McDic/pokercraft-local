@@ -218,6 +218,7 @@
   "deepDive.finalTable.title": "파이널 테이블 기록",
   "deepDive.finalTable.subtitle": "토너먼트 결과와 매칭된 파이널 테이블 — {{n}}개",
   "deepDive.finalTable.note": "토너먼트 결과와 핸드 히스토리를 결합해 만든 목록입니다. 포커크래프트는 토너먼트 결과를 약 12개월, 핸드 히스토리를 약 3개월만 제공하므로, 다운로드된 핸드 히스토리가 없는 토너먼트의 파이널 테이블은 여기에 표시되지 않습니다.",
+  "deepDive.finalTable.skipped": "결합된 토너먼트 중 {{n}}개는 여기에 표시되지 않았습니다 (새틀라이트, 10명 미만 필드, 또는 파이널 테이블 전 탈락).",
   "deepDive.finalTable.reentryTag": "(리엔트리)",
   "deepDive.finalTable.col.date": "날짜",
   "deepDive.finalTable.col.tournament": "토너먼트",
