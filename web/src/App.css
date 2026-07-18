@@ -260,6 +260,48 @@
   cursor: not-allowed;
 }
 
+/* Tooltip explaining why a tab is inert. A CSS `::after` rather than a native `title`, which does
+   not reliably show on a disabled <button>; `:hover` still matches the disabled tab. */
+.chart-tabs .tab[data-tooltip] {
+  position: relative;
+}
+
+.chart-tabs .tab[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  /* Above the tab, so it never covers the chart section below. */
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 220px;
+  white-space: normal;
+  text-align: center;
+  background: #333;
+  color: #eee;
+  padding: 0.45rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.35;
+  z-index: 100;
+  pointer-events: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+}
+
+/* Arrow under the bubble, pointing down at the tab. */
+.chart-tabs .tab[data-tooltip]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #333;
+  z-index: 100;
+  pointer-events: none;
+}
+
 .chart-tabs .tab-icon {
   font-size: 1.25rem;
 }

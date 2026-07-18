@@ -1,5 +1,11 @@
 /**
- * React hook for managing the analysis Web Worker
+ * React hook for managing the analysis Web Workers.
+ *
+ * Two workers, so parsing and the bankroll simulation run independently: after tournament results
+ * are uploaded the bankroll sim runs on the analyze worker, and hand histories dropped in during it
+ * are parsed on the parse worker at the same time (each worker has its own WASM instance) — the
+ * hand-history charts and all-in equity then start without waiting for the sim to finish. Within a
+ * worker, tasks that arrive while it is busy queue and post when it frees.
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react'
@@ -25,8 +31,14 @@ export interface AnalysisProgress {
 }
 
 export interface AnalysisState {
-  isLoading: boolean
-  progress: AnalysisProgress | null
+  /** Files are being read/parsed. The uploader blocks during this (short) phase. */
+  isParsing: boolean
+  /** The bankroll simulation is running. Runs on its own worker, so the uploader stays usable. */
+  isAnalyzing: boolean
+  /** Progress of the current parse — shown in the uploader. */
+  parseProgress: AnalysisProgress | null
+  /** Progress of the bankroll sim — shown in the tournament tab, like equity in the HH tab. */
+  analyzeProgress: AnalysisProgress | null
   tournaments: TournamentSummary[]
   handHistories: HandHistory[]
   equityData: AllInEquityWorkerData[]
@@ -69,14 +81,18 @@ export function mergeHandHistories(
 }
 
 export interface UseAnalysisWorkerReturn extends AnalysisState {
+  /** Derived: any worker task in flight (parse or analyze). Kept for consumers that mean "busy". */
+  isLoading: boolean
   parseFiles: (files: FileList | File[], allowFreerolls?: boolean) => void
   runAnalysis: () => void
   reset: () => void
 }
 
 const initialState: AnalysisState = {
-  isLoading: false,
-  progress: null,
+  isParsing: false,
+  isAnalyzing: false,
+  parseProgress: null,
+  analyzeProgress: null,
   tournaments: [],
   handHistories: [],
   equityData: [],
@@ -85,140 +101,207 @@ const initialState: AnalysisState = {
   wasmVersion: '',
 }
 
+const STARTING_PROGRESS = (messageKey: TranslationKey): AnalysisProgress => ({
+  stage: 'init',
+  current: 0,
+  total: 1,
+  messageKey,
+  percentage: 0,
+})
+
+function toProgress(p: WorkerProgress): AnalysisProgress {
+  return {
+    stage: p.stage,
+    current: p.current,
+    total: p.total,
+    messageKey: p.messageKey,
+    messageParams: p.messageParams,
+    percentage: p.total > 0 ? (p.current / p.total) * 100 : 0,
+  }
+}
+
+function newWorker(): Worker {
+  return new Worker(new URL('../workers/analysisWorker.ts', import.meta.url), { type: 'module' })
+}
+
 export function useAnalysisWorker(): UseAnalysisWorkerReturn {
   const [state, setState] = useState<AnalysisState>(initialState)
-  const workerRef = useRef<Worker | null>(null)
 
-  // Initialize worker
+  // Two independent workers. Each serializes its own tasks; the two run concurrently.
+  const parseWorkerRef = useRef<Worker | null>(null)
+  const analyzeWorkerRef = useRef<Worker | null>(null)
+
+  // Parse worker: files that arrive mid-parse queue here and post when it frees.
+  const parseBusyRef = useRef(false)
+  const pendingFilesRef = useRef<File[]>([])
+  const pendingAllowFreerollsRef = useRef(false)
+  const pumpParseRef = useRef<() => void>(() => {})
+
+  // Analyze worker: a re-analyze requested mid-run is collapsed to one pending flag and re-run
+  // with the latest tournaments when the current sim finishes.
+  const analyzeBusyRef = useRef(false)
+  const reanalyzePendingRef = useRef(false)
+  const tournamentsRef = useRef<TournamentSummary[]>([])
+  const pumpAnalyzeRef = useRef<() => void>(() => {})
+
+  // The set a queued analyze posts — kept current with the merged state.
   useEffect(() => {
-    workerRef.current = new Worker(
-      new URL('../workers/analysisWorker.ts', import.meta.url),
-      { type: 'module' }
-    )
+    tournamentsRef.current = state.tournaments
+  }, [state.tournaments])
 
-    workerRef.current.onmessage = (event: MessageEvent<WorkerProgress | WorkerResult>) => {
+  // Reassigned each render, but closes over only refs/setState, so the once-bound worker callbacks
+  // can call the latest through the ref.
+  pumpParseRef.current = () => {
+    const worker = parseWorkerRef.current
+    if (!worker || parseBusyRef.current || pendingFilesRef.current.length === 0) return
+    const files = pendingFilesRef.current
+    const allowFreerolls = pendingAllowFreerollsRef.current
+    pendingFilesRef.current = []
+    parseBusyRef.current = true
+    setState(prev => ({
+      ...prev,
+      isParsing: true,
+      parseProgress: STARTING_PROGRESS('progress.starting'),
+      errors: [],
+    }))
+    worker.postMessage({ type: 'parse', files, allowFreerolls } as WorkerMessage)
+  }
+
+  pumpAnalyzeRef.current = () => {
+    const worker = analyzeWorkerRef.current
+    if (!worker || analyzeBusyRef.current || !reanalyzePendingRef.current) return
+    reanalyzePendingRef.current = false
+    if (tournamentsRef.current.length === 0) return
+    analyzeBusyRef.current = true
+    setState(prev => ({
+      ...prev,
+      isAnalyzing: true,
+      analyzeProgress: STARTING_PROGRESS('progress.startingAnalysis'),
+    }))
+    worker.postMessage({ type: 'analyze', tournaments: tournamentsRef.current } as WorkerMessage)
+  }
+
+  useEffect(() => {
+    const parseWorker = newWorker()
+    const analyzeWorker = newWorker()
+    parseWorkerRef.current = parseWorker
+    analyzeWorkerRef.current = analyzeWorker
+
+    parseWorker.onmessage = (event: MessageEvent<WorkerProgress | WorkerResult>) => {
       const data = event.data
-
       if (data.type === 'progress') {
-        const progress = data as WorkerProgress
-        setState(prev => ({
-          ...prev,
-          progress: {
-            stage: progress.stage,
-            current: progress.current,
-            total: progress.total,
-            messageKey: progress.messageKey,
-            messageParams: progress.messageParams,
-            percentage: progress.total > 0 ? (progress.current / progress.total) * 100 : 0,
-          },
-        }))
+        setState(prev => ({ ...prev, parseProgress: toProgress(data as WorkerProgress) }))
       } else if (data.type === 'result') {
         const result = data as WorkerResult
-
+        parseBusyRef.current = false
         if (result.error) {
           setState(prev => ({
             ...prev,
-            isLoading: false,
-            progress: null,
+            isParsing: false,
+            parseProgress: null,
             errors: [...prev.errors, result.error!],
           }))
         } else if (result.parseResult) {
-          // Parse result - merge with existing data, deduplicating by ID
           setState(prev => {
             const parsed = result.parseResult!
             return {
               ...prev,
-              isLoading: false,
-              progress: null,
+              isParsing: false,
+              parseProgress: null,
               tournaments: mergeTournaments(prev.tournaments, parsed.tournaments),
               handHistories: mergeHandHistories(prev.handHistories, parsed.handHistories),
               errors: [...prev.errors, ...parsed.errors],
               wasmVersion: result.wasmVersion || prev.wasmVersion,
             }
           })
-        } else {
-          // Analysis result
+        }
+        pumpParseRef.current() // next queued parse, if any
+      }
+    }
+
+    parseWorker.onerror = error => {
+      parseBusyRef.current = false
+      setState(prev => ({
+        ...prev,
+        isParsing: false,
+        parseProgress: null,
+        errors: [...prev.errors, i18n.t('errors.worker', { message: error.message })],
+      }))
+      pumpParseRef.current()
+    }
+
+    analyzeWorker.onmessage = (event: MessageEvent<WorkerProgress | WorkerResult>) => {
+      const data = event.data
+      if (data.type === 'progress') {
+        setState(prev => ({ ...prev, analyzeProgress: toProgress(data as WorkerProgress) }))
+      } else if (data.type === 'result') {
+        const result = data as WorkerResult
+        analyzeBusyRef.current = false
+        if (result.error) {
           setState(prev => ({
             ...prev,
-            isLoading: false,
-            progress: null,
+            isAnalyzing: false,
+            analyzeProgress: null,
+            errors: [...prev.errors, result.error!],
+          }))
+        } else {
+          setState(prev => ({
+            ...prev,
+            isAnalyzing: false,
+            analyzeProgress: null,
             equityData: result.equityData || prev.equityData,
             bankrollResults: result.bankrollResults || prev.bankrollResults,
           }))
         }
+        pumpAnalyzeRef.current() // re-run if the set changed mid-sim
       }
     }
 
-    workerRef.current.onerror = (error) => {
+    analyzeWorker.onerror = error => {
+      analyzeBusyRef.current = false
       setState(prev => ({
         ...prev,
-        isLoading: false,
-        progress: null,
+        isAnalyzing: false,
+        analyzeProgress: null,
         errors: [...prev.errors, i18n.t('errors.worker', { message: error.message })],
       }))
+      pumpAnalyzeRef.current()
     }
 
+    // Flush anything queued before the workers existed.
+    pumpParseRef.current()
+    pumpAnalyzeRef.current()
+
     return () => {
-      workerRef.current?.terminate()
+      parseWorker.terminate()
+      analyzeWorker.terminate()
     }
   }, [])
 
   const parseFiles = useCallback((files: FileList | File[], allowFreerolls = false) => {
-    if (!workerRef.current) return
-
-    setState(prev => ({
-      ...prev,
-      isLoading: true,
-      progress: {
-        stage: 'init',
-        current: 0,
-        total: 1,
-        messageKey: 'progress.starting',
-        percentage: 0,
-      },
-      errors: [],
-    }))
-
-    // Convert FileList to array for worker
-    const fileArray = Array.from(files)
-
-    workerRef.current.postMessage({
-      type: 'parse',
-      files: fileArray,
-      allowFreerolls,
-    } as WorkerMessage)
+    pendingFilesRef.current = [...pendingFilesRef.current, ...Array.from(files)]
+    pendingAllowFreerollsRef.current = allowFreerolls
+    pumpParseRef.current()
   }, [])
 
   // Only run bankroll simulation for tournaments.
   // Hand history equity is handled independently by HandHistoryCharts.
   const runAnalysis = useCallback(() => {
-    if (!workerRef.current) return
-    if (state.tournaments.length === 0) return
-
-    setState(prev => ({
-      ...prev,
-      isLoading: true,
-      progress: {
-        stage: 'init',
-        current: 0,
-        total: 1,
-        messageKey: 'progress.startingAnalysis',
-        percentage: 0,
-      },
-    }))
-
-    workerRef.current.postMessage({
-      type: 'analyze',
-      tournaments: state.tournaments,
-    } as WorkerMessage)
-  }, [state.tournaments])
+    reanalyzePendingRef.current = true
+    pumpAnalyzeRef.current()
+  }, [])
 
   const reset = useCallback(() => {
+    parseBusyRef.current = false
+    analyzeBusyRef.current = false
+    pendingFilesRef.current = []
+    reanalyzePendingRef.current = false
     setState(initialState)
   }, [])
 
   return {
     ...state,
+    isLoading: state.isParsing || state.isAnalyzing,
     parseFiles,
     runAnalysis,
     reset,

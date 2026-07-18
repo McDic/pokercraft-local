@@ -98,7 +98,10 @@ function App() {
 
   const {
     isLoading,
-    progress,
+    isParsing,
+    isAnalyzing,
+    parseProgress,
+    analyzeProgress,
     tournaments,
     handHistories,
     bankrollResults,
@@ -193,8 +196,8 @@ function App() {
 
       <FileUploader
         onFilesSelected={parseFiles}
-        isLoading={isLoading}
-        progress={progress}
+        isParsing={isParsing}
+        parseProgress={parseProgress}
         tournamentCount={tournaments.length}
         handHistoryCount={handHistories.length}
       />
@@ -229,6 +232,8 @@ function App() {
             ref={tournamentChartsRef}
             tournaments={tournaments}
             bankrollResults={bankrollResults}
+            isAnalyzing={isAnalyzing}
+            analyzeProgress={analyzeProgress}
           />
         </ErrorBoundary>
       </div>
