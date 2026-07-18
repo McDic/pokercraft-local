@@ -40,10 +40,12 @@ function render(tournamentCount: number, handHistoryCount: number) {
 describe('ChartTabs — disabled-tab tooltips', () => {
   it('explains every disabled tab, per its missing data', () => {
     render(0, 5) // hand histories only
-    expect(tabByLabel('Tournament Summary')!.disabled).toBe(true)
-    expect(tabByLabel('Tournament Summary')!.getAttribute('data-tooltip')).toBe(
-      'Needs tournament results'
-    )
+    const tournament = tabByLabel('Tournament Summary')!
+    // Disabled via aria-disabled (not the `disabled` attribute), so it stays focusable for AT.
+    expect(tournament.getAttribute('aria-disabled')).toBe('true')
+    expect(tournament.getAttribute('data-tooltip')).toBe('Needs tournament results')
+    // The reason is also exposed to assistive tech via aria-label.
+    expect(tournament.getAttribute('aria-label')).toContain('Needs tournament results')
     expect(tabByLabel('Deep Dive')!.getAttribute('data-tooltip')).toBe(
       'Needs both tournament results and hand histories'
     )
@@ -61,7 +63,7 @@ describe('ChartTabs — disabled-tab tooltips', () => {
   it('gives an enabled tab no tooltip', () => {
     render(3, 5) // both present
     const deepDive = tabByLabel('Deep Dive')!
-    expect(deepDive.disabled).toBe(false)
+    expect(deepDive.getAttribute('aria-disabled')).toBeNull()
     expect(deepDive.getAttribute('data-tooltip')).toBeNull()
   })
 })

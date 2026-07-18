@@ -84,9 +84,14 @@ export function ChartTabs({
       {tabs.map(tab => (
         <button
           key={tab.id}
+          type="button"
           className={`tab ${activeTab === tab.id ? 'active' : ''} ${!tab.enabled ? 'disabled' : ''}`}
           onClick={() => tab.enabled && onTabChange(tab.id)}
-          disabled={!tab.enabled}
+          // `aria-disabled` rather than `disabled`, so a disabled tab stays focusable: keyboard and
+          // screen-reader users can reach it and hear why it is inert. The visual tooltip is the CSS
+          // `data-tooltip` (shown on hover and focus); `aria-label` carries the same reason to AT.
+          aria-disabled={!tab.enabled || undefined}
+          aria-label={!tab.enabled ? `${t(tab.labelKey)} — ${t(tab.disabledTooltipKey)}` : undefined}
           data-tooltip={!tab.enabled ? t(tab.disabledTooltipKey) : undefined}
         >
           <span className="tab-icon">{tab.icon}</span>

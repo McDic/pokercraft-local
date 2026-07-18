@@ -266,7 +266,8 @@
   position: relative;
 }
 
-.chart-tabs .tab[data-tooltip]:hover::after {
+.chart-tabs .tab[data-tooltip]:hover::after,
+.chart-tabs .tab[data-tooltip]:focus-visible::after {
   content: attr(data-tooltip);
   position: absolute;
   /* Above the tab, so it never covers the chart section below. */
@@ -290,7 +291,8 @@
 }
 
 /* Arrow under the bubble, pointing down at the tab. */
-.chart-tabs .tab[data-tooltip]:hover::before {
+.chart-tabs .tab[data-tooltip]:hover::before,
+.chart-tabs .tab[data-tooltip]:focus-visible::before {
   content: '';
   position: absolute;
   bottom: calc(100% + 4px);

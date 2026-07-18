@@ -275,6 +275,13 @@ export function useAnalysisWorker(): UseAnalysisWorkerReturn {
     return () => {
       parseWorker.terminate()
       analyzeWorker.terminate()
+      // Reset coordination refs so a real mid-work remount can't leave a pump wedged against a
+      // terminated worker. (StrictMode's init-time remount has nothing in flight, so this is
+      // insurance rather than a fix for a live bug.)
+      parseBusyRef.current = false
+      analyzeBusyRef.current = false
+      pendingFilesRef.current = []
+      reanalyzePendingRef.current = false
     }
   }, [])
 
