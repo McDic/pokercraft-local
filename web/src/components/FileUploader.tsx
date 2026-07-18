@@ -1,5 +1,9 @@
 /**
- * File uploader component with drag & drop and progress indicator
+ * File uploader component with drag & drop and a parse-progress indicator.
+ *
+ * Only *parsing* blocks the drop zone (a second parse must not race the first). The bankroll
+ * simulation runs on its own worker, so during it the drop zone stays open and you can add hand
+ * histories right away — the sim's own progress shows in the tournament tab, next to the charts.
  */
 
 import { useCallback, useState } from 'react'
@@ -8,16 +12,16 @@ import type { AnalysisProgress } from '../hooks/useAnalysisWorker'
 
 interface FileUploaderProps {
   onFilesSelected: (files: FileList | File[]) => void
-  isLoading: boolean
-  progress: AnalysisProgress | null
+  isParsing: boolean
+  parseProgress: AnalysisProgress | null
   tournamentCount: number
   handHistoryCount: number
 }
 
 export function FileUploader({
   onFilesSelected,
-  isLoading,
-  progress,
+  isParsing,
+  parseProgress,
   tournamentCount,
   handHistoryCount,
 }: FileUploaderProps) {
@@ -28,11 +32,11 @@ export function FileUploader({
     (e: React.DragEvent) => {
       e.preventDefault()
       setDragOver(false)
-      if (e.dataTransfer.files.length > 0 && !isLoading) {
+      if (e.dataTransfer.files.length > 0 && !isParsing) {
         onFilesSelected(e.dataTransfer.files)
       }
     },
-    [onFilesSelected, isLoading]
+    [onFilesSelected, isParsing]
   )
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -46,11 +50,11 @@ export function FileUploader({
 
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files && e.target.files.length > 0 && !isLoading) {
+      if (e.target.files && e.target.files.length > 0 && !isParsing) {
         onFilesSelected(e.target.files)
       }
     },
-    [onFilesSelected, isLoading]
+    [onFilesSelected, isParsing]
   )
 
   const hasData = tournamentCount > 0 || handHistoryCount > 0
@@ -58,21 +62,23 @@ export function FileUploader({
   return (
     <section className="file-uploader">
       <div
-        className={`upload-zone ${dragOver ? 'drag-over' : ''} ${isLoading ? 'loading' : ''}`}
+        className={`upload-zone ${dragOver ? 'drag-over' : ''} ${isParsing ? 'loading' : ''}`}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
       >
-        {isLoading ? (
+        {isParsing ? (
           <div className="progress-container">
             <div className="progress-bar">
               <div
                 className="progress-fill"
-                style={{ width: `${progress?.percentage ?? 0}%` }}
+                style={{ width: `${parseProgress?.percentage ?? 0}%` }}
               />
             </div>
             <p className="progress-message">
-              {progress ? t(progress.messageKey, progress.messageParams) : t('uploader.loading')}
+              {parseProgress
+                ? t(parseProgress.messageKey, parseProgress.messageParams)
+                : t('uploader.loading')}
             </p>
           </div>
         ) : (
@@ -86,7 +92,6 @@ export function FileUploader({
               accept=".txt,.zip"
               onChange={handleFileInput}
               id="file-input"
-              disabled={isLoading}
             />
             <label htmlFor="file-input" className="file-button">
               {t('uploader.chooseFiles')}
@@ -95,7 +100,7 @@ export function FileUploader({
         )}
       </div>
 
-      {hasData && !isLoading && (
+      {hasData && !isParsing && (
         <div className="stats-bar">
           {/* <Trans> rather than a plain t(): languages disagree on where the number
               goes relative to the noun ("5 tournaments" vs "토너먼트 5개"), and only

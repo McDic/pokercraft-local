@@ -10,6 +10,7 @@ import type { TournamentSummary } from '../types'
 import type { BankrollWorkerResult } from '../workers/analysisWorker'
 import type { ExportChart } from '../export/htmlExport'
 import type { TranslationKey } from '../i18n'
+import type { AnalysisProgress } from '../hooks/useAnalysisWorker'
 import { yieldToBrowser } from '../utils'
 
 interface ChartData {
@@ -20,6 +21,10 @@ interface ChartData {
 interface TournamentChartsProps {
   tournaments: TournamentSummary[]
   bankrollResults: BankrollWorkerResult[]
+  /** The bankroll simulation (upstream of `bankrollResults`) is running in the analysis worker. */
+  isAnalyzing?: boolean
+  /** Its progress, shown here below the tabs — like the equity progress in the hand-history tab. */
+  analyzeProgress?: AnalysisProgress | null
 }
 
 interface ChartsState {
@@ -39,7 +44,10 @@ export interface TournamentChartsRef {
 }
 
 export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentChartsProps>(
-  function TournamentCharts({ tournaments, bankrollResults }, ref) {
+  function TournamentCharts(
+    { tournaments, bankrollResults, isAnalyzing = false, analyzeProgress = null },
+    ref
+  ) {
   const { t, i18n } = useTranslation()
   const [state, setState] = useState<ChartsState>({
     historical: null,
@@ -223,16 +231,22 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
         </div>
       )}
 
-      {state.isComputing && (
+      {/* One loading slot for both upstream phases: the bankroll simulation (analysis worker),
+          then building the figures from its results. */}
+      {(isAnalyzing || state.isComputing) && (
         <div className="chart-loading">
           <div className="progress-bar">
             <div
               className="progress-fill"
-              style={{ width: `${state.progress.percentage}%` }}
+              style={{
+                width: `${isAnalyzing ? (analyzeProgress?.percentage ?? 0) : state.progress.percentage}%`,
+              }}
             />
           </div>
           <p className="progress-message">
-            {state.progress.messageKey && t(state.progress.messageKey)}
+            {isAnalyzing
+              ? analyzeProgress && t(analyzeProgress.messageKey, analyzeProgress.messageParams)
+              : state.progress.messageKey && t(state.progress.messageKey)}
           </p>
         </div>
       )}

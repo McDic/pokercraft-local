@@ -18,6 +18,8 @@
 
   "tabs.tournament": "토너먼트 결과 분석",
   "tabs.handHistory": "핸드 히스토리 분석",
+  "tabs.tournamentDisabledTooltip": "토너먼트 결과 데이터가 필요합니다",
+  "tabs.handHistoryDisabledTooltip": "핸드 히스토리 데이터가 필요합니다",
 
   "errors.title": "오류:",
   "errors.worker": "워커 오류: {{message}}",
@@ -212,6 +214,7 @@
   "charts.noSituationData": "불러온 핸드 히스토리 데이터가 없습니다",
 
   "tabs.deepDive": "심층 분석",
+  "tabs.deepDiveDisabledTooltip": "토너먼트 결과와 핸드 히스토리 데이터가 모두 필요합니다",
   "errorBoundary.label.deepDiveCharts": "심층 분석 차트",
   "export.section.deepDive": "심층 분석",
   "charts.noDeepDiveData": "파이널 테이블 기록이 없습니다. 서로 맞는 토너먼트 결과와 핸드 히스토리를 불러오세요.",

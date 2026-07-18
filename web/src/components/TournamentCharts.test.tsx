@@ -143,4 +143,29 @@ describe('TournamentCharts', () => {
     expect(viz.getBankrollAnalysisData).toHaveBeenCalledWith(sim, expect.any(Function))
     expect(isComputing()).toBe(false)
   })
+
+  it('shows the bankroll-simulation progress below the charts while analyzing', async () => {
+    // While analyzing, the sim message takes priority over any chart-generation message.
+    await act(async () => {
+      root.render(
+        <TournamentCharts
+          tournaments={[makeTournament(1)]}
+          bankrollResults={[]}
+          isAnalyzing={true}
+          analyzeProgress={{
+            stage: 'bankroll',
+            current: 0,
+            total: 1,
+            messageKey: 'progress.bankroll',
+            messageParams: { capital: 10 },
+            percentage: 40,
+          }}
+        />
+      )
+    })
+    const loading = container.querySelector('.chart-loading')
+    expect(loading).not.toBeNull()
+    // The real "Simulating N buy-ins" message (with its interpolated number), not a generic label.
+    expect(loading!.textContent).toContain('10')
+  })
 })

@@ -18,6 +18,8 @@
 
   "tabs.tournament": "Tournament Summary",
   "tabs.handHistory": "Hand History",
+  "tabs.tournamentDisabledTooltip": "Needs tournament results",
+  "tabs.handHistoryDisabledTooltip": "Needs hand history data",
 
   "errors.title": "Errors:",
   "errors.worker": "Worker error: {{message}}",
@@ -212,6 +214,7 @@
   "charts.noSituationData": "No hand history data loaded",
 
   "tabs.deepDive": "Deep Dive",
+  "tabs.deepDiveDisabledTooltip": "Needs both tournament results and hand histories",
   "errorBoundary.label.deepDiveCharts": "deep dive charts",
   "export.section.deepDive": "Deep Dive",
   "charts.noDeepDiveData": "No final-table runs found yet. Load matching tournament results and hand histories.",
