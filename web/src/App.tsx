@@ -14,6 +14,7 @@ import {
   type HandHistoryChartsRef,
   SituationCharts,
   type SituationChartsRef,
+  DeepDiveCharts,
   ConfirmModal,
   ErrorBoundary,
 } from './components'
@@ -63,6 +64,14 @@ const EXPORT_BY_TAB: Record<
     // Matches what the tab and the export heading both call it ("Preflop Situations").
     // `prefix` is a DOM id and need not, but a filename is read by a person.
     filename: 'preflop-situations',
+  },
+  // The Deep Dive tab renders a table, not figures, so it has no export in v1 (its export
+  // affordance is disabled while it is active). This entry only satisfies the exhaustive
+  // Record<ChartTab, …> type; it is never read at runtime.
+  deepDive: {
+    titleKey: 'export.section.deepDive',
+    prefix: 'deepdive',
+    filename: 'deep-dive',
   },
 }
 
@@ -173,7 +182,13 @@ function App() {
   return (
     <div className="app">
       <Header
-        onExport={tournaments.length > 0 || handHistories.length > 0 ? handleExport : undefined}
+        onExport={
+          // The Deep Dive tab has no export in v1 (it shows a table, not figures), so the
+          // export affordance is disabled while it is active.
+          activeTab !== 'deepDive' && (tournaments.length > 0 || handHistories.length > 0)
+            ? handleExport
+            : undefined
+        }
       />
 
       <FileUploader
@@ -227,6 +242,15 @@ function App() {
       <div style={{ display: activeTab === 'situation' ? 'block' : 'none' }}>
         <ErrorBoundary labelKey="errorBoundary.label.situationCharts" resetKeys={[handHistories]}>
           <SituationCharts ref={situationChartsRef} handHistories={handHistories} />
+        </ErrorBoundary>
+      </div>
+
+      <div style={{ display: activeTab === 'deepDive' ? 'block' : 'none' }}>
+        <ErrorBoundary
+          labelKey="errorBoundary.label.deepDiveCharts"
+          resetKeys={[tournaments, handHistories]}
+        >
+          <DeepDiveCharts tournaments={tournaments} handHistories={handHistories} />
         </ErrorBoundary>
       </div>
 

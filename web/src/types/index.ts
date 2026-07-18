@@ -137,6 +137,7 @@ export interface HandHistory {
   sbSeat: number | null  // SB seat is optional (heads-up)
   bbSeat: number
   maxSeats: number
+  tableId: string  // Table number, e.g. "110" from `Table '110' 9-max`
 
   // Seat number -> [playerId, initialChips]
   seats: Map<number, [string, number]>

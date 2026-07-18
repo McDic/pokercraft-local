@@ -4,7 +4,7 @@
 
 import { useTranslation } from 'react-i18next'
 
-export type ChartTab = 'tournament' | 'handHistory' | 'situation'
+export type ChartTab = 'tournament' | 'handHistory' | 'situation' | 'deepDive'
 
 interface ChartTabsProps {
   activeTab: ChartTab
@@ -22,6 +22,8 @@ export function ChartTabs({
   const { t } = useTranslation()
   const hasTournaments = tournamentCount > 0
   const hasHandHistories = handHistoryCount > 0
+  // The Deep Dive tab joins both datasets, so it stays inert until both are present.
+  const hasBoth = hasTournaments && hasHandHistories
 
   if (!hasTournaments && !hasHandHistories) {
     return null
@@ -55,6 +57,14 @@ export function ChartTabs({
         <span className="tab-icon">🎯</span>
         <span className="tab-label">{t('tabs.situation')}</span>
         {hasHandHistories && <span className="tab-count">{handHistoryCount}</span>}
+      </button>
+      <button
+        className={`tab ${activeTab === 'deepDive' ? 'active' : ''} ${!hasBoth ? 'disabled' : ''}`}
+        onClick={() => hasBoth && onTabChange('deepDive')}
+        disabled={!hasBoth}
+      >
+        <span className="tab-icon">🤿</span>
+        <span className="tab-label">{t('tabs.deepDive')}</span>
       </button>
     </nav>
   )
