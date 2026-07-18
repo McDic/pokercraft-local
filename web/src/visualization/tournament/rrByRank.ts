@@ -101,9 +101,14 @@ export function getRRByRankData(tournaments: TournamentSummary[], t: Translate):
   }
 
   const traces: Data[] = [
-    // Main scatter: RR by percentile
+    // Main scatter: RR by percentile.
+    // WebGL (`scattergl`), not SVG `scatter`: this is one marker per cashed tournament — up to a
+    // few thousand across a full 12-month history — and SVG markers turn hover/zoom janky at that
+    // count. Markers are exactly what WebGL renders best. The regression line below deliberately
+    // stays SVG (see there). Exports keep working: the standalone HTML re-renders trace JSON against
+    // the full Plotly CDN build, which ships the gl renderer.
     {
-      type: 'scatter',
+      type: 'scattergl',
       x: rankPercentiles,
       y: rrValues,
       mode: 'markers',
@@ -111,9 +116,9 @@ export function getRRByRankData(tournaments: TournamentSummary[], t: Translate):
       customdata: data.map(d => [d.name, d.totalPlayers, d.rank, d.rr, d.peRR]),
       hovertemplate: t('chart.rrByRank.hover.rr'),
     } as Data,
-    // Secondary scatter: PERR (on secondary y-axis)
+    // Secondary scatter: PERR (on secondary y-axis) — same per-tournament markers, same reason for gl.
     {
-      type: 'scatter',
+      type: 'scattergl',
       x: rankPercentiles,
       y: peRRValues,
       mode: 'markers',
@@ -124,7 +129,8 @@ export function getRRByRankData(tournaments: TournamentSummary[], t: Translate):
       hovertemplate: t('chart.rrByRank.hover.perr'),
       yaxis: 'y2',
     } as Data,
-    // Regression line
+    // Regression line — stays SVG `scatter`. It is a handful of fitted points, so gl buys nothing,
+    // and as an SVG trace it paints *above* the WebGL layer, keeping the trend line on top of the dots.
     {
       type: 'scatter',
       x: fittedX,
