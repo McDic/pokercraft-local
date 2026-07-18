@@ -16,6 +16,8 @@ import { yieldToBrowser } from '../../utils'
 export interface ChipHistoriesData {
   traces: Data[]
   layout: Partial<Layout>
+  /** How to read the chart; one paragraph per line. Shown above the figure and in the export. */
+  caption: string[]
 }
 
 /**
@@ -26,6 +28,8 @@ export async function getChipHistoriesData(
   t: Translate,
   onProgress?: (current: number, total: number) => void
 ): Promise<ChipHistoriesData> {
+  const caption = [t('chart.chipHistories.caption.main'), t('chart.chipHistories.caption.panels')]
+
   const sequences = generateSequences(handHistories)
   const traces: Data[] = []
 
@@ -279,5 +283,5 @@ export async function getChipHistoriesData(
     ],
   }
 
-  return { traces, layout }
+  return { traces, layout, caption }
 }

@@ -26,6 +26,8 @@ const WEEKDAY_KEYS = [
 export interface PrizePiesData {
   traces: Data[]
   layout: Partial<Layout>
+  /** How to read the chart; one paragraph per line. Shown above the figure and in the export. */
+  caption: string[]
 }
 
 /**
@@ -40,6 +42,12 @@ function formatTournamentName(t: TournamentSummary): string {
  * Generate prize pies chart data
  */
 export function getPrizePiesData(tournaments: TournamentSummary[], t: Translate): PrizePiesData {
+  const caption = [
+    t('chart.prizePies.caption.what'),
+    t('chart.prizePies.caption.rings'),
+    t('chart.prizePies.caption.mismatch'),
+  ]
+
   const totalPrizes = tournaments.reduce((sum, tour) => sum + tour.myPrize, 0)
   const threshold = totalPrizes * 0.01
 
@@ -157,5 +165,5 @@ export function getPrizePiesData(tournaments: TournamentSummary[], t: Translate)
     ],
   }
 
-  return { traces, layout }
+  return { traces, layout, caption }
 }

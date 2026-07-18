@@ -21,6 +21,8 @@ export interface HistoricalPerformanceOptions {
 export interface HistoricalPerformanceData {
   traces: Data[]
   layout: Partial<Layout>
+  /** How to read the chart; one paragraph per line. Shown above the figure and in the export. */
+  caption: string[]
 }
 
 /**
@@ -33,6 +35,13 @@ export function getHistoricalPerformanceData(
 ): HistoricalPerformanceData {
   const { windowSizes = DEFAULT_WINDOW_SIZES } = options
 
+  const caption = [
+    t('chart.historical.caption.axis'),
+    t('chart.historical.caption.money'),
+    t('chart.historical.caption.ratio'),
+    t('chart.historical.caption.stakes'),
+  ]
+
   // With no tournaments every bound below degenerates: `Math.min(...[])` is Infinity and
   // `Math.max(...[])` is -Infinity, giving `yaxis3.range = [Infinity, -0.95]`, and the
   // shapes anchor to `netProfit[-1]`, which is `undefined`. Plotly discards both, and the
@@ -41,6 +50,7 @@ export function getHistoricalPerformanceData(
   if (tournaments.length === 0) {
     return {
       traces: [],
+      caption,
       layout: {
         title: { text: t('chart.historical.title') },
         height: 800,
@@ -397,5 +407,5 @@ export function getHistoricalPerformanceData(
     ],
   }
 
-  return { traces, layout }
+  return { traces, layout, caption }
 }

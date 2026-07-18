@@ -5,6 +5,7 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import { useTranslation } from 'react-i18next'
 import Plot from './plot'
+import { ChartCaption } from './ChartCaption'
 import type { Data, Layout } from 'plotly.js-dist-min'
 import type { TournamentSummary } from '../types'
 import type { BankrollWorkerResult } from '../workers/analysisWorker'
@@ -16,6 +17,8 @@ import { yieldToBrowser } from '../utils'
 interface ChartData {
   traces: Data[]
   layout: Partial<Layout>
+  /** Explanatory paragraphs shown above the figure (and carried into the export). */
+  caption: string[]
 }
 
 interface TournamentChartsProps {
@@ -253,6 +256,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
 
       {state.historical && (
         <section className="chart-section">
+          <ChartCaption lines={state.historical.caption} />
           <Plot
             data={state.historical.traces}
             layout={{ ...state.historical.layout, autosize: true }}
@@ -265,6 +269,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
 
       {state.rre && (
         <section className="chart-section">
+          <ChartCaption lines={state.rre.caption} />
           <Plot
             data={state.rre.traces}
             layout={{ ...state.rre.layout, autosize: true }}
@@ -277,6 +282,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
 
       {state.bankroll && (
         <section className="chart-section">
+          <ChartCaption lines={state.bankroll.caption} />
           <Plot
             data={state.bankroll.traces}
             layout={{ ...state.bankroll.layout, autosize: true }}
@@ -289,6 +295,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
 
       {state.prizePies && (
         <section className="chart-section">
+          <ChartCaption lines={state.prizePies.caption} />
           <Plot
             data={state.prizePies.traces}
             layout={{ ...state.prizePies.layout, autosize: true }}
@@ -301,6 +308,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
 
       {state.rrByRank && (
         <section className="chart-section">
+          <ChartCaption lines={state.rrByRank.caption} />
           <Plot
             data={state.rrByRank.traces}
             layout={{ ...state.rrByRank.layout, autosize: true }}

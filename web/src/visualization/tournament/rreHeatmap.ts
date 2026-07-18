@@ -16,12 +16,16 @@ import type { Data, Layout } from 'plotly.js-dist-min'
 export interface RREHeatmapData {
   traces: Data[]
   layout: Partial<Layout>
+  /** How to read the chart; one paragraph per line. Shown above the figure and in the export. */
+  caption: string[]
 }
 
 /**
  * Generate RRE heatmap chart data
  */
 export function getRREHeatmapData(tournaments: TournamentSummary[], t: Translate): RREHeatmapData {
+  const caption = [t('chart.rre.caption.what'), t('chart.rre.caption.panels')]
+
   // Calculate data for each tournament
   const data = tournaments.map(tour => ({
     buyIn: getTournamentBuyIn(tour),
@@ -220,5 +224,5 @@ export function getRREHeatmapData(tournaments: TournamentSummary[], t: Translate
     ],
   }
 
-  return { traces, layout: layout as Partial<Layout> }
+  return { traces, layout: layout as Partial<Layout>, caption }
 }

@@ -15,6 +15,8 @@ export interface BankrollResult {
 export interface BankrollAnalysisData {
   traces: Data[]
   layout: Partial<Layout>
+  /** How to read the chart; one paragraph per line. Shown above the figure and in the export. */
+  caption: string[]
 }
 
 /**
@@ -24,9 +26,16 @@ export function getBankrollAnalysisData(
   results: BankrollResult[],
   t: Translate
 ): BankrollAnalysisData {
+  const caption = [
+    t('chart.bankroll.caption.what'),
+    t('chart.bankroll.caption.read'),
+    t('chart.bankroll.caption.caveat'),
+  ]
+
   if (results.length === 0) {
     return {
       traces: [],
+      caption,
       layout: {
         title: { text: t('chart.bankroll.title') },
         annotations: [
@@ -92,5 +101,5 @@ export function getBankrollAnalysisData(
     height: 400,
   }
 
-  return { traces, layout }
+  return { traces, layout, caption }
 }

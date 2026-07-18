@@ -12,12 +12,20 @@ import type { Data, Layout } from 'plotly.js-dist-min'
 export interface RRByRankData {
   traces: Data[]
   layout: Partial<Layout>
+  /** How to read the chart; one paragraph per line. Shown above the figure and in the export. */
+  caption: string[]
 }
 
 /**
  * Generate RR by Rank chart data
  */
 export function getRRByRankData(tournaments: TournamentSummary[], t: Translate): RRByRankData {
+  const caption = [
+    t('chart.rrByRank.caption.what'),
+    t('chart.rrByRank.caption.read'),
+    t('chart.rrByRank.caption.cashesOnly'),
+  ]
+
   // Calculate data for each tournament
   const data = tournaments
     .map(tour => {
@@ -47,6 +55,7 @@ export function getRRByRankData(tournaments: TournamentSummary[], t: Translate):
   if (data.length === 0) {
     return {
       traces: [],
+      caption,
       layout: {
         title: { text: t('chart.rrByRank.title') },
         height: 500,
@@ -243,5 +252,5 @@ export function getRRByRankData(tournaments: TournamentSummary[], t: Translate):
     ],
   }
 
-  return { traces, layout }
+  return { traces, layout, caption }
 }

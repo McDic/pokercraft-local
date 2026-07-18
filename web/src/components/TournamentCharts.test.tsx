@@ -11,7 +11,7 @@ import type { BankrollWorkerResult } from '../workers/analysisWorker'
 vi.mock('./plot', () => ({ default: () => null }))
 
 const viz = vi.hoisted(() => {
-  const empty = () => ({ traces: [], layout: {} })
+  const empty = () => ({ traces: [], layout: {}, caption: [] })
   return {
     getHistoricalPerformanceData: vi.fn(empty),
     getRREHeatmapData: vi.fn(empty),

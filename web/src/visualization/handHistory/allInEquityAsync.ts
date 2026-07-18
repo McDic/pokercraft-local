@@ -27,6 +27,8 @@ export interface AllInHandData {
 export interface AllInEquityData {
   traces: Data[]
   layout: Partial<Layout>
+  /** How to read the chart; one paragraph per line. Shown above the figure and in the export. */
+  caption: string[]
 }
 
 function getCommunityAtStreet(h: HandHistory, street: HandStage): string[] {
@@ -297,9 +299,16 @@ export function createAllInEquityChart(
   luckScore: LuckScore,
   t: Translate
 ): AllInEquityData {
+  const caption = [
+    t('chart.allInEquity.caption.scope'),
+    t('chart.allInEquity.caption.diagonal'),
+    t('chart.allInEquity.caption.luck'),
+  ]
+
   if (allInData.length === 0) {
     return {
       traces: [],
+      caption,
       layout: {
         title: { text: t('chart.allInEquity.title') },
         annotations: [
@@ -520,5 +529,5 @@ export function createAllInEquityChart(
     ],
   }
 
-  return { traces, layout }
+  return { traces, layout, caption }
 }

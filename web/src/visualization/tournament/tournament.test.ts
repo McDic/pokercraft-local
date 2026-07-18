@@ -136,3 +136,21 @@ describe('getBankrollAnalysisData', () => {
     ).toEqual([])
   })
 })
+
+// Every tournament chart carries its own explanatory caption, shown above the figure and in the
+// export. It must be present with data and on the no-data path alike (the caption is where the
+// "what am I looking at" lives even when the chart is empty).
+describe('every tournament chart ships a caption', () => {
+  const withData = [cashed(1), cashed(2)]
+  const builders: Array<[string, (empty: boolean) => { caption: string[] }]> = [
+    ['rrByRank', e => getRRByRankData(e ? [] : withData, identityT)],
+    ['historical', e => getHistoricalPerformanceData(e ? [] : withData, identityT)],
+    ['rre', e => getRREHeatmapData(e ? [] : withData, identityT)],
+    ['prizePies', e => getPrizePiesData(e ? [] : withData, identityT)],
+    ['bankroll', e => getBankrollAnalysisData(e ? [] : makeBankrollResults(0.5), identityT)],
+  ]
+  it.each(builders)('%s: caption present with data and empty', (_name, build) => {
+    expect(build(false).caption.length).toBeGreaterThan(0)
+    expect(build(true).caption.length).toBeGreaterThan(0)
+  })
+})
