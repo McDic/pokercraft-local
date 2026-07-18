@@ -75,9 +75,9 @@ describe('chipHistories', () => {
 
   // The per-tournament chip lines are a WebGL trace (`scattergl`) — ~943 lines / ~76k points on
   // real data, the only heavy trace here. The danger line, survival curve, and death-threshold bar
-  // stay non-gl: one trace each, the survival curve needs `fill` (gl's weak spot), and as SVG they
-  // paint above the WebGL layer so the danger line and overlays stay on top. The overlays all share
-  // `mode:'lines'` with the chip lines, so they're identified by name, not mode.
+  // stay non-gl: one trace each, and the survival curve needs `fill` (gl's weak spot). The danger
+  // line and survival curve also share `mode:'lines'` with the chip lines, so they're identified by
+  // name, not mode.
   it('uses WebGL only for the per-tournament chip lines, SVG for the overlays', async () => {
     const hh1 = createMockHandHistory({ id: 'TM00001', tournamentId: 1, wons: new Map([['Hero', 50]]) })
     const hh2 = createMockHandHistory({ id: 'TM00002', tournamentId: 2, wons: new Map([['Hero', 100]]) })

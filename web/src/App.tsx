@@ -120,6 +120,17 @@ function App() {
     }
   }, [tournaments, runAnalysis])
 
+  // Plotly sizes each chart to its container at draw time. A chart first drawn inside a hidden
+  // (`display:none`) tab is drawn at width 0: an SVG chart still recovers, because the browser
+  // scales its viewBox to the container once shown, but a WebGL (`scattergl`) chart's drawing
+  // buffer stays 0×0 and paints blank until something resizes it. react-plotly's `useResizeHandler`
+  // listens on window resize only, so nudge it on every tab switch — by the time this effect runs
+  // the now-visible tab has its real width, and the dispatch makes every mounted Plot re-fit. This
+  // became load-bearing when the RR-by-Rank and Chip Histories charts moved to WebGL.
+  useEffect(() => {
+    window.dispatchEvent(new Event('resize'))
+  }, [activeTab])
+
   // The export follows whatever language the site is currently in: the charts were
   // built in it, so anything else would mean rebuilding every figure.
   const language = i18n.resolvedLanguage ?? 'en'

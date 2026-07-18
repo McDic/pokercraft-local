@@ -98,8 +98,9 @@ export async function getChipHistoriesData(
     // One gl line per tournament. This is the heavy trace — ~943 lines / ~76k vertices on the
     // real data — and it is the only thing here worth moving to WebGL. The danger line, survival
     // curve, and death-threshold bar below stay SVG on purpose: they are one trace each (no perf
-    // reason), the survival curve needs `fill` (gl's weak spot), and being SVG they paint above
-    // this WebGL layer so the danger line and overlays stay on top of the chip trajectories.
+    // reason) and the survival curve needs `fill` (gl's weak spot). The danger line also shares
+    // this subplot with the chip lines, and being SVG it paints above the WebGL layer, so it stays
+    // on top of the trajectories (the survival curve and bar sit on their own grid panels).
     traces.push({
       type: 'scattergl',
       x: xValues,
