@@ -137,7 +137,7 @@
 
   "chart.rrByRank.name": "RR by Rank",
   "chart.rrByRank.caption.what": "Each dot is one cashed tournament: how deep you finished (rank percentile, x) against your return (RR = prize ÷ buy-in, y). Both axes are log.",
-  "chart.rrByRank.caption.read": "Deep, high-return runs sit in the lower-left. The horizontal line is break-even (1×), the vertical the rough in-the-money cut (~12.5%); the trendline is fit to your deepest 12.5% of finishes. PERR (percentile × RR) is hidden — toggle it to weight each return by how deep you ran.",
+  "chart.rrByRank.caption.read": "Deep, high-return runs sit in the upper-right (the percentile axis is reversed, so deeper finishes are to the right). The horizontal line is break-even (1×), the vertical the rough in-the-money cut (~12.5%); the trendline is fit to your deepest 12.5% of finishes. PERR (percentile × RR) is hidden — toggle it to weight each return by how deep you ran.",
   "chart.rrByRank.caption.cashesOnly": "Only cashes appear — a bust has no return to plot.",
   "chart.rrByRank.title": "RR by Rank Percentile",
   "chart.rrByRank.noData": "No cashes yet — nothing to plot",
