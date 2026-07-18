@@ -72,6 +72,31 @@ describe('chipHistories', () => {
     expect(result.traces.length).toBeGreaterThan(0)
     expect(result.layout.title).toEqual({ text: 'chart.chipHistories.title' })
   })
+
+  // The per-tournament chip lines are a WebGL trace (`scattergl`) — ~943 lines / ~76k points on
+  // real data, the only heavy trace here. The danger line, survival curve, and death-threshold bar
+  // stay non-gl: one trace each, the survival curve needs `fill` (gl's weak spot), and as SVG they
+  // paint above the WebGL layer so the danger line and overlays stay on top. The overlays all share
+  // `mode:'lines'` with the chip lines, so they're identified by name, not mode.
+  it('uses WebGL only for the per-tournament chip lines, SVG for the overlays', async () => {
+    const hh1 = createMockHandHistory({ id: 'TM00001', tournamentId: 1, wons: new Map([['Hero', 50]]) })
+    const hh2 = createMockHandHistory({ id: 'TM00002', tournamentId: 2, wons: new Map([['Hero', 100]]) })
+
+    const { traces } = await getChipHistoriesData([hh1, hh2], identityT)
+    const typeOf = (name: string) =>
+      (traces.find(tr => (tr as { name?: string }).name === name) as { type?: string } | undefined)
+        ?.type
+
+    // Every gl trace is a per-tournament chip line (mode 'lines'), and there is at least one.
+    const gl = traces.filter(tr => (tr as { type?: string }).type === 'scattergl')
+    expect(gl.length).toBeGreaterThan(0)
+    for (const tr of gl) expect((tr as { mode?: string }).mode).toBe('lines')
+
+    // The overlays stay off the WebGL layer.
+    expect(typeOf('chart.chipHistories.legend.dangerLine')).toBe('scatter')
+    expect(typeOf('chart.chipHistories.legend.survivalRate')).toBe('scatter')
+    expect(typeOf('chart.chipHistories.legend.deathThreshold')).toBe('bar')
+  })
 })
 
 describe('handUsageHeatmaps', () => {
