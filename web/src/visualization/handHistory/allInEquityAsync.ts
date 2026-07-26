@@ -6,7 +6,7 @@
 import type { Data, Layout } from 'plotly.js-dist-min'
 import type { HandHistory, HandStage } from '../../types'
 import {
-  getHandHistoryAllInedStreet,
+  getHandHistoryAllInShowdownStreet,
   getHandHistoryShowdownPlayers,
 } from '../../types'
 import type {
@@ -82,7 +82,7 @@ function filterEligibleHands(handHistories: HandHistory[]): EligibleHand[] {
   const eligible: EligibleHand[] = []
 
   for (const h of handHistories) {
-    const allInStreet = getHandHistoryAllInedStreet(h, 'Hero')
+    const allInStreet = getHandHistoryAllInShowdownStreet(h, 'Hero')
 
     if (allInStreet !== 'preflop' && allInStreet !== 'flop' && allInStreet !== 'turn') {
       continue
