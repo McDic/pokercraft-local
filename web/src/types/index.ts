@@ -324,11 +324,68 @@ export function getHandHistoryPreflopPassiveFolded(h: HandHistory, playerId: str
   return null
 }
 
+const HAND_STAGE_ORDER: Record<HandStage, number> = { preflop: 0, flop: 1, turn: 2, river: 3 }
+
 /**
- * Get the street where a player went all-in, or null if they didn't go all-in.
+ * All-in street per player, including all-ins from posting a short
+ * blind/ante — those are flagged on the action but never reach `h.allIned`
+ * because GG prints no "and is all-in" line for them.
  */
-export function getHandHistoryAllInedStreet(h: HandHistory, playerId: string): HandStage | null {
-  return h.allIned.get(playerId) ?? null
+function getAllInStreets(h: HandHistory): Map<string, HandStage> {
+  const streets = new Map(h.allIned)
+  for (const action of h.actionsPreflop) {
+    if ((action.action === 'blind' || action.action === 'ante') && action.isAllIn) {
+      streets.set(action.playerId, 'preflop')
+    }
+  }
+  return streets
+}
+
+/**
+ * Get the street where an all-in showdown formed for a player, or null.
+ *
+ * A hand qualifies in two ways:
+ * - The player themselves went all-in (returns their all-in street), or
+ * - At the end of some street every other player still in the hand was
+ *   all-in while this player had chips behind (a covering call). Betting is
+ *   closed at that point, so the board runs out exactly as if the player
+ *   were all-in too.
+ */
+export function getHandHistoryAllInShowdownStreet(
+  h: HandHistory,
+  playerId: string
+): HandStage | null {
+  const allInStreets = getAllInStreets(h)
+  const own = allInStreets.get(playerId)
+  if (own) return own
+  if (allInStreets.size === 0) return null
+
+  const streets: [HandStage, BetAction[]][] = [
+    ['preflop', h.actionsPreflop],
+    ['flop', h.actionsFlop],
+    ['turn', h.actionsTurn],
+    ['river', h.actionsRiver],
+  ]
+  const folded = new Set<string>()
+  for (const [stage, actions] of streets) {
+    for (const action of actions) {
+      if (action.action === 'fold') folded.add(action.playerId)
+    }
+    const remaining = Array.from(h.seats.values())
+      .map(([pid]) => pid)
+      .filter(pid => !folded.has(pid))
+    if (remaining.length < 2 || !remaining.includes(playerId)) return null
+
+    const stageIdx = HAND_STAGE_ORDER[stage]
+    const nonAllIn = remaining.filter(pid => {
+      const st = allInStreets.get(pid)
+      return st === undefined || HAND_STAGE_ORDER[st] > stageIdx
+    })
+    // The player is not all-in here (handled above), so nonAllIn contains at
+    // least them; exactly one non-all-in player means everyone else is in.
+    if (nonAllIn.length === 1) return stage
+  }
+  return null
 }
 
 // ============================================================================
