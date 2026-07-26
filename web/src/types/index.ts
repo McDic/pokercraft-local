@@ -327,23 +327,18 @@ export function getHandHistoryPreflopPassiveFolded(h: HandHistory, playerId: str
 const HAND_STAGE_ORDER: Record<HandStage, number> = { preflop: 0, flop: 1, turn: 2, river: 3 }
 
 /**
- * Street where a player is all-in, including all-ins from posting a short
+ * All-in street per player, including all-ins from posting a short
  * blind/ante — those are flagged on the action but never reach `h.allIned`
  * because GG prints no "and is all-in" line for them.
  */
-function getPlayerAllInStreet(h: HandHistory, playerId: string): HandStage | null {
-  const tagged = h.allIned.get(playerId)
-  if (tagged) return tagged
+function getAllInStreets(h: HandHistory): Map<string, HandStage> {
+  const streets = new Map(h.allIned)
   for (const action of h.actionsPreflop) {
-    if (
-      (action.action === 'blind' || action.action === 'ante') &&
-      action.playerId === playerId &&
-      action.isAllIn
-    ) {
-      return 'preflop'
+    if ((action.action === 'blind' || action.action === 'ante') && action.isAllIn) {
+      streets.set(action.playerId, 'preflop')
     }
   }
-  return null
+  return streets
 }
 
 /**
@@ -360,8 +355,10 @@ export function getHandHistoryAllInShowdownStreet(
   h: HandHistory,
   playerId: string
 ): HandStage | null {
-  const own = getPlayerAllInStreet(h, playerId)
+  const allInStreets = getAllInStreets(h)
+  const own = allInStreets.get(playerId)
   if (own) return own
+  if (allInStreets.size === 0) return null
 
   const streets: [HandStage, BetAction[]][] = [
     ['preflop', h.actionsPreflop],
@@ -381,8 +378,8 @@ export function getHandHistoryAllInShowdownStreet(
 
     const stageIdx = HAND_STAGE_ORDER[stage]
     const nonAllIn = remaining.filter(pid => {
-      const st = getPlayerAllInStreet(h, pid)
-      return st === null || HAND_STAGE_ORDER[st] > stageIdx
+      const st = allInStreets.get(pid)
+      return st === undefined || HAND_STAGE_ORDER[st] > stageIdx
     })
     // The player is not all-in here (handled above), so nonAllIn contains at
     // least them; exactly one non-all-in player means everyone else is in.

@@ -270,6 +270,171 @@ Seat 1: aaaa1111 (small blind) showed [7s 7h] and lost with two pair, Queens and
 Seat 3: Hero (big blind) showed [Qs Ks] and won (50) with three of a kind, Queens
 `
 
+// Opponent is all-in from posting a short small blind (no GG tag; only the
+// parser postprocess flags it). Hero covers — must qualify at preflop.
+const OPPONENT_BLIND_ALL_IN_HERO_COVERS = `
+Poker Hand #SG1000000010: Tournament #900000001, Spin&Gold #4 Hold'em No Limit - Level2(15/30) - 2025/09/29 01:01:00
+Table '12470' 3-max Seat #1 is the button
+Seat 1: aaaa1111 (10 in chips)
+Seat 3: Hero (890 in chips)
+aaaa1111: posts small blind 10
+Hero: posts big blind 30
+*** HOLE CARDS ***
+Dealt to aaaa1111
+Dealt to Hero [Qs Ks]
+Uncalled bet (20) returned to Hero
+aaaa1111: shows [7s 7h]
+Hero: shows [Qs Ks]
+*** FLOP *** [Tc Qh As]
+*** TURN *** [Tc Qh As] [Qc]
+*** RIVER *** [Tc Qh As Qc] [9c]
+*** SHOWDOWN ***
+Hero collected 20 from pot
+*** SUMMARY ***
+Total pot 20 | Rake 0 | Jackpot 0 | Bingo 0 | Fortune 0 | Tax 0
+Board [Tc Qh As Qc 9c]
+Seat 1: aaaa1111 (small blind) showed [7s 7h] and lost with two pair, Queens and Sevens
+Seat 3: Hero (big blind) showed [Qs Ks] and won (20) with three of a kind, Queens
+`
+
+// Hero is all-in from posting a short ante (flagged only by postprocess).
+const HERO_ANTE_ALL_IN = `
+Poker Hand #TM1000000011: Tournament #900000002, Test Tournament Hold'em No Limit - Level10(600/1200) - 2025/09/29 01:10:00
+Table '1' 6-max Seat #1 is the button
+Seat 1: aaaa1111 (30,000 in chips)
+Seat 2: bbbb2222 (30,000 in chips)
+Seat 3: Hero (40 in chips)
+aaaa1111: posts the ante 150
+bbbb2222: posts the ante 150
+Hero: posts the ante 40
+aaaa1111: posts small blind 600
+bbbb2222: posts big blind 1,200
+*** HOLE CARDS ***
+Dealt to aaaa1111
+Dealt to bbbb2222
+Dealt to Hero [Qs Ks]
+aaaa1111: folds
+Hero: shows [Qs Ks]
+bbbb2222: shows [7s 7h]
+*** FLOP *** [Tc Qh As]
+*** TURN *** [Tc Qh As] [Qc]
+*** RIVER *** [Tc Qh As Qc] [9c]
+*** SHOWDOWN ***
+Hero collected 120 from pot
+*** SUMMARY ***
+Total pot 120 | Rake 0 | Jackpot 0 | Bingo 0 | Fortune 0 | Tax 0
+Board [Tc Qh As Qc 9c]
+Seat 1: aaaa1111 (small blind) folded before Flop
+Seat 2: bbbb2222 (big blind) showed [7s 7h] and lost with two pair, Queens and Sevens
+Seat 3: Hero (button) showed [Qs Ks] and won (120) with three of a kind, Queens
+`
+
+// Covering call on the flop resolves to the flop.
+const HU_HERO_COVERS_FLOP_SHOVE = `
+Poker Hand #SG1000000012: Tournament #900000001, Spin&Gold #4 Hold'em No Limit - Level2(15/30) - 2025/09/29 01:12:00
+Table '12470' 3-max Seat #1 is the button
+Seat 1: aaaa1111 (360 in chips)
+Seat 3: Hero (540 in chips)
+aaaa1111: posts small blind 15
+Hero: posts big blind 30
+*** HOLE CARDS ***
+Dealt to aaaa1111
+Dealt to Hero [Qs Ks]
+aaaa1111: calls 15
+Hero: checks
+*** FLOP *** [Tc Qh As]
+Hero: checks
+aaaa1111: bets 330 and is all-in
+Hero: calls 330
+aaaa1111: shows [7s 7h]
+Hero: shows [Qs Ks]
+*** TURN *** [Tc Qh As] [Qc]
+*** RIVER *** [Tc Qh As Qc] [9c]
+*** SHOWDOWN ***
+Hero collected 720 from pot
+*** SUMMARY ***
+Total pot 720 | Rake 0 | Jackpot 0 | Bingo 0 | Fortune 0 | Tax 0
+Board [Tc Qh As Qc 9c]
+Seat 1: aaaa1111 (small blind) showed [7s 7h] and lost with two pair, Queens and Sevens
+Seat 3: Hero (big blind) showed [Qs Ks] and won (720) with three of a kind, Queens
+`
+
+// One opponent is all-in but a second opponent stays live with chips behind
+// (checked down to showdown). Hero also has chips — never an all-in showdown
+// for Hero, even though everyone reaches showdown.
+const MW_SECOND_OPPONENT_STAYS_LIVE = `
+Poker Hand #TM1000000013: Tournament #900000002, Test Tournament Hold'em No Limit - Level5(100/200) - 2025/09/29 01:13:00
+Table '1' 6-max Seat #1 is the button
+Seat 1: aaaa1111 (300 in chips)
+Seat 2: bbbb2222 (10,000 in chips)
+Seat 3: Hero (10,000 in chips)
+aaaa1111: posts small blind 100
+bbbb2222: posts big blind 200
+*** HOLE CARDS ***
+Dealt to aaaa1111
+Dealt to bbbb2222
+Dealt to Hero [As Ad]
+Hero: calls 200
+aaaa1111: raises 100 to 300 and is all-in
+bbbb2222: calls 100
+Hero: calls 100
+*** FLOP *** [2c 5h 9s]
+bbbb2222: checks
+Hero: checks
+*** TURN *** [2c 5h 9s] [Jd]
+bbbb2222: checks
+Hero: checks
+*** RIVER *** [2c 5h 9s Jd] [3c]
+bbbb2222: checks
+Hero: checks
+aaaa1111: shows [Kd Kc]
+bbbb2222: shows [Qh Qd]
+Hero: shows [As Ad]
+*** SHOWDOWN ***
+Hero collected 900 from pot
+*** SUMMARY ***
+Total pot 900 | Rake 0 | Jackpot 0 | Bingo 0 | Fortune 0 | Tax 0
+Board [2c 5h 9s Jd 3c]
+Seat 1: aaaa1111 (small blind) showed [Kd Kc] and lost with a pair of Kings
+Seat 2: bbbb2222 (big blind) showed [Qh Qd] and lost with a pair of Queens
+Seat 3: Hero (button) showed [As Ad] and won (900) with a pair of Aces
+`
+
+// River shove covered by Hero: the helper reports 'river'; excluding river
+// all-ins from the equity chart is the callers' policy, not the helper's.
+const HU_HERO_COVERS_RIVER_SHOVE = `
+Poker Hand #SG1000000014: Tournament #900000001, Spin&Gold #4 Hold'em No Limit - Level2(15/30) - 2025/09/29 01:14:00
+Table '12470' 3-max Seat #1 is the button
+Seat 1: aaaa1111 (360 in chips)
+Seat 3: Hero (540 in chips)
+aaaa1111: posts small blind 15
+Hero: posts big blind 30
+*** HOLE CARDS ***
+Dealt to aaaa1111
+Dealt to Hero [Qs Ks]
+aaaa1111: calls 15
+Hero: checks
+*** FLOP *** [Tc Qh As]
+Hero: checks
+aaaa1111: checks
+*** TURN *** [Tc Qh As] [Qc]
+Hero: checks
+aaaa1111: checks
+*** RIVER *** [Tc Qh As Qc] [9c]
+Hero: checks
+aaaa1111: bets 330 and is all-in
+Hero: calls 330
+aaaa1111: shows [7s 7h]
+Hero: shows [Qs Ks]
+*** SHOWDOWN ***
+Hero collected 720 from pot
+*** SUMMARY ***
+Total pot 720 | Rake 0 | Jackpot 0 | Bingo 0 | Fortune 0 | Tax 0
+Board [Tc Qh As Qc 9c]
+Seat 1: aaaa1111 (small blind) showed [7s 7h] and lost with two pair, Queens and Sevens
+Seat 3: Hero (big blind) showed [Qs Ks] and won (720) with three of a kind, Queens
+`
+
 // Hero folds to the shove — no showdown for Hero, must not qualify.
 const HERO_FOLDS_TO_SHOVE = `
 Poker Hand #SG1000000009: Tournament #900000001, Spin&Gold #4 Hold'em No Limit - Level2(15/30) - 2025/09/29 00:59:00
@@ -327,5 +492,25 @@ describe('getHandHistoryAllInShowdownStreet', () => {
 
   it('Hero folding to a shove does not qualify', () => {
     expect(heroStreet(HERO_FOLDS_TO_SHOVE)).toBeNull()
+  })
+
+  it('Hero covering an opponent all-in from a short blind qualifies', () => {
+    expect(heroStreet(OPPONENT_BLIND_ALL_IN_HERO_COVERS)).toBe('preflop')
+  })
+
+  it('Hero all-in from posting a short ante qualifies', () => {
+    expect(heroStreet(HERO_ANTE_ALL_IN)).toBe('preflop')
+  })
+
+  it('covering call on the flop resolves to the flop', () => {
+    expect(heroStreet(HU_HERO_COVERS_FLOP_SHOVE)).toBe('flop')
+  })
+
+  it('a second live opponent with chips behind prevents qualification', () => {
+    expect(heroStreet(MW_SECOND_OPPONENT_STAYS_LIVE)).toBeNull()
+  })
+
+  it('river covering call reports river (callers exclude it)', () => {
+    expect(heroStreet(HU_HERO_COVERS_RIVER_SHOVE)).toBe('river')
   })
 })

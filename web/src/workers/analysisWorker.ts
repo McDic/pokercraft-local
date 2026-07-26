@@ -5,7 +5,7 @@
 
 import init, { EquityResult, simulate, version } from '../wasm/pokercraft_wasm'
 import { loadAndParseFiles, CurrencyRateConverter } from '../parser'
-import type { TournamentSummary, HandHistory, ParseResult } from '../types'
+import type { TournamentSummary, HandHistory, HandStage, ParseResult } from '../types'
 import {
   getHandHistoryAllInShowdownStreet,
   getHandHistoryShowdownPlayers,
@@ -129,16 +129,16 @@ async function calculateEquityData(handHistories: HandHistory[]): Promise<AllInE
   await ensureWasmInit()
 
   const results: AllInEquityWorkerData[] = []
-  const eligibleHands = handHistories.filter(h => {
+  const eligibleHands: [HandHistory, HandStage][] = []
+  for (const h of handHistories) {
     const street = getHandHistoryAllInShowdownStreet(h, 'Hero')
-    if (street !== 'preflop' && street !== 'flop' && street !== 'turn') return false
+    if (street !== 'preflop' && street !== 'flop' && street !== 'turn') continue
     const showdown = getHandHistoryShowdownPlayers(h)
-    return showdown.size >= 2 && showdown.has('Hero')
-  })
+    if (showdown.size >= 2 && showdown.has('Hero')) eligibleHands.push([h, street])
+  }
 
   let processed = 0
-  for (const h of eligibleHands) {
-    const street = getHandHistoryAllInShowdownStreet(h, 'Hero')!
+  for (const [h, street] of eligibleHands) {
     const heroCards = h.knownCards.get('Hero')
     if (!heroCards) continue
 
