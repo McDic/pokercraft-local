@@ -173,11 +173,6 @@ export async function collectAllInDataAsync(
     onProgress?.(total, eligible.length)
   }
 
-  // Track stats across all workers
-  let totalCacheHits = 0
-  let totalCacheMisses = 0
-  let totalFullCalcs = 0
-
   // Spawn workers and collect results
   const workerPromises = chunks.map((chunk, workerIndex) => {
     return new Promise<AllInHandData[]>((resolve, reject) => {
@@ -219,12 +214,10 @@ export async function collectAllInDataAsync(
         } else if (msg.type === 'result') {
           settle()
           worker.terminate()
-          // Aggregate stats
-          if (msg.stats) {
-            totalCacheHits += msg.stats.cacheHits
-            totalCacheMisses += msg.stats.cacheMisses
-            totalFullCalcs += msg.stats.fullCalcs
-          }
+          // `msg.stats` (cache hits/misses, full calcs) stays part of the worker
+          // protocol for ad-hoc profiling, but nothing consumes it here — the
+          // aggregation that used to live at this point fed a debug log that is
+          // gone, so it accumulated into variables no one read.
           resolve(msg.data.map(d => ({
             ...d,
             allInStreet: d.allInStreet as HandStage,
