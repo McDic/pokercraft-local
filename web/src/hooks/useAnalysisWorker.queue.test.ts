@@ -213,8 +213,10 @@ describe('useAnalysisWorker analyze queue', () => {
     parseWorker().emit(parseResult([makeTournament(1)]))
 
     // Pump again *without* a fresh runAnalysis() — deliberately, since a second call would re-set
-    // the flag and the test would pass either way. The analyze worker reporting back is the
-    // in-app trigger for this path. If the earlier pump had consumed the flag, nothing posts.
+    // the flag and the test would pass under either ordering, making it vacuous. The worker error
+    // is simply the only pump trigger left: nothing was ever posted to this worker, so in the real
+    // app the only way it fires here is a module or WASM load failure. Contrived on purpose — the
+    // point is to observe whether the flag survived, and this is the one lever that does that.
     act(() => {
       analyzeWorker().onerror?.({ message: 'unrelated' })
     })

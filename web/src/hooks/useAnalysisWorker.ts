@@ -171,9 +171,16 @@ export function useAnalysisWorker(): UseAnalysisWorkerReturn {
   const pumpAnalyze = useCallback(() => {
     const worker = analyzeWorkerRef.current
     if (!worker || analyzeBusyRef.current || !reanalyzePendingRef.current) return
-    // Checked before the flag is consumed, so a request made with nothing to analyse is deferred
-    // rather than dropped: it stays pending and is served by the next pump, once tournaments have
-    // arrived. Consuming first meant "pending" could be cleared by a pump that did no work.
+    // Checked before the flag is consumed, so a request that finds nothing to analyse leaves
+    // "pending" set for whatever pump comes next, rather than being silently swallowed by a pump
+    // that did no work.
+    //
+    // Note what this deliberately does *not* do: nothing pumps this queue when tournaments
+    // arrive — the parse-result branch calls only pumpParse — so preserving the flag is not by
+    // itself a delivery mechanism. Wiring one into the tournamentsRef sync effect would deliver
+    // it, but in App's shape it turns one analysis into two: the arrival pump posts, App's
+    // auto-run effect re-sets the flag, and the result triggers an identical re-run. Preserving
+    // the flag without wiring delivery is the deliberate stopping point.
     if (tournamentsRef.current.length === 0) return
     reanalyzePendingRef.current = false
     analyzeBusyRef.current = true
