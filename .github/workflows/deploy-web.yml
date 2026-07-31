@@ -13,6 +13,8 @@ on:
       - 'Cargo.lock'
       - 'web/public/hu_preflop_cache.bin'
       - '.github/workflows/deploy-web.yml'
+      # The shared toolchain action this workflow calls.
+      - '.github/actions/setup-wasm-build/**'
   # Allow manual trigger
   workflow_dispatch:
 
@@ -34,19 +36,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-
-      - name: Cache Rust build
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: ". -> target"
-          shared-key: "wasm-build"
-
-      - name: Install wasm-pack
-        run: cargo install wasm-pack
+      # Rust toolchain + Cargo cache + pinned wasm-pack, shared with test-web.yml.
+      #
+      # This step used to be a hand-rolled copy that had drifted: `cargo install wasm-pack`,
+      # unpinned. It compiled from source on every deploy (77s, measured, and not fixable by
+      # caching — test-web.yml wins the shared cache key and stores a ~/.cargo/bin with no
+      # wasm-pack in it), and being unpinned it would have started building the published
+      # artifact with a different wasm-pack than the PR gate validates the moment upstream
+      # tagged a release. It resolved to the same v0.15.0 only by coincidence.
+      - name: Setup WASM build toolchain
+        uses: ./.github/actions/setup-wasm-build
 
       - name: Build WASM
         run: ./scripts/build-wasm.sh

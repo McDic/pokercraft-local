@@ -598,13 +598,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-
-      - name: Install wasm-pack
-        run: cargo install wasm-pack
+      # Both CI workflows call the shared composite action instead, which pins wasm-pack
+      # to a prebuilt binary. `cargo install wasm-pack` is unpinned and compiles from
+      # source; see .github/actions/setup-wasm-build/action.yml.
+      - name: Setup WASM build toolchain
+        uses: ./.github/actions/setup-wasm-build
 
       - name: Build WASM
         run: |
