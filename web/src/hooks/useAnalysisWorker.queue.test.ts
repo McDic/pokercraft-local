@@ -203,6 +203,28 @@ describe('useAnalysisWorker analyze queue', () => {
     expect(analyzeWorker().posted).toHaveLength(0)
   })
 
+  it('defers a request made before any tournaments exist rather than dropping it', () => {
+    // A request with nothing to analyse. The pump can do no work, but the flag must survive it.
+    act(() => api().runAnalysis())
+    expect(analyzeWorker().posted).toHaveLength(0)
+
+    // Tournaments land via a parse.
+    act(() => api().parseFiles([file('a.txt')]))
+    parseWorker().emit(parseResult([makeTournament(1)]))
+
+    // Pump again *without* a fresh runAnalysis() — deliberately, since a second call would re-set
+    // the flag and the test would pass under either ordering, making it vacuous. The worker error
+    // is simply the only pump trigger left: nothing was ever posted to this worker, so in the real
+    // app the only way it fires here is a module or WASM load failure. Contrived on purpose — the
+    // point is to observe whether the flag survived, and this is the one lever that does that.
+    act(() => {
+      analyzeWorker().onerror?.({ message: 'unrelated' })
+    })
+
+    expect(analyzeWorker().posted).toHaveLength(1)
+    expect(analyzeWorker().posted[0].tournaments?.map(t => t.id)).toEqual([1])
+  })
+
   it('collapses repeated mid-run requests into a single re-run', () => {
     seedTournaments()
     act(() => api().runAnalysis())
