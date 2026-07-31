@@ -17,6 +17,7 @@ import { makeTournament } from '../test/fixtures'
 interface PostedMessage {
   type: 'parse' | 'analyze'
   files?: File[]
+  allowFreerolls?: boolean
   tournaments?: { id: number }[]
 }
 
@@ -75,7 +76,14 @@ const parseWorker = () => FakeWorker.instances[0]
 const analyzeWorker = () => FakeWorker.instances[1]
 
 beforeEach(() => {
+  // Opts into React's act() support, which is what makes "an update was not wrapped in act(...)"
+  // an actual warning — the net that catches a future helper here forgetting to wrap. Matches
+  // TournamentCharts.test.tsx and HandHistoryCharts.test.tsx.
+  ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
   FakeWorker.instances = []
+  // Cleared so the `api()` guard can fire. Left set, a test whose render throws before commit
+  // would silently read the previous test's hook — bound to an unmounted root and a dead worker.
+  latest.current = null
   globalThis.Worker = FakeWorker as unknown as typeof Worker
   container = document.createElement('div')
   document.body.appendChild(container)
@@ -132,6 +140,23 @@ describe('useAnalysisWorker parse queue', () => {
 
     expect(parseWorker().posted).toHaveLength(2)
     expect(parseWorker().posted[1].files?.map(f => f.name)).toEqual(['b.txt', 'c.txt'])
+  })
+
+  it('applies the last upload\'s freeroll flag to the whole coalesced batch', () => {
+    // `parseFiles` overwrites the pending flag rather than tracking it per file, so a batch that
+    // merges two uploads carries only the second one's setting. Characterising, not endorsing:
+    // it is pre-existing behaviour, and pinning it means a future per-file fix fails loudly here
+    // rather than silently changing which hands get filtered.
+    act(() => api().parseFiles([file('a.txt')], false))
+    act(() => api().parseFiles([file('b.txt')], false))
+    act(() => api().parseFiles([file('c.txt')], true))
+
+    expect(parseWorker().posted[0].allowFreerolls).toBe(false)
+
+    parseWorker().emit(parseResult())
+
+    expect(parseWorker().posted[1].files?.map(f => f.name)).toEqual(['b.txt', 'c.txt'])
+    expect(parseWorker().posted[1].allowFreerolls).toBe(true)
   })
 
   it('stops pumping once the queue is empty', () => {
@@ -220,11 +245,14 @@ describe('useAnalysisWorker teardown', () => {
     const [parse, analyze] = FakeWorker.instances
     act(() => root.unmount())
 
-    expect(parse.terminated).toBe(true)
-    expect(analyze.terminated).toBe(true)
-
-    // Re-mount so the shared afterEach unmount stays harmless.
-    root = createRoot(container)
-    act(() => root.render(createElement(Probe)))
+    try {
+      expect(parse.terminated).toBe(true)
+      expect(analyze.terminated).toBe(true)
+    } finally {
+      // Re-mount so the shared afterEach unmount stays harmless. In `finally` so that a real
+      // regression here reports once, instead of also tripping the teardown on its way out.
+      root = createRoot(container)
+      act(() => root.render(createElement(Probe)))
+    }
   })
 })

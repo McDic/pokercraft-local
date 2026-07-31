@@ -34,6 +34,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Node and lint come before the Rust/WASM build purely for feedback speed: lint needs
+      # neither a toolchain nor the generated bindings, so making a one-character lint error
+      # wait out a full wasm-pack build before it reports would be wasted minutes on every
+      # such PR. Everything from `Setup Rust` down is unchanged and still gates the run.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+
+      # Lint was previously run only by hand, which let seven errors accumulate on master
+      # unnoticed — including three genuine render-purity bugs the react-hooks rules catch
+      # and review had not. It lives here rather than in pre-commit.yml because that workflow
+      # has no Node toolchain, and this one has just installed the dependencies anyway.
+      # `tseslint.configs.recommended` is not type-aware, so this needs no type information
+      # of its own and does not have to wait for the bindings.
+      - name: Lint
+        working-directory: web
+        run: npm run lint
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -74,33 +99,12 @@ jobs:
       - name: Build WASM
         run: ./scripts/build-wasm.sh
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: web/package-lock.json
-
-      - name: Install dependencies
-        working-directory: web
-        run: npm ci
-
       # Typechecking used to run only in the deploy workflow, on master. That is too
       # late: i18n keys are checked by the type system, so a mistyped key would go
       # green on the PR and only break the deploy.
       - name: Typecheck
         working-directory: web
         run: npx tsc -b
-
-      # Lint was previously run only by hand, which let seven errors accumulate on master
-      # unnoticed — including three genuine render-purity bugs the react-hooks rules catch
-      # and review had not. Gating it here rather than in pre-commit.yml because that
-      # workflow has no Node toolchain, and this one already has the dependencies installed
-      # a step above. `tseslint.configs.recommended` is not type-aware, so this needs no
-      # type information of its own and costs a few seconds.
-      - name: Lint
-        working-directory: web
-        run: npm run lint
 
       - name: Run tests
         working-directory: web
