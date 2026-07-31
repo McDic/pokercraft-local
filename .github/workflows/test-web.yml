@@ -92,6 +92,16 @@ jobs:
         working-directory: web
         run: npx tsc -b
 
+      # Lint was previously run only by hand, which let seven errors accumulate on master
+      # unnoticed — including three genuine render-purity bugs the react-hooks rules catch
+      # and review had not. Gating it here rather than in pre-commit.yml because that
+      # workflow has no Node toolchain, and this one already has the dependencies installed
+      # a step above. `tseslint.configs.recommended` is not type-aware, so this needs no
+      # type information of its own and costs a few seconds.
+      - name: Lint
+        working-directory: web
+        run: npm run lint
+
       - name: Run tests
         working-directory: web
         run: npm test
