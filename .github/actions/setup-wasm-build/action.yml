@@ -1,21 +1,16 @@
-# A *composite action*: a reusable sequence of steps, called from a workflow with a single
-# `uses:`. The mechanics, since they differ from a workflow file in ways that are easy to trip on:
+# Shared by test-web.yml and deploy-web.yml, so the toolchain that gates a PR is by construction
+# the toolchain that builds what ships. They used to hand-roll these steps separately and the
+# copies drifted: deploy ran an unpinned `cargo install wasm-pack`, compiling from source for 76s
+# on every deploy and one upstream release away from building the published artifact with a
+# different wasm-pack than the gate validates.
 #
-#   * It must live at `.github/actions/<name>/action.yml`, and the file must be named
-#     `action.yml` (or `action.yaml`). The directory name is what callers reference.
-#   * Callers reference it by *path*, not by `owner/repo`: `uses: ./.github/actions/setup-wasm-build`.
-#     The path is relative to the repository root, not to the calling workflow.
-#   * Because it is a path, `actions/checkout` must have already run in that job — the action's
-#     own file is part of the repo, so before checkout there is nothing to call.
-#   * `name` and `description` are both required. A missing `description` is a hard error, not a
-#     warning.
-#   * Every `run:` step inside a composite action must set `shell:` explicitly. Workflows default
-#     it; composite actions do not, and omitting it fails at runtime. (Nothing here uses `run:`,
-#     but it is the single most common surprise when one is added later.)
+# Callers must run `actions/checkout` first. This action is referenced by path, and its own file
+# is part of the repo — before checkout there is nothing to call.
 #
-# Deliberately takes no `inputs`. The point of this action is that both callers get *identical*
-# tooling; an input for, say, the wasm-pack version would hand a caller the means to drift, which
-# is the exact failure this consolidates away.
+# Deliberately takes no `inputs`. The point is that both callers get *identical* tooling; an input
+# for, say, the wasm-pack version would hand a caller the means to drift again, which is the exact
+# failure being consolidated away. If a third caller ever needs different settings, widen this for
+# everyone rather than adding a parameter.
 
 name: Setup WASM build toolchain
 description: >-

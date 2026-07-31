@@ -16,9 +16,11 @@ on:
       - "Cargo.toml"
       - "Cargo.lock"
       - ".github/workflows/test-web.yml"
-      # The shared toolchain action this workflow calls — without it, a change to the
-      # wasm-pack pin would land untested by the very workflow that validates it.
+      # The build inputs this workflow runs but does not otherwise watch. Without these, a
+      # change to the wasm-pack pin or to the build script would land untested by the very
+      # workflow that validates it.
       - ".github/actions/setup-wasm-build/**"
+      - "scripts/build-wasm.sh"
   pull_request:
     branches:
       - "**"
@@ -29,9 +31,11 @@ on:
       - "Cargo.toml"
       - "Cargo.lock"
       - ".github/workflows/test-web.yml"
-      # The shared toolchain action this workflow calls — without it, a change to the
-      # wasm-pack pin would land untested by the very workflow that validates it.
+      # The build inputs this workflow runs but does not otherwise watch. Without these, a
+      # change to the wasm-pack pin or to the build script would land untested by the very
+      # workflow that validates it.
       - ".github/actions/setup-wasm-build/**"
+      - "scripts/build-wasm.sh"
   workflow_dispatch:
 
 jobs:
@@ -65,9 +69,8 @@ jobs:
         working-directory: web
         run: npm run lint
 
-      # Rust toolchain + Cargo cache + pinned wasm-pack. Shared with deploy-web.yml so the
-      # artifact that ships is built by the same toolchain that gates the PR; see the action
-      # for why the wasm-pack version is pinned.
+      # Rust toolchain + Cargo cache + pinned wasm-pack, shared with deploy-web.yml so that what
+      # ships is built by the toolchain this gate validated. Rationale lives in the action.
       - name: Setup WASM build toolchain
         uses: ./.github/actions/setup-wasm-build
 

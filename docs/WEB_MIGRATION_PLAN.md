@@ -581,6 +581,15 @@ export function renderHistoricalPerformance(
 
 ## Appendix B: Example GitHub Actions Workflow
 
+> **Historical — do not copy from this.** This sketch predates the workflows that were actually
+> built and has drifted from them in almost every detail: the filename, the branch, the crate path,
+> the output directory, the Node version, and the deploy action are all different now, and
+> `cargo install wasm-pack` in particular is unpinned and compiles from source — the real workflows
+> share `.github/actions/setup-wasm-build`, which installs a pinned prebuilt binary.
+>
+> It is kept as a record of what was planned. For what is actually running, read
+> `.github/workflows/deploy-web.yml` and `.github/workflows/test-web.yml`.
+
 ```yaml
 # .github/workflows/web-deploy.yml
 name: Deploy Web App
@@ -598,11 +607,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Both CI workflows call the shared composite action instead, which pins wasm-pack
-      # to a prebuilt binary. `cargo install wasm-pack` is unpinned and compiles from
-      # source; see .github/actions/setup-wasm-build/action.yml.
-      - name: Setup WASM build toolchain
-        uses: ./.github/actions/setup-wasm-build
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
 
       - name: Build WASM
         run: |
