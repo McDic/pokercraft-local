@@ -135,23 +135,24 @@ export function useAnalysisWorker(): UseAnalysisWorkerReturn {
   const parseBusyRef = useRef(false)
   const pendingFilesRef = useRef<File[]>([])
   const pendingAllowFreerollsRef = useRef(false)
-  const pumpParseRef = useRef<() => void>(() => {})
 
   // Analyze worker: a re-analyze requested mid-run is collapsed to one pending flag and re-run
   // with the latest tournaments when the current sim finishes.
   const analyzeBusyRef = useRef(false)
   const reanalyzePendingRef = useRef(false)
   const tournamentsRef = useRef<TournamentSummary[]>([])
-  const pumpAnalyzeRef = useRef<() => void>(() => {})
 
   // The set a queued analyze posts — kept current with the merged state.
   useEffect(() => {
     tournamentsRef.current = state.tournaments
   }, [state.tournaments])
 
-  // Reassigned each render, but closes over only refs/setState, so the once-bound worker callbacks
-  // can call the latest through the ref.
-  pumpParseRef.current = () => {
+  // Both pumps close over only refs and `setState`, all of which are stable for the life of the
+  // component, so there is nothing render-specific to capture and one binding serves forever.
+  // These used to be reassigned into a ref on every render — the "latest ref" pattern — which is
+  // a ref write during render, unsafe under concurrent rendering and flagged by react-hooks/refs.
+  // The indirection bought nothing precisely because the closures were already render-invariant.
+  const pumpParse = useCallback(() => {
     const worker = parseWorkerRef.current
     if (!worker || parseBusyRef.current || pendingFilesRef.current.length === 0) return
     const files = pendingFilesRef.current
@@ -165,9 +166,9 @@ export function useAnalysisWorker(): UseAnalysisWorkerReturn {
       errors: [],
     }))
     worker.postMessage({ type: 'parse', files, allowFreerolls } as WorkerMessage)
-  }
+  }, [])
 
-  pumpAnalyzeRef.current = () => {
+  const pumpAnalyze = useCallback(() => {
     const worker = analyzeWorkerRef.current
     if (!worker || analyzeBusyRef.current || !reanalyzePendingRef.current) return
     reanalyzePendingRef.current = false
@@ -179,7 +180,7 @@ export function useAnalysisWorker(): UseAnalysisWorkerReturn {
       analyzeProgress: STARTING_PROGRESS('progress.startingAnalysis'),
     }))
     worker.postMessage({ type: 'analyze', tournaments: tournamentsRef.current } as WorkerMessage)
-  }
+  }, [])
 
   useEffect(() => {
     const parseWorker = newWorker()
@@ -215,7 +216,7 @@ export function useAnalysisWorker(): UseAnalysisWorkerReturn {
             }
           })
         }
-        pumpParseRef.current() // next queued parse, if any
+        pumpParse() // next queued parse, if any
       }
     }
 
@@ -227,7 +228,7 @@ export function useAnalysisWorker(): UseAnalysisWorkerReturn {
         parseProgress: null,
         errors: [...prev.errors, i18n.t('errors.worker', { message: error.message })],
       }))
-      pumpParseRef.current()
+      pumpParse()
     }
 
     analyzeWorker.onmessage = (event: MessageEvent<WorkerProgress | WorkerResult>) => {
@@ -253,7 +254,7 @@ export function useAnalysisWorker(): UseAnalysisWorkerReturn {
             bankrollResults: result.bankrollResults || prev.bankrollResults,
           }))
         }
-        pumpAnalyzeRef.current() // re-run if the set changed mid-sim
+        pumpAnalyze() // re-run if the set changed mid-sim
       }
     }
 
@@ -265,12 +266,12 @@ export function useAnalysisWorker(): UseAnalysisWorkerReturn {
         analyzeProgress: null,
         errors: [...prev.errors, i18n.t('errors.worker', { message: error.message })],
       }))
-      pumpAnalyzeRef.current()
+      pumpAnalyze()
     }
 
     // Flush anything queued before the workers existed.
-    pumpParseRef.current()
-    pumpAnalyzeRef.current()
+    pumpParse()
+    pumpAnalyze()
 
     return () => {
       parseWorker.terminate()
@@ -283,20 +284,25 @@ export function useAnalysisWorker(): UseAnalysisWorkerReturn {
       pendingFilesRef.current = []
       reanalyzePendingRef.current = false
     }
-  }, [])
+    // Both pumps are `useCallback(…, [])`, so these deps never change and the workers are still
+    // created exactly once. Listing them keeps the dependency honest rather than silenced.
+  }, [pumpParse, pumpAnalyze])
 
-  const parseFiles = useCallback((files: FileList | File[], allowFreerolls = false) => {
-    pendingFilesRef.current = [...pendingFilesRef.current, ...Array.from(files)]
-    pendingAllowFreerollsRef.current = allowFreerolls
-    pumpParseRef.current()
-  }, [])
+  const parseFiles = useCallback(
+    (files: FileList | File[], allowFreerolls = false) => {
+      pendingFilesRef.current = [...pendingFilesRef.current, ...Array.from(files)]
+      pendingAllowFreerollsRef.current = allowFreerolls
+      pumpParse()
+    },
+    [pumpParse]
+  )
 
   // Only run bankroll simulation for tournaments.
   // Hand history equity is handled independently by HandHistoryCharts.
   const runAnalysis = useCallback(() => {
     reanalyzePendingRef.current = true
-    pumpAnalyzeRef.current()
-  }, [])
+    pumpAnalyze()
+  }, [pumpAnalyze])
 
   const reset = useCallback(() => {
     parseBusyRef.current = false
