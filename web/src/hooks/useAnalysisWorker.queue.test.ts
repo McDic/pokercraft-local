@@ -203,6 +203,26 @@ describe('useAnalysisWorker analyze queue', () => {
     expect(analyzeWorker().posted).toHaveLength(0)
   })
 
+  it('defers a request made before any tournaments exist rather than dropping it', () => {
+    // A request with nothing to analyse. The pump can do no work, but the flag must survive it.
+    act(() => api().runAnalysis())
+    expect(analyzeWorker().posted).toHaveLength(0)
+
+    // Tournaments land via a parse.
+    act(() => api().parseFiles([file('a.txt')]))
+    parseWorker().emit(parseResult([makeTournament(1)]))
+
+    // Pump again *without* a fresh runAnalysis() — deliberately, since a second call would re-set
+    // the flag and the test would pass either way. The analyze worker reporting back is the
+    // in-app trigger for this path. If the earlier pump had consumed the flag, nothing posts.
+    act(() => {
+      analyzeWorker().onerror?.({ message: 'unrelated' })
+    })
+
+    expect(analyzeWorker().posted).toHaveLength(1)
+    expect(analyzeWorker().posted[0].tournaments?.map(t => t.id)).toEqual([1])
+  })
+
   it('collapses repeated mid-run requests into a single re-run', () => {
     seedTournaments()
     act(() => api().runAnalysis())

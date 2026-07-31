@@ -171,8 +171,11 @@ export function useAnalysisWorker(): UseAnalysisWorkerReturn {
   const pumpAnalyze = useCallback(() => {
     const worker = analyzeWorkerRef.current
     if (!worker || analyzeBusyRef.current || !reanalyzePendingRef.current) return
-    reanalyzePendingRef.current = false
+    // Checked before the flag is consumed, so a request made with nothing to analyse is deferred
+    // rather than dropped: it stays pending and is served by the next pump, once tournaments have
+    // arrived. Consuming first meant "pending" could be cleared by a pump that did no work.
     if (tournamentsRef.current.length === 0) return
+    reanalyzePendingRef.current = false
     analyzeBusyRef.current = true
     setState(prev => ({
       ...prev,
