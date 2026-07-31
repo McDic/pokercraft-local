@@ -184,14 +184,35 @@ function App() {
     runExport(request)
   }, [activeTab, isLoading, runExport])
 
-  // Auto-switch tab when data changes
-  useEffect(() => {
+  // Auto-switch to whichever tab is the only one with data.
+  //
+  // Adjusted during render rather than in an effect. As an effect this committed the stale tab,
+  // painted it, then immediately re-rendered with the corrected one — the cascading render the
+  // hook lint flags, and a visible flash of the wrong tab on upload. Setting state during render
+  // makes React discard this pass and re-run the component before committing anything, so only
+  // the corrected tab ever reaches the DOM.
+  //
+  // The counts are tracked in state (React's documented pattern) instead of compared in an
+  // effect body, which is what keeps this from looping: the branch only runs on the render
+  // where a count actually changed.
+  // Seeded with zeros rather than the live counts so that a first render which already has data
+  // still gets the switch, exactly as the effect did by running on mount. The hook always starts
+  // from empty arrays today, so the two seedings are indistinguishable — but they stop being so
+  // the moment initial state comes from anywhere else (a restore, an initial-data prop, or this
+  // state being lifted so an ErrorBoundary reset remounts App with data intact), and the failure
+  // would be silent: a hand-history-only user left staring at an empty Tournament tab.
+  const [prevCounts, setPrevCounts] = useState({ tournaments: 0, handHistories: 0 })
+  if (
+    prevCounts.tournaments !== tournaments.length ||
+    prevCounts.handHistories !== handHistories.length
+  ) {
+    setPrevCounts({ tournaments: tournaments.length, handHistories: handHistories.length })
     if (tournaments.length === 0 && handHistories.length > 0) {
       setActiveTab('handHistory')
     } else if (tournaments.length > 0 && handHistories.length === 0) {
       setActiveTab('tournament')
     }
-  }, [tournaments.length, handHistories.length])
+  }
 
   return (
     <div className="app">
