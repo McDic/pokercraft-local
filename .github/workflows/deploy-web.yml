@@ -13,6 +13,9 @@ on:
       - 'Cargo.lock'
       - 'web/public/hu_preflop_cache.bin'
       - '.github/workflows/deploy-web.yml'
+      # The build inputs this workflow runs but does not otherwise watch.
+      - '.github/actions/setup-wasm-build/**'
+      - 'scripts/build-wasm.sh'
   # Allow manual trigger
   workflow_dispatch:
 
@@ -34,19 +37,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-
-      - name: Cache Rust build
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: ". -> target"
-          shared-key: "wasm-build"
-
-      - name: Install wasm-pack
-        run: cargo install wasm-pack
+      # Rust toolchain + Cargo cache + pinned wasm-pack, shared with test-web.yml so that what
+      # ships is built by the toolchain the PR gate validated. Rationale lives in the action.
+      - name: Setup WASM build toolchain
+        uses: ./.github/actions/setup-wasm-build
 
       - name: Build WASM
         run: ./scripts/build-wasm.sh
