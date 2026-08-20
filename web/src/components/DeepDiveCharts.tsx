@@ -210,7 +210,7 @@ export function DeepDiveCharts({ tournaments, handHistories }: DeepDiveChartsPro
             config={{ responsive: true }}
           />
           {lateRegHeatmap && (
-            <>
+            <div className="chart-subfigure">
               {lateRegHeatmap.caption.map(line => (
                 <p key={line} className="chart-caption">
                   {line}
@@ -223,7 +223,7 @@ export function DeepDiveCharts({ tournaments, handHistories }: DeepDiveChartsPro
                 style={{ width: '100%', height: `${lateRegHeatmap.layout.height ?? 420}px` }}
                 config={{ responsive: true }}
               />
-            </>
+            </div>
           )}
         </section>
       )}

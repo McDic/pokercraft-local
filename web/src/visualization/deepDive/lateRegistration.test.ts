@@ -28,30 +28,31 @@ function rowLabels(layout: Partial<Layout>): string[] {
 }
 
 describe('getLateRegistrationData', () => {
-  it('quarantines level-1 entries into the on-time row, whatever their depth', () => {
+  it('buckets every entry by depth alone — a level-1 hyper and a late entry share a band', () => {
+    // Hyper-bounty formats (e.g. Speed Racer) start level 1 at 10–25 BB, so blind level
+    // cannot separate "on time" from "late"; depth is the axis, and level only rides along
+    // in the hover. The 12 BB level-1 entry and the 12 BB level-3 entry land together.
     const figure = getLateRegistrationData(
-      // A 12 BB level-1 entry is a shallow-start format, not a late registration — it must
-      // land in the on-time row, never in the "<15" bucket.
       resultOf([entry(12, -1, -10, 1), entry(150, 0.5, 5, 1), entry(12, -1, -10)]),
       identityT
     )
     expect(rowLabels(figure.layout)).toEqual([
-      'deepDive.lateReg.onTimeLabel({"n":2})',
-      'deepDive.lateReg.rowLabel({"range":"<15","n":1})',
+      'deepDive.lateReg.rowLabel({"range":"128+","n":1})',
+      'deepDive.lateReg.rowLabel({"range":"<16","n":2})',
     ])
   })
 
-  it('buckets late entries by depth, deepest first, and skips empty buckets', () => {
+  it('orders rows deepest first and skips empty bands', () => {
+    // 128 lands in "128+" (bounds are inclusive below), 16 in "16–32", 15.9 in "<16";
+    // nothing between 32 and 128, so those rows must not appear.
     const figure = getLateRegistrationData(
-      // 100 lands in "100+" (bounds are inclusive below), 15 in "15–25", 14.9 in "<15";
-      // nothing between 25 and 100 and nothing on time, so those rows must not appear.
-      resultOf([entry(100, 0.5, 5), entry(15, -1, -10), entry(14.9, -1, -10)]),
+      resultOf([entry(128, 0.5, 5), entry(16, -1, -10), entry(15.9, -1, -10)]),
       identityT
     )
     expect(rowLabels(figure.layout)).toEqual([
-      'deepDive.lateReg.rowLabel({"range":"100+","n":1})',
-      'deepDive.lateReg.rowLabel({"range":"15–25","n":1})',
-      'deepDive.lateReg.rowLabel({"range":"<15","n":1})',
+      'deepDive.lateReg.rowLabel({"range":"128+","n":1})',
+      'deepDive.lateReg.rowLabel({"range":"16–32","n":1})',
+      'deepDive.lateReg.rowLabel({"range":"<16","n":1})',
     ])
   })
 
@@ -90,15 +91,17 @@ interface HeatmapTrace {
 }
 
 describe('getLateRegHeatmapData', () => {
-  it('bins busts into their own column and returns into log-2 columns', () => {
+  it('bins busts into their own column and returns into log-2 columns up to 128×+', () => {
     const hm = getLateRegHeatmapData(
-      // <16 band: one bust, one 0.4× return. 64–128 band: an exact 1× (break-even) and a 20×.
-      resultOf([entry(12, -1, -10), entry(12, -0.6, -6), entry(100, 0, 0), entry(100, 19, 190)]),
+      // <16 band: one bust, one 0.4× return. 64–128 band: an exact 1× (break-even) and a
+      // 200× — the tail column exists precisely because a few such scores drive the profit.
+      resultOf([entry(12, -1, -10), entry(12, -0.6, -6), entry(100, 0, 0), entry(100, 199, 1990)]),
       identityT
     )
     const trace = hm.traces[0] as unknown as HeatmapTrace
 
     expect(trace.x[0]).toBe('deepDive.lateReg.heatmap.bust')
+    expect(trace.x[trace.x.length - 1]).toBe('128×+')
     // Only the two non-empty depth bands survive, shallowest first (drawn at the bottom).
     expect(trace.y).toEqual([
       'deepDive.lateReg.rowLabel({"range":"<16","n":2})',
@@ -107,7 +110,7 @@ describe('getLateRegHeatmapData', () => {
     // <16 row: the bust in column 0, the 0.4× in "0.25–0.5×" (column 2).
     expect(trace.customdata[0][0]).toEqual([1, 0.5])
     expect(trace.customdata[0][2]).toEqual([1, 0.5])
-    // 64–128 row: 1× is not a bust — it lands in "1–2×" (column 4); 20× in the last column.
+    // 64–128 row: 1× is not a bust — it lands in "1–2×" (column 4); 200× in the last column.
     expect(trace.customdata[1][4]).toEqual([1, 0.5])
     expect(trace.customdata[1][trace.x.length - 1]).toEqual([1, 0.5])
   })

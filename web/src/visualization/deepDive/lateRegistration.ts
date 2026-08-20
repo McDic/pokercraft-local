@@ -7,14 +7,14 @@
  * USD — where the money actually is. Colour still carries significance, not sign: a bucket is
  * blue or red only when its 95% interval clears break-even.
  *
- * The top row is every entry made at blind level 1 — on time by definition, *whatever* its
- * depth. Depth alone cannot say "late": formats that simply start shallow (hypers, Flip & Go)
- * enter level 1 at well under 15 BB, and on a real ~4-month dataset they were 42% of the
- * sub-15 BB entries — enough to swamp the very bucket that reads as "registered latest".
- * Only level ≥ 2 entries are late registrations, and those are bucketed by entry depth in
- * big blinds, deepest first, so the late rows read top-down as "later and later". Depth is
- * the right axis for them because it is what late registration costs you. Edges validated
- * on the same dataset so no bucket is left holding a handful of entries.
+ * Depth is the axis, not lateness. Blind level cannot separate the two cleanly in either
+ * direction: hypers and Flip & Go start level 1 under 15 BB, and hyper-bounty formats
+ * (Speed Racer and friends) start level 1 at 10–25 BB — so a "level 1 = on time" row would
+ * blend 500 BB deep-stacks with 12 BB hypers into one meaningless reference (user's call,
+ * 2026-08-20). Instead every entry lands in a depth band, and each row's hover carries its
+ * median blind level and minutes-after-start so late-reg rows and shallow-format rows stay
+ * distinguishable. Both figures share the same log-2 depth bands, so they compare row for
+ * row; edges validated on a real ~4-month dataset so no band holds a handful of entries.
  */
 
 import type { Data, Layout } from 'plotly.js-dist-min'
@@ -38,21 +38,27 @@ const KEYS: DeltaFigureKeys = {
   hoverTotal: 'deepDive.lateReg.hover.total',
 }
 
-interface StackBucketDef {
-  /** Inclusive lower bound of the entry stack, in big blinds. */
-  min: number
-  /** Plain numeric range; language-independent, so not a translation key. */
-  range: string
-}
-
-/** Deepest (earliest registration) first. The final `min: 0` bucket catches everything else. */
-const LATE_BUCKETS: StackBucketDef[] = [
-  { min: 100, range: '100+' },
-  { min: 60, range: '60–100' },
-  { min: 25, range: '25–60' },
-  { min: 15, range: '15–25' },
-  { min: 0, range: '<15' },
+/**
+ * The depth bands both figures bucket by, shallowest first (Plotly draws the heatmap's first
+ * y category at the bottom; the bars iterate this reversed). Log-2 spaced: 15 vs. 25 BB is a
+ * bigger strategic difference than 60 vs. 100 BB, so equal-width bins would spend most of
+ * their rows where nothing changes. `range` is a plain numeric string — language-independent,
+ * so not a translation key.
+ */
+const DEPTH_BANDS = [
+  { min: 0, range: '<16' },
+  { min: 16, range: '16–32' },
+  { min: 32, range: '32–64' },
+  { min: 64, range: '64–128' },
+  { min: 128, range: '128+' },
 ]
+
+function depthBandOf(stackBB: number): number {
+  for (let i = DEPTH_BANDS.length - 1; i >= 0; i--) {
+    if (stackBB >= DEPTH_BANDS[i].min) return i
+  }
+  return 0
+}
 
 /** Median of an unsorted sample; callers guarantee it is non-empty. */
 function median(values: number[]): number {
@@ -62,49 +68,37 @@ function median(values: number[]): number {
 }
 
 export function getLateRegistrationData(result: LateRegResult, t: Translate): DeltaFigure {
-  const onTime: LateRegEntry[] = []
-  const byBucket: LateRegEntry[][] = LATE_BUCKETS.map(() => [])
+  const byBand: LateRegEntry[][] = DEPTH_BANDS.map(() => [])
   for (const e of result.entries) {
-    if (e.level === 1) onTime.push(e)
-    else byBucket[LATE_BUCKETS.findIndex(b => e.stackBB >= b.min)].push(e)
+    byBand[depthBandOf(e.stackBB)].push(e)
   }
 
-  // The total panel is real dollars, not summed relative returns: buy-ins differ across
-  // tournaments, so only USD answers "where the money actually is".
+  // Deepest first, so the rows read top-down as "entering shallower and shallower".
   const rows: DeltaRow[] = []
-  if (onTime.length > 0) {
-    const stats = summarize(onTime.map(e => e.rr))
-    rows.push({
-      label: t('deepDive.lateReg.onTimeLabel', { n: stats.n }),
-      description: t('deepDive.lateReg.onTimeDesc', {
-        bb: Math.round(median(onTime.map(e => e.stackBB))),
-      }),
-      ...stats,
-      total: onTime.reduce((sum, e) => sum + e.profitUsd, 0),
-    })
-  }
-  LATE_BUCKETS.forEach((bucket, i) => {
-    const entries = byBucket[i]
-    if (entries.length === 0) return
+  for (let i = DEPTH_BANDS.length - 1; i >= 0; i--) {
+    const entries = byBand[i]
+    if (entries.length === 0) continue
 
     const stats = summarize(entries.map(e => e.rr))
     rows.push({
-      label: t('deepDive.lateReg.rowLabel', { range: bucket.range, n: stats.n }),
+      label: t('deepDive.lateReg.rowLabel', { range: DEPTH_BANDS[i].range, n: stats.n }),
       description: t('deepDive.lateReg.bucketDesc', {
         level: Math.round(median(entries.map(e => e.level))),
         minutes: Math.round(median(entries.map(e => e.minutesLate))),
       }),
       ...stats,
+      // The total panel is real dollars, not summed relative returns: buy-ins differ across
+      // tournaments, so only USD answers "where the money actually is".
       total: entries.reduce((sum, e) => sum + e.profitUsd, 0),
     })
-  })
+  }
 
   return buildDeltaFigure(
     rows,
     // The section heading already names the chart, and its prose is rendered as section
     // captions by DeepDiveCharts — so the figure itself carries neither. The margin fits
-    // the widest row label, the Korean on-time row "정시 등록 — 레벨 1 (n=…)".
-    { title: '', caption: [], leftMargin: 200, keys: KEYS },
+    // the widest row label, the Korean "시작 스택 64–128 BB (n=…)".
+    { title: '', caption: [], leftMargin: 185, keys: KEYS },
     t
   )
 }
@@ -121,33 +115,27 @@ export interface LateRegHeatmapData {
 }
 
 /**
- * Depth bands for the heatmap's y axis, shallowest first because Plotly draws the first
- * category at the bottom. Log-2 spaced: 15 vs. 25 BB is a bigger strategic difference than
- * 60 vs. 100 BB, so equal-width bins would spend most of their rows where nothing changes.
- */
-const DEPTH_BANDS = [
-  { min: 0, range: '<16' },
-  { min: 16, range: '16–32' },
-  { min: 32, range: '32–64' },
-  { min: 64, range: '64–128' },
-  { min: 128, range: '128+' },
-]
-
-/**
  * Return columns in multiples of the buy-in, log-2 spaced above 0.25×, plus a dedicated
  * bust column: zero return has no logarithm, and ~85% of entries land there — dropping
  * them (as a log transform silently would) turns a profit distribution into a cash-only
- * highlight reel.
+ * highlight reel. The scale runs to 128×+ because a handful of 100-buy-in-plus scores is
+ * exactly what drives tournament profit; hiding them inside a "16×+" catch-all would
+ * flatten the one tail that matters.
  */
-const RETURN_EDGES = [0.25, 0.5, 1, 2, 4, 8, 16]
-const RETURN_COLS = ['<0.25×', '0.25–0.5×', '0.5–1×', '1–2×', '2–4×', '4–8×', '8–16×', '16×+']
-
-function depthBandOf(stackBB: number): number {
-  for (let i = DEPTH_BANDS.length - 1; i >= 0; i--) {
-    if (stackBB >= DEPTH_BANDS[i].min) return i
-  }
-  return 0
-}
+const RETURN_EDGES = [0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128]
+const RETURN_COLS = [
+  '<0.25×',
+  '0.25–0.5×',
+  '0.5–1×',
+  '1–2×',
+  '2–4×',
+  '4–8×',
+  '8–16×',
+  '16–32×',
+  '32–64×',
+  '64–128×',
+  '128×+',
+]
 
 /** Column index into `[bust, ...RETURN_COLS]` for a return of `multiple` × buy-in. */
 function returnColOf(multiple: number): number {
