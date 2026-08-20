@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { DeepDiveCharts } from './DeepDiveCharts'
 import { makeTournament, makeHandHistory } from '../test/fixtures'
 import type { HandHistory, TournamentSummary } from '../types'
+
+vi.mock('./plot', () => ({ default: () => null }))
 
 function ftHand(
   tournamentId: number,
@@ -45,9 +47,19 @@ function render(tournaments: TournamentSummary[], handHistories: HandHistory[]) 
 }
 
 describe('DeepDiveCharts', () => {
-  it('shows the empty state when no final table is found', () => {
+  it('shows the empty state when no analysis finds anything', () => {
     render([], [])
-    expect(container.textContent).toContain('No final-table runs')
+    expect(container.textContent).toContain('No joined analyses')
+  })
+
+  it('shows the late-registration section even when no final table was reached', () => {
+    // Deep run, but not to the final table: rank 500 in a 1462 field.
+    const tournament = makeTournament(100, { myRank: 500, totalPlayers: 1462 })
+    render([tournament], [ftHand(100, 1, 'A', 9, [['Hero', 100], ['a', 200]])])
+
+    const text = container.textContent ?? ''
+    expect(text).toContain('Late Registration vs. ROI')
+    expect(text).not.toContain('Final Table Runs')
   })
 
   it('lists a reached final table with entry state and finish', () => {

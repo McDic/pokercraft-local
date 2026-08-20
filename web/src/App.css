@@ -349,6 +349,12 @@
   margin-bottom: 1rem;
 }
 
+/* A second figure inside one section: without this, the figure above runs straight into
+   the next figure's captions and the two read as one blob. */
+.chart-subfigure {
+  margin-top: 2.5rem;
+}
+
 /* Situation filters: one row above the chart, so the controls that change what is
    plotted are never mistaken for part of the plot. */
 .situation-filters {

@@ -1,21 +1,32 @@
 /**
  * "Deep Dive" — analyses that require BOTH tournament summaries and hand histories.
  *
- * This is the only tab that joins the two datasets. Its first (and, for now, only) section is
- * Final Table Runs: every final table the Hero reached, matched by the exact `Tournament #<id>`
- * key to its official result, so entry state (rank + chip share, from the hand history) sits next
- * to the finish and field size (from the summary). See `analysis/finalTable.ts`.
+ * This is the only tab that joins the two datasets. Its sections:
+ *
+ *   Final Table Runs        every final table the Hero reached, matched by the exact
+ *                           `Tournament #<id>` key to its official result, so entry state (rank +
+ *                           chip share, from the hand history) sits next to the finish and field
+ *                           size (from the summary). See `analysis/finalTable.ts`.
+ *   Late Registration vs ROI  every entry's depth at its first recorded hand against what the
+ *                           entry returned. See `analysis/lateRegistration.ts`.
  *
  * A future joined analysis becomes a new `analysis/*.ts` module plus a new <section> here — never
- * a new tab. The analysis is a synchronous, memoized pass, so it re-runs exactly when either
- * dataset's array identity changes (i.e. when a later upload adds data).
+ * a new tab. The analyses are synchronous, memoized passes, so they re-run exactly when either
+ * dataset's array identity changes (i.e. when a later upload adds data). Each section renders only
+ * when its own analysis found something; the tab-level empty state means *no* section did.
  */
 
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import Plot from './plot'
 import type { TournamentSummary, HandHistory } from '../types'
 import type { TranslationKey } from '../i18n'
 import { analyzeFinalTables, type FinalTableRow } from '../analysis/finalTable'
+import { analyzeLateRegistration } from '../analysis/lateRegistration'
+import {
+  getLateRegistrationData,
+  getLateRegHeatmapData,
+} from '../visualization/deepDive/lateRegistration'
 
 interface DeepDiveChartsProps {
   tournaments: TournamentSummary[]
@@ -72,6 +83,20 @@ export function DeepDiveCharts({ tournaments, handHistories }: DeepDiveChartsPro
     [tournaments, handHistories]
   )
 
+  const lateReg = useMemo(
+    () => analyzeLateRegistration(tournaments, handHistories),
+    [tournaments, handHistories]
+  )
+  // The figures bake translated strings into their traces, so they depend on `t` as well.
+  const lateRegFigure = useMemo(
+    () => (lateReg.entries.length > 0 ? getLateRegistrationData(lateReg, t) : null),
+    [lateReg, t]
+  )
+  const lateRegHeatmap = useMemo(
+    () => (lateReg.entries.length > 0 ? getLateRegHeatmapData(lateReg, t) : null),
+    [lateReg, t]
+  )
+
   const rows = useMemo(() => {
     const dir = sort.dir === 'asc' ? 1 : -1
     return [...result.rows].sort((a, b) => compare(a, b, sort.key) * dir)
@@ -97,7 +122,7 @@ export function DeepDiveCharts({ tournaments, handHistories }: DeepDiveChartsPro
     )
   }
 
-  if (result.rows.length === 0) {
+  if (result.rows.length === 0 && !lateRegFigure) {
     return (
       <div className="no-data">
         {t('charts.noDeepDiveData')}
@@ -112,53 +137,96 @@ export function DeepDiveCharts({ tournaments, handHistories }: DeepDiveChartsPro
 
   return (
     <div className="charts-container">
-      <section className="chart-section">
-        <h3>{t('deepDive.finalTable.title')}</h3>
-        <p className="chart-caption">
-          {t('deepDive.finalTable.subtitle', { n: result.rows.length })}
-        </p>
-        <p className="chart-caption">{t('deepDive.finalTable.note')}</p>
-        {result.skipped.length > 0 && (
+      {result.rows.length > 0 && (
+        <section className="chart-section">
+          <h3>{t('deepDive.finalTable.title')}</h3>
           <p className="chart-caption">
-            {t('deepDive.finalTable.skipped', { n: result.skipped.length })}
+            {t('deepDive.finalTable.subtitle', { n: result.rows.length })}
           </p>
-        )}
-        <div className="deep-dive-table-wrap">
-          <table className="deep-dive-table">
-            <thead>
-              <tr>
-                {header('date', 'deepDive.finalTable.col.date')}
-                {header('tournament', 'deepDive.finalTable.col.tournament')}
-                {header('entrants', 'deepDive.finalTable.col.entrants', true)}
-                {header('entryRank', 'deepDive.finalTable.col.entryRank', true)}
-                {header('entryChipRatio', 'deepDive.finalTable.col.entryChipRatio', true)}
-                {header('finish', 'deepDive.finalTable.col.finish', true)}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(r => (
-                <tr key={r.tournamentId}>
-                  <td>{formatDate(r.startTime)}</td>
-                  <td>
-                    {r.name}
-                    {r.reentry && (
-                      <span className="reentry-tag"> {t('deepDive.finalTable.reentryTag')}</span>
-                    )}
-                  </td>
-                  <td className="num">{fmt(r.entrants)}</td>
-                  <td className="num">
-                    {r.entryRank} / {r.entrySeated}
-                  </td>
-                  <td className="num">{(r.entryChipRatio * 100).toFixed(1)}%</td>
-                  <td className="num">
-                    {r.finish} / {fmt(r.entrants)}
-                  </td>
+          <p className="chart-caption">{t('deepDive.finalTable.note')}</p>
+          {result.skipped.length > 0 && (
+            <p className="chart-caption">
+              {t('deepDive.finalTable.skipped', { n: result.skipped.length })}
+            </p>
+          )}
+          <div className="deep-dive-table-wrap">
+            <table className="deep-dive-table">
+              <thead>
+                <tr>
+                  {header('date', 'deepDive.finalTable.col.date')}
+                  {header('tournament', 'deepDive.finalTable.col.tournament')}
+                  {header('entrants', 'deepDive.finalTable.col.entrants', true)}
+                  {header('entryRank', 'deepDive.finalTable.col.entryRank', true)}
+                  {header('entryChipRatio', 'deepDive.finalTable.col.entryChipRatio', true)}
+                  {header('finish', 'deepDive.finalTable.col.finish', true)}
                 </tr>
+              </thead>
+              <tbody>
+                {rows.map(r => (
+                  <tr key={r.tournamentId}>
+                    <td>{formatDate(r.startTime)}</td>
+                    <td>
+                      {r.name}
+                      {r.reentry && (
+                        <span className="reentry-tag"> {t('deepDive.finalTable.reentryTag')}</span>
+                      )}
+                    </td>
+                    <td className="num">{fmt(r.entrants)}</td>
+                    <td className="num">
+                      {r.entryRank} / {r.entrySeated}
+                    </td>
+                    <td className="num">{(r.entryChipRatio * 100).toFixed(1)}%</td>
+                    <td className="num">
+                      {r.finish} / {fmt(r.entrants)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+      {lateRegFigure && (
+        <section className="chart-section">
+          <h3>{t('deepDive.lateReg.title')}</h3>
+          <p className="chart-caption">
+            {t('deepDive.lateReg.subtitle', {
+              n: lateReg.entries.length,
+              m: lateReg.joinedTournaments,
+            })}
+          </p>
+          <p className="chart-caption">{t('deepDive.lateReg.note')}</p>
+          <p className="chart-caption">{t('deepDive.lateReg.disclaimer')}</p>
+          {lateReg.skippedMismatch > 0 && (
+            <p className="chart-caption">
+              {t('deepDive.lateReg.skipped', { n: lateReg.skippedMismatch })}
+            </p>
+          )}
+          <Plot
+            data={lateRegFigure.traces}
+            layout={{ ...lateRegFigure.layout, autosize: true }}
+            useResizeHandler
+            style={{ width: '100%', height: `${lateRegFigure.layout.height ?? 460}px` }}
+            config={{ responsive: true }}
+          />
+          {lateRegHeatmap && (
+            <div className="chart-subfigure">
+              {lateRegHeatmap.caption.map(line => (
+                <p key={line} className="chart-caption">
+                  {line}
+                </p>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+              <Plot
+                data={lateRegHeatmap.traces}
+                layout={{ ...lateRegHeatmap.layout, autosize: true }}
+                useResizeHandler
+                style={{ width: '100%', height: `${lateRegHeatmap.layout.height ?? 420}px` }}
+                config={{ responsive: true }}
+              />
+            </div>
+          )}
+        </section>
+      )}
     </div>
   )
 }
