@@ -259,7 +259,7 @@
   "deepDive.lateReg.skipped": "{{n}} joined tournaments were skipped because their hand histories don't cover every entry (incomplete download).",
   "deepDive.lateReg.onTimeLabel": "On time — level 1 (n={{n}})",
   "deepDive.lateReg.onTimeDesc": "Entered at level 1, so on time by definition — this row includes formats that start shallow. Median depth {{bb}} BB.",
-  "deepDive.lateReg.rowLabel": "Late, {{range}} BB left (n={{n}})",
+  "deepDive.lateReg.rowLabel": "{{range}} BB start (n={{n}})",
   "deepDive.lateReg.bucketDesc": "Typical entry here: level {{level}}, {{minutes}} min after start (medians)",
   "deepDive.lateReg.axis.mean": "Average ROI per entry (buy-ins, 95% CI; 0 = break-even)",
   "deepDive.lateReg.axis.total": "Net profit (USD)",

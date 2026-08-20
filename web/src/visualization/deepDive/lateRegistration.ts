@@ -102,8 +102,8 @@ export function getLateRegistrationData(result: LateRegResult, t: Translate): De
     rows,
     // The section heading already names the chart, and its prose is rendered as section
     // captions by DeepDiveCharts — so the figure itself carries neither. The margin fits
-    // the widest row label, the Korean "늦은 등록, 남은 스택 60–100 BB (n=…)".
-    { title: '', caption: [], leftMargin: 230, keys: KEYS },
+    // the widest row label, the Korean on-time row "정시 등록 — 레벨 1 (n=…)".
+    { title: '', caption: [], leftMargin: 200, keys: KEYS },
     t
   )
 }
