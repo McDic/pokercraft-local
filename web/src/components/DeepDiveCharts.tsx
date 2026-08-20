@@ -23,7 +23,10 @@ import type { TournamentSummary, HandHistory } from '../types'
 import type { TranslationKey } from '../i18n'
 import { analyzeFinalTables, type FinalTableRow } from '../analysis/finalTable'
 import { analyzeLateRegistration } from '../analysis/lateRegistration'
-import { getLateRegistrationData } from '../visualization/deepDive/lateRegistration'
+import {
+  getLateRegistrationData,
+  getLateRegHeatmapData,
+} from '../visualization/deepDive/lateRegistration'
 
 interface DeepDiveChartsProps {
   tournaments: TournamentSummary[]
@@ -84,9 +87,13 @@ export function DeepDiveCharts({ tournaments, handHistories }: DeepDiveChartsPro
     () => analyzeLateRegistration(tournaments, handHistories),
     [tournaments, handHistories]
   )
-  // The figure bakes translated strings into its traces, so it depends on `t` as well.
+  // The figures bake translated strings into their traces, so they depend on `t` as well.
   const lateRegFigure = useMemo(
     () => (lateReg.entries.length > 0 ? getLateRegistrationData(lateReg, t) : null),
+    [lateReg, t]
+  )
+  const lateRegHeatmap = useMemo(
+    () => (lateReg.entries.length > 0 ? getLateRegHeatmapData(lateReg, t) : null),
     [lateReg, t]
   )
 
@@ -202,6 +209,22 @@ export function DeepDiveCharts({ tournaments, handHistories }: DeepDiveChartsPro
             style={{ width: '100%', height: `${lateRegFigure.layout.height ?? 460}px` }}
             config={{ responsive: true }}
           />
+          {lateRegHeatmap && (
+            <>
+              {lateRegHeatmap.caption.map(line => (
+                <p key={line} className="chart-caption">
+                  {line}
+                </p>
+              ))}
+              <Plot
+                data={lateRegHeatmap.traces}
+                layout={{ ...lateRegHeatmap.layout, autosize: true }}
+                useResizeHandler
+                style={{ width: '100%', height: `${lateRegHeatmap.layout.height ?? 420}px` }}
+                config={{ responsive: true }}
+              />
+            </>
+          )}
         </section>
       )}
     </div>

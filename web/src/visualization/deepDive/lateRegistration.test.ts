@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getLateRegistrationData } from './lateRegistration'
+import { getLateRegistrationData, getLateRegHeatmapData } from './lateRegistration'
 import type { LateRegEntry, LateRegResult } from '../../analysis/lateRegistration'
 import { identityT } from '../../test/i18n'
 import type { Layout } from 'plotly.js-dist-min'
@@ -79,5 +79,50 @@ describe('getLateRegistrationData', () => {
     expect(layout.xaxis2.title.text).toBe('deepDive.lateReg.axis.total')
     const [mean] = figure.traces as Array<{ hovertemplate: string }>
     expect(mean.hovertemplate).toBe('deepDive.lateReg.hover.mean')
+  })
+})
+
+interface HeatmapTrace {
+  x: string[]
+  y: string[]
+  z: number[][]
+  customdata: Array<Array<[number, number]>>
+}
+
+describe('getLateRegHeatmapData', () => {
+  it('bins busts into their own column and returns into log-2 columns', () => {
+    const hm = getLateRegHeatmapData(
+      // <16 band: one bust, one 0.4× return. 64–128 band: an exact 1× (break-even) and a 20×.
+      resultOf([entry(12, -1, -10), entry(12, -0.6, -6), entry(100, 0, 0), entry(100, 19, 190)]),
+      identityT
+    )
+    const trace = hm.traces[0] as unknown as HeatmapTrace
+
+    expect(trace.x[0]).toBe('deepDive.lateReg.heatmap.bust')
+    // Only the two non-empty depth bands survive, shallowest first (drawn at the bottom).
+    expect(trace.y).toEqual([
+      'deepDive.lateReg.rowLabel({"range":"<16","n":2})',
+      'deepDive.lateReg.rowLabel({"range":"64–128","n":2})',
+    ])
+    // <16 row: the bust in column 0, the 0.4× in "0.25–0.5×" (column 2).
+    expect(trace.customdata[0][0]).toEqual([1, 0.5])
+    expect(trace.customdata[0][2]).toEqual([1, 0.5])
+    // 64–128 row: 1× is not a bust — it lands in "1–2×" (column 4); 20× in the last column.
+    expect(trace.customdata[1][4]).toEqual([1, 0.5])
+    expect(trace.customdata[1][trace.x.length - 1]).toEqual([1, 0.5])
+  })
+
+  it('normalises each row to its own total and colours by the square root', () => {
+    const hm = getLateRegHeatmapData(
+      resultOf([entry(20, -1, -10), entry(20, -1, -10), entry(20, -1, -10), entry(20, 1, 10)]),
+      identityT
+    )
+    const trace = hm.traces[0] as unknown as HeatmapTrace
+
+    expect(trace.y).toEqual(['deepDive.lateReg.rowLabel({"range":"16–32","n":4})'])
+    const shares = trace.customdata[0].map(([, share]) => share)
+    expect(shares.reduce((a, b) => a + b, 0)).toBeCloseTo(1)
+    expect(trace.customdata[0][0]).toEqual([3, 0.75])
+    expect(trace.z[0][0]).toBeCloseTo(Math.sqrt(0.75))
   })
 })
