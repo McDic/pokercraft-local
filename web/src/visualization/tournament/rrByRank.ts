@@ -173,6 +173,9 @@ export function getRRByRankData(tournaments: TournamentSummary[], t: Translate):
       title: { text: t('chart.rrByRank.axis.perr') },
       type: 'log',
       overlaying: 'y',
+      // Plotly 4 defaults an overlaying axis to 'sync', which would hang this axis's ticks
+      // on the primary axis's gridlines — odd values on a log axis with its own range.
+      tickmode: 'auto',
       side: 'right',
       range: [log10OrNaN(0.01), log10OrNaN(0.75)],
       autorange: false,

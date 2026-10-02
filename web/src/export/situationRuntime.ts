@@ -41,6 +41,7 @@ import {
 import type { SituationExport } from './situationPayload'
 import { unpackSituation } from './situationPayload'
 import { toLightLayout } from './lightTheme'
+import { PLOT_CONFIG } from '../visualization/plotConfig'
 
 /** Loaded from the CDN by the exported page, before this script runs. */
 interface Plotly {
@@ -162,9 +163,7 @@ class FigureBlock {
     // chart, which is the exact regression PR #32 ("show the user when a chart fails") fixed
     // everywhere else. The message is deliberately not translated: it is a stack trace for a
     // person who is about to file a bug, not prose for a reader.
-    window.Plotly.react(this.plot, figure.traces, toLightLayout(figure.layout), {
-      responsive: true,
-    }).catch((error: unknown) => {
+    window.Plotly.react(this.plot, figure.traces, toLightLayout(figure.layout), PLOT_CONFIG).catch((error: unknown) => {
       this.container.style.display = 'none'
       this.empty.style.display = ''
       this.empty.textContent = `Failed to draw this chart: ${String(error)}`

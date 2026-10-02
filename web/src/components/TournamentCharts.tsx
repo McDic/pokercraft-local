@@ -5,6 +5,7 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import { useTranslation } from 'react-i18next'
 import Plot from './plot'
+import { PLOT_CONFIG } from '../visualization/plotConfig'
 import { ChartCaption } from './ChartCaption'
 import type { Data, Layout } from 'plotly.js-dist-min'
 import type { TournamentSummary } from '../types'
@@ -262,7 +263,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
             layout={{ ...state.historical.layout, autosize: true }}
             useResizeHandler
             style={{ width: '100%', height: state.historical.layout.height }}
-            config={{ responsive: true }}
+            config={PLOT_CONFIG}
           />
         </section>
       )}
@@ -275,7 +276,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
             layout={{ ...state.rre.layout, autosize: true }}
             useResizeHandler
             style={{ width: '100%', height: state.rre.layout.height }}
-            config={{ responsive: true }}
+            config={PLOT_CONFIG}
           />
         </section>
       )}
@@ -288,7 +289,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
             layout={{ ...state.bankroll.layout, autosize: true }}
             useResizeHandler
             style={{ width: '100%', height: state.bankroll.layout.height }}
-            config={{ responsive: true }}
+            config={PLOT_CONFIG}
           />
         </section>
       )}
@@ -301,7 +302,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
             layout={{ ...state.prizePies.layout, autosize: true }}
             useResizeHandler
             style={{ width: '100%', height: state.prizePies.layout.height }}
-            config={{ responsive: true }}
+            config={PLOT_CONFIG}
           />
         </section>
       )}
@@ -314,7 +315,7 @@ export const TournamentCharts = forwardRef<TournamentChartsRef, TournamentCharts
             layout={{ ...state.rrByRank.layout, autosize: true }}
             useResizeHandler
             style={{ width: '100%', height: state.rrByRank.layout.height }}
-            config={{ responsive: true }}
+            config={PLOT_CONFIG}
           />
         </section>
       )}
