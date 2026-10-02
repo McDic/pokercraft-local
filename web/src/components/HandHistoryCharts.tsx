@@ -27,8 +27,9 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import { useTranslation } from 'react-i18next'
 import Plot from './plot'
+import { PLOT_CONFIG } from '../visualization/plotConfig'
 import { ChartCaption } from './ChartCaption'
-import type { Data, Layout } from 'plotly.js-dist-min'
+import type { Data, Layout } from 'plotly.js'
 import type { HandHistory } from '../types'
 import type { AllInHandData, LuckScore } from '../visualization/handHistory/allInEquityAsync'
 import type { ExportChart } from '../export/htmlExport'
@@ -389,7 +390,7 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
             layout={{ ...chipHistories.layout, autosize: true }}
             useResizeHandler
             style={{ width: '100%', height: '900px' }}
-            config={{ responsive: true }}
+            config={PLOT_CONFIG}
           />
         </section>
       )}
@@ -402,7 +403,7 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
             layout={{ ...handUsage.layout, autosize: true }}
             useResizeHandler
             style={{ width: '100%', height: '900px' }}
-            config={{ responsive: true }}
+            config={PLOT_CONFIG}
           />
         </section>
       )}
@@ -415,7 +416,7 @@ export const HandHistoryCharts = forwardRef<HandHistoryChartsRef, HandHistoryCha
             layout={{ ...allInEquity.layout, autosize: true }}
             useResizeHandler
             style={{ width: '100%', height: '700px' }}
-            config={{ responsive: true }}
+            config={PLOT_CONFIG}
           />
         </section>
       )}

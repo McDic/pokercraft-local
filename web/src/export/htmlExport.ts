@@ -6,12 +6,14 @@
  * keep working after the file is downloaded. See `situationRuntime.ts`.
  */
 
-import type { Data, Layout } from 'plotly.js-dist-min'
+import type { Data, Layout } from 'plotly.js'
+import { version as plotlyVersion } from 'plotly.js/package.json'
 import runtimeSource from 'virtual:situation-runtime'
 import { getVersionInfo } from '../utils/version'
 import type { Translate, TranslationKey } from '../i18n'
 import type { SituationExport } from './situationPayload'
 import { toLightLayout } from './lightTheme'
+import { PLOT_CONFIG } from '../visualization/plotConfig'
 
 export interface ExportChart {
   /** Already translated; rendered as the chart's heading in the exported file. */
@@ -52,7 +54,9 @@ function isPresent(section: ExportSection): boolean {
   return section.charts.length > 0 || section.situation !== undefined
 }
 
-const PLOTLY_CDN = 'https://cdn.plot.ly/plotly-3.3.1.min.js'
+// Pinned to the installed plotly.js, so a dependency bump (say, for an advisory in the
+// maplibre it bundles) reaches exported files too instead of leaving them on a stale script.
+export const PLOTLY_CDN = `https://cdn.plot.ly/plotly-${plotlyVersion}.min.js`
 
 const THEME_CSS = `
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -177,7 +181,7 @@ function buildPlotCalls(charts: ExportChart[], prefix: string): string {
         ${embedJson(`${prefix}-${i}`)},
         ${embedJson(chart.traces)},
         ${embedJson(toLightLayout(chart.layout))},
-        {responsive: true}
+        ${embedJson(PLOT_CONFIG)}
       );`
     )
     .join('\n      ')

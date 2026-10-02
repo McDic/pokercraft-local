@@ -10,7 +10,7 @@ import {
 } from '../../types'
 import { cumsum, cummax, cummin, rollingMean, expandingMean } from '../../analytics'
 import type { Translate } from '../../i18n'
-import type { Data, Layout } from 'plotly.js-dist-min'
+import type { Data, Layout } from 'plotly.js'
 
 export const DEFAULT_WINDOW_SIZES = [25, 100, 400, 800] as const
 

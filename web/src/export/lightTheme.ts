@@ -6,7 +6,7 @@
  * chart that is subtly the wrong colour still looks like a chart.
  */
 
-import type { Layout } from 'plotly.js-dist-min'
+import type { Layout } from 'plotly.js'
 
 /**
  * Axis colours for a light background — as **defaults, not overrides**.

@@ -24,6 +24,7 @@
 import { useState, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react'
 import { useTranslation } from 'react-i18next'
 import Plot from './plot'
+import { PLOT_CONFIG } from '../visualization/plotConfig'
 import type { HandHistory } from '../types'
 import type { Classification } from '../analysis/preflopSituation'
 import { classifyHandHistories } from '../analysis/preflopSituation'
@@ -120,7 +121,7 @@ function Figure({ figure, emptyMessage }: { figure: DeltaFigure; emptyMessage: s
           layout={{ ...figure.layout, autosize: true }}
           useResizeHandler
           style={{ width: '100%', height: `${figure.layout.height ?? 600}px` }}
-          config={{ responsive: true }}
+          config={PLOT_CONFIG}
         />
       ) : (
         <div className="no-data">{emptyMessage}</div>
