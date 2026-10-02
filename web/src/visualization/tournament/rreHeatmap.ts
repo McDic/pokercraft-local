@@ -11,7 +11,7 @@ import {
 } from '../../types'
 import { log2OrNaN } from '../../analytics'
 import type { Translate } from '../../i18n'
-import type { Data, Layout } from 'plotly.js-dist-min'
+import type { Data, Layout } from 'plotly.js'
 
 export interface RREHeatmapData {
   traces: Data[]

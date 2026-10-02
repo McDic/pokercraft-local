@@ -7,7 +7,7 @@ import type { TournamentSummary } from '../../types'
 import { getTournamentRRs } from '../../types'
 import { log2OrNaN, log10OrNaN, linearRegression } from '../../analytics'
 import type { Translate } from '../../i18n'
-import type { Data, Layout } from 'plotly.js-dist-min'
+import type { Data, Layout } from 'plotly.js'
 
 export interface RRByRankData {
   traces: Data[]

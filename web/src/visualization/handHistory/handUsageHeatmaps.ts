@@ -3,7 +3,7 @@
  * Shows VPIP (Voluntarily Put In Pot) by hand and position
  */
 
-import type { Data, Layout } from 'plotly.js-dist-min'
+import type { Data, Layout } from 'plotly.js'
 import type { HandHistory } from '../../types'
 import {
   getHandHistoryOffsetFromButton,
