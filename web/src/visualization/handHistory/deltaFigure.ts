@@ -27,7 +27,7 @@
  * would be a lie told quietly.
  */
 
-import type { Data, Layout } from 'plotly.js-dist-min'
+import type { Data, Layout } from 'plotly.js'
 import type { Translate, TranslationKey } from '../../i18n'
 
 export interface DeltaFigure {

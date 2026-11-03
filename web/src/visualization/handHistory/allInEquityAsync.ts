@@ -3,7 +3,7 @@
  * Uses Web Worker to run WASM off the main thread
  */
 
-import type { Data, Layout } from 'plotly.js-dist-min'
+import type { Data, Layout } from 'plotly.js'
 import type { HandHistory, HandStage } from '../../types'
 import {
   getHandHistoryAllInShowdownStreet,

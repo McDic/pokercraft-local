@@ -3,7 +3,7 @@
  * Shows chip stack progression over hands for each tournament
  */
 
-import type { Data, Layout } from 'plotly.js-dist-min'
+import type { Data, Layout } from 'plotly.js'
 import type { HandHistory } from '../../types'
 import {
   generateSequences,

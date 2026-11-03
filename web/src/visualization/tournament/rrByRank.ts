@@ -7,7 +7,7 @@ import type { TournamentSummary } from '../../types'
 import { getTournamentRRs } from '../../types'
 import { log2OrNaN, log10OrNaN, linearRegression } from '../../analytics'
 import type { Translate } from '../../i18n'
-import type { Data, Layout } from 'plotly.js-dist-min'
+import type { Data, Layout } from 'plotly.js'
 
 export interface RRByRankData {
   traces: Data[]
@@ -173,6 +173,9 @@ export function getRRByRankData(tournaments: TournamentSummary[], t: Translate):
       title: { text: t('chart.rrByRank.axis.perr') },
       type: 'log',
       overlaying: 'y',
+      // Plotly 4 defaults an overlaying axis to 'sync', which would hang this axis's ticks
+      // on the primary axis's gridlines — odd values on a log axis with its own range.
+      tickmode: 'auto',
       side: 'right',
       range: [log10OrNaN(0.01), log10OrNaN(0.75)],
       autorange: false,

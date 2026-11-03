@@ -6,7 +6,7 @@
 import type { TournamentSummary } from '../../types'
 import { getTournamentTimeOfWeek } from '../../types'
 import type { Translate, TranslationKey } from '../../i18n'
-import type { Data, Layout } from 'plotly.js-dist-min'
+import type { Data, Layout } from 'plotly.js'
 
 /**
  * Weekday order, as translation keys. The sunburst links children to parents by

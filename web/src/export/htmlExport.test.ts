@@ -69,6 +69,8 @@ describe('generateExportHTML', () => {
     expect(html).toContain('id="hand-0"')
     // Both sections must actually be drawn, not just headed.
     expect(html.match(/Plotly\.newPlot\(/g) ?? []).toHaveLength(2)
+    // Plotly 4's default-on "Upload to Cloud" button would post the reader's data off-device.
+    expect(html.match(/"showSendToCloud":false/g) ?? []).toHaveLength(2)
   })
 
   it('does not let the light-theme patch overwrite an axis the chart styled itself', () => {

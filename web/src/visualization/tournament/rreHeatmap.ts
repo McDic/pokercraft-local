@@ -11,7 +11,7 @@ import {
 } from '../../types'
 import { log2OrNaN } from '../../analytics'
 import type { Translate } from '../../i18n'
-import type { Data, Layout } from 'plotly.js-dist-min'
+import type { Data, Layout } from 'plotly.js'
 
 export interface RREHeatmapData {
   traces: Data[]
@@ -111,7 +111,7 @@ export function getRREHeatmapData(tournaments: TournamentSummary[], t: Translate
     yaxis: 'y',
   } as unknown as Data)
 
-  const layout = {
+  const layout: Partial<Layout> = {
     title: { text: t('chart.rre.title') },
     height: 500,
     grid: {
@@ -224,5 +224,5 @@ export function getRREHeatmapData(tournaments: TournamentSummary[], t: Translate
     ],
   }
 
-  return { traces, layout: layout as Partial<Layout>, caption }
+  return { traces, layout, caption }
 }
