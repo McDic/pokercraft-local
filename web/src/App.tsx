@@ -65,8 +65,8 @@ const EXPORT_BY_TAB: Record<
     // `prefix` is a DOM id and need not, but a filename is read by a person.
     filename: 'preflop-situations',
   },
-  // The Deep Dive tab renders a table, not figures, so it has no export in v1 (its export
-  // affordance is disabled while it is active). This entry only satisfies the exhaustive
+  // The Deep Dive tab has no export in v1 (its export affordance is disabled while it is
+  // active), even though its Late Registration section now draws figures. This entry only satisfies the exhaustive
   // Record<ChartTab, …> type; it is never read at runtime.
   deepDive: {
     titleKey: 'export.section.deepDive',

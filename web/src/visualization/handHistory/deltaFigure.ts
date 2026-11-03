@@ -209,6 +209,38 @@ function colorOf(row: DeltaRow): string {
   return INCONCLUSIVE
 }
 
+/**
+ * The i18n keys a figure's fixed text is drawn from.
+ *
+ * The layout machinery — significance colouring, the two panels, the hover plumbing — is not
+ * specific to Δbb-vs-folding, but its wording is. A consumer measuring something else (the
+ * late-registration chart measures ROI against break-even) supplies its own keys; the
+ * situation charts keep the defaults below, so their two figures still cannot drift apart.
+ */
+export interface DeltaFigureKeys {
+  /** Legend entry for rows whose 95% interval sits entirely above zero. */
+  legendAbove: TranslationKey
+  /** Legend entry for rows whose 95% interval sits entirely below zero. */
+  legendBelow: TranslationKey
+  /** Legend entry for rows whose interval includes zero. */
+  legendInconclusive: TranslationKey
+  axisMean: TranslationKey
+  axisTotal: TranslationKey
+  /** Plotly hovertemplates; `customdata` is `[n, ci95]` on the mean panel, `[n]` on the total. */
+  hoverMean: TranslationKey
+  hoverTotal: TranslationKey
+}
+
+const SITUATION_KEYS: DeltaFigureKeys = {
+  legendAbove: 'chart.situation.legend.beatFold',
+  legendBelow: 'chart.situation.legend.lostToFold',
+  legendInconclusive: 'chart.situation.legend.inconclusive',
+  axisMean: 'chart.situation.axis.mean',
+  axisTotal: 'chart.situation.axis.total',
+  hoverMean: 'chart.situation.hover.mean',
+  hoverTotal: 'chart.situation.hover.total',
+}
+
 interface DeltaFigureOptions {
   /** Already translated. */
   title: string
@@ -216,20 +248,22 @@ interface DeltaFigureOptions {
   caption: string[]
   /** Room for the row labels; the hand classes need far less of it than the ledger rows. */
   leftMargin: number
+  /** Wording for legend, axes, and hover. Defaults to the situation charts'. */
+  keys?: DeltaFigureKeys
 }
 
 export function buildDeltaFigure(
   rows: DeltaRow[],
-  { title, caption, leftMargin }: DeltaFigureOptions,
+  { title, caption, leftMargin, keys = SITUATION_KEYS }: DeltaFigureOptions,
   t: Translate
 ): DeltaFigure {
   // Rows are laid out top-down in the order given, so the y axis counts downward.
   const y = rows.map((_, i) => i)
 
   const groups: Array<[string, TranslationKey]> = [
-    [BEAT_FOLD, 'chart.situation.legend.beatFold'],
-    [LOST_TO_FOLD, 'chart.situation.legend.lostToFold'],
-    [INCONCLUSIVE, 'chart.situation.legend.inconclusive'],
+    [BEAT_FOLD, keys.legendAbove],
+    [LOST_TO_FOLD, keys.legendBelow],
+    [INCONCLUSIVE, keys.legendInconclusive],
   ]
 
   const traces: Data[] = []
@@ -261,7 +295,7 @@ export function buildDeltaFigure(
       // `%{hovertext}`: `%{text}` is a *different* field, and resolves to a bare "-".
       hovertext: idx.map(i => hoverLabel(rows[i])),
       customdata: idx.map(i => [rows[i].n, rows[i].ci95]),
-      hovertemplate: t('chart.situation.hover.mean'),
+      hovertemplate: t(keys.hoverMean),
       xaxis: 'x',
       yaxis: 'y',
     } as Data)
@@ -278,7 +312,7 @@ export function buildDeltaFigure(
       marker: { color },
       hovertext: idx.map(i => hoverLabel(rows[i])),
       customdata: idx.map(i => [rows[i].n]),
-      hovertemplate: t('chart.situation.hover.total'),
+      hovertemplate: t(keys.hoverTotal),
       xaxis: 'x2',
       yaxis: 'y',
     } as Data)
@@ -313,7 +347,7 @@ export function buildDeltaFigure(
     hovermode: 'closest',
     xaxis: {
       domain: [0, 0.6],
-      title: { text: t('chart.situation.axis.mean') },
+      title: { text: t(keys.axisMean) },
       zeroline: true,
       zerolinecolor: '#898781',
       zerolinewidth: 2,
@@ -322,7 +356,7 @@ export function buildDeltaFigure(
     xaxis2: {
       domain: [0.7, 1],
       anchor: 'y',
-      title: { text: t('chart.situation.axis.total') },
+      title: { text: t(keys.axisTotal) },
       zeroline: true,
       zerolinecolor: '#898781',
       zerolinewidth: 2,
