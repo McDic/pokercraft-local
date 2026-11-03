@@ -132,6 +132,11 @@ export function DeepDiveCharts({ tournaments, handHistories }: DeepDiveChartsPro
             {t('deepDive.finalTable.skipped', { n: result.skipped.length })}
           </p>
         )}
+        {lateReg.skippedMismatch > 0 && (
+          <p className="chart-caption">
+            {t('deepDive.lateReg.skipped', { n: lateReg.skippedMismatch })}
+          </p>
+        )}
       </div>
     )
   }

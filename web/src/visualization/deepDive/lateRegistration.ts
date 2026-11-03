@@ -203,7 +203,7 @@ export function getLateRegHeatmapData(result: LateRegResult, t: Translate): Late
     } as unknown as Data,
   ]
 
-  // Between the "0.5–1×" and "1–2×" columns: everything right of this line beat the buy-in.
+  // Between the "0.5–1×" and "1–2×" columns: everything right of this line returned at least the buy-in (1× itself is in "1–2×").
   const breakEvenX = 3.5
 
   const layout: Partial<Layout> = {

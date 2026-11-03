@@ -52,6 +52,16 @@ describe('DeepDiveCharts', () => {
     expect(container.textContent).toContain('No joined analyses')
   })
 
+  it('still reports late-reg skips when every joined tournament was skipped', () => {
+    // Two entries per the summary, but the hands cover only one lifecycle: a mismatch skip.
+    const tournament = makeTournament(100, { myRank: 500, totalPlayers: 1462, myEntries: 2 })
+    render([tournament], [ftHand(100, 1, 'A', 9, [['Hero', 100], ['a', 200]])])
+
+    const text = container.textContent ?? ''
+    expect(text).toContain('No joined analyses')
+    expect(text).toContain('1 joined tournaments were skipped')
+  })
+
   it('shows the late-registration section even when no final table was reached', () => {
     // Deep run, but not to the final table: rank 500 in a 1462 field.
     const tournament = makeTournament(100, { myRank: 500, totalPlayers: 1462 })

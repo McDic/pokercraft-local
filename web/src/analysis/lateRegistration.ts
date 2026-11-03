@@ -12,8 +12,9 @@
  * lifecycle (split on busts by `generateSequences`) is its own data point, and the return is
  * attributed the way `getTournamentRRs` defines: every busted entry returned −1 buy-in, the
  * final entry carries the whole prize. A summary only knows the prize per *tournament*, so
- * this attribution is exact for the busted entries and conservative-by-construction for the
- * last one.
+ * in bounty formats the bounties a busted entry collected land on the final entry too: the
+ * busted entries read worse and the final (shallower) one better than they really did. The
+ * disclaimer says so; the per-tournament total stays exact either way.
  *
  * A tournament whose lifecycle count disagrees with the summary's entry count is dropped and
  * counted, never silently kept: the mismatch means the download is missing hands (typically

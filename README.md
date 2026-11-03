@@ -93,7 +93,7 @@ The web app lives in `web/` (Vite + React + TypeScript, with the Rust core compi
 ```bash
 ./scripts/build-wasm.sh   # build the WASM package (once, and after Rust changes)
 cd web
-npm install
+npm ci
 npm run dev               # local dev server
 npm test                  # vitest
 ```
