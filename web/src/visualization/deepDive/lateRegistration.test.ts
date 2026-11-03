@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { getLateRegistrationData, getLateRegHeatmapData } from './lateRegistration'
 import type { LateRegEntry, LateRegResult } from '../../analysis/lateRegistration'
 import { identityT } from '../../test/i18n'
-import type { Layout } from 'plotly.js-dist-min'
+import type { Layout } from 'plotly.js'
 
 function entry(stackBB: number, rr: number, profitUsd: number, level = 3): LateRegEntry {
   return {

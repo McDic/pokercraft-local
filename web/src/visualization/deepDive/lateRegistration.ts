@@ -17,7 +17,7 @@
  * row; edges validated on a real ~4-month dataset so no band holds a handful of entries.
  */
 
-import type { Data, Layout } from 'plotly.js-dist-min'
+import type { Data, Layout } from 'plotly.js'
 import type { LateRegEntry, LateRegResult } from '../../analysis/lateRegistration'
 import type { Translate } from '../../i18n'
 import {

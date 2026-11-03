@@ -19,6 +19,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Plot from './plot'
+import { PLOT_CONFIG } from '../visualization/plotConfig'
 import type { TournamentSummary, HandHistory } from '../types'
 import type { TranslationKey } from '../i18n'
 import { analyzeFinalTables, type FinalTableRow } from '../analysis/finalTable'
@@ -207,7 +208,7 @@ export function DeepDiveCharts({ tournaments, handHistories }: DeepDiveChartsPro
             layout={{ ...lateRegFigure.layout, autosize: true }}
             useResizeHandler
             style={{ width: '100%', height: `${lateRegFigure.layout.height ?? 460}px` }}
-            config={{ responsive: true }}
+            config={PLOT_CONFIG}
           />
           {lateRegHeatmap && (
             <div className="chart-subfigure">
@@ -221,7 +222,7 @@ export function DeepDiveCharts({ tournaments, handHistories }: DeepDiveChartsPro
                 layout={{ ...lateRegHeatmap.layout, autosize: true }}
                 useResizeHandler
                 style={{ width: '100%', height: `${lateRegHeatmap.layout.height ?? 420}px` }}
-                config={{ responsive: true }}
+                config={PLOT_CONFIG}
               />
             </div>
           )}
